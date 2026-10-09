@@ -47,9 +47,9 @@ All bodies are JSON. Field names follow `backend/app/models.py` (CLAUDE.md §5).
 
 ### Shapes the UI relies on
 
-- `SimResult.kpis`: `pct_served`, `pct_hardship`, `pct_left_out` (0-100; 0-1 fractions are auto-scaled), `avg_hours_lost`, `avg_cost_jd`.
+- `SimResult.kpis`: `pct_served`, `pct_hardship`, `pct_left_out` (0-100; 0-1 fractions are auto-scaled), `avg_hours_lost`, `avg_cost_jd`, `n_home_visits`.
 - `SimResult.by_group`: `{tag: {served, hardship, left_out}}` in percent. Any tag is shown; known ones get translated labels (`elderly, disabled, no_car, offline, low_income, worker, student`).
-- `SimResult.outcomes[]`: `citizen_id, status, channel, channel_name_ar, channel_name_en, mode, bus_transfers, visit_day, travel_minutes, cost_jd, hours_lost, work_hours_missed, reasons[]`.
+- `SimResult.outcomes[]`: `citizen_id, status, channel, channel_name_ar, channel_name_en, mode, bus_transfers, visit_day, travel_minutes, cost_jd, hours_lost, work_hours_missed, reasons[]`. A home visit has `channel: "home_visit"`, `mode: "home"` (the card then hides the travel facts).
 - `CompareResult`: `baseline`, `scenario`, `flipped_worse[]`, `flipped_better[]`, `worst_groups[]`. Deltas are recomputed in the UI from the two `kpis`.
 - `FixCandidate`: `id, title_ar, title_en, policy, source, left_out_drop, hardship_drop` (percentage points), `explanation_ar/_en` (may be null). Optional `explanation_source: "ai" | "fallback"` per fix; otherwise the `/fixes` response's `source` is used for the tag.
 - `ParseResult`: `status: "ok" | "unsupported"`, `policy`, `changes_ar[]`, `changes_en[]`, `message_ar`, `message_en`.
@@ -57,7 +57,9 @@ All bodies are JSON. Field names follow `backend/app/models.py` (CLAUDE.md §5).
 
 ### What the UI sends as a Policy
 
-Exactly §5's `Policy`. When an office pin is dragged it snaps to the nearest site and sets `site_id`, `id = "office_<area>"`, `name_ar`, `name_en` from `/sites`. Mobile units are `{area, day, open, close}`. Days are `sat..fri`, times `HH:MM`.
+Exactly §5's `Policy`. When an office pin is dragged it snaps to the nearest site and sets `site_id`, `id = "office_<area>"`, `name_ar`, `name_en` from `/sites`. "Open an office" adds one the same way at the chosen area's site (the real CSPD office there if any; a suffix keeps the id unique) with the first office's hours; the trash button removes one. Mobile units are `{area, day, open, close}`. Days are `sat..fri`, times `HH:MM`.
+
+The "Protections for groups" section edits `appointment_exempt_groups` (group chips), `fee_discounts` (chips + a 25-100 % stepper; every chosen group gets the same %), `transport_vouchers` (one voucher: chips + a 1-20 JD stepper), `home_visits` (switch, chips, 10-200 slots stepper) and `hybrid_pickup` (switch). A policy from free text can hold more than the panel shows (e.g. two vouchers); the panel shows the first and editing replaces it.
 
 ## If the backend's shapes differ
 

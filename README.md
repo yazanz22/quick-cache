@@ -26,6 +26,16 @@ uvicorn app.main:app --reload --port 8000
 - `pytest -q` runs the offline test suite (no AI calls).
 - `DEMO_OFFLINE=1` in `.env`: cache + templates only, never a network call. `?offline=1` in the URL draws no map tiles.
 - The UI still loads Leaflet, icons and fonts from CDNs, so vendor those before a fully offline demo.
+- Production: https://nas-rbo5.onrender.com (Render free plan from `render.yaml`; sleeps when idle, ~30-60 s to wake).
+  Deploy from the Render dashboard (Manual Deploy → latest commit) if a push doesn't trigger one.
+
+## What an official can change
+
+Offices (open, close or move one at any of 15 sites, hours per day, late Thursday, wheelchair access), online on/off/only,
+appointments, mobile units (area, day, hours), the fee, the number of visits, and **protections for groups**: walk-in without
+an appointment, fee exemptions or discounts, transport vouchers, capped home visits, and "apply online, collect in person".
+All of it from the policy panel or in Arabic/English free text. Anything else (e.g. extra staff, road closures) gets an
+honest "not supported yet" with the closest supported change.
 
 ## API (for the frontend)
 
@@ -50,9 +60,10 @@ Contract: [backend/app/models.py](backend/app/models.py). The frontend reads it 
 
 Invalid policies (unknown site/area, bad hours, discounts outside 0-100) return **422** with a readable message.
 
-**Group protections** (Policy fields, per citizen by tags): `appointment_exempt_groups`, `fee_discounts`, `home_visits`
-`{groups, slots}`, `transport_vouchers` `[{groups, amount_jd}]`, `hybrid_pickup`. Home-visit outcomes have
-`channel: "home_visit"`, `mode: "home"`; `kpis.n_home_visits` counts them.
+**Group protections** (Policy fields, per citizen by tags; groups = `elderly, disabled, no_car, offline, low_income, worker,
+student`): `appointment_exempt_groups`, `fee_discounts` `{group: %}`, `home_visits` `{groups, slots}`, `transport_vouchers`
+`[{groups, amount_jd}]`, `hybrid_pickup`. Home-visit outcomes have `channel: "home_visit"`, `mode: "home"`;
+`kpis.n_home_visits` counts them. They are manual levers only, not part of the `/fixgrid` search.
 
 ## Data
 
@@ -75,4 +86,7 @@ python -m app.data.fetch_map_data matrix # re-fetch OSRM times after the populat
 python -m scripts.pick_heroes            # choose hero citizens -> scenarios/heroes.json
 python -m scripts.find_ai_fix            # search for a verified AI fix for the demo path
 python -m scripts.warm_cache             # warm the AI cache (online, after final scenario work; --parse-only for requests)
+pytest -q                                # 39 offline tests
 ```
+
+Project state and decisions for the next person (or AI session): [HANDOFF.md](HANDOFF.md).

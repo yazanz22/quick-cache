@@ -14,6 +14,7 @@ A digital model of Amman is populated by ~1,000 **synthetic citizens, AI-voiced*
 - "Close counters at 1 PM and require online appointments"
 - "Make ID renewal online-only"
 - "Add a mobile service van in Marka on Saturdays"
+- "Let elderly and disabled people walk in without an appointment" or "20 home visits for wheelchair users"
 
 The engine runs every citizen through the service under the new policy. The map lights up:
 
@@ -134,7 +135,7 @@ nas/
 │   │       └── scenarios/      # baseline + presets (demo one flagged "demo": true), heroes.json, demo_requests.json
 │   ├── scripts/                # pick_heroes.py, find_ai_fix.py, warm_cache.py
 │   ├── cache/                  # AI cache files (committed for offline mode)
-│   └── tests/                  # test_engine.py, test_fixgrid.py, test_llm.py (offline, no AI calls)
+│   └── tests/                  # test_engine.py, test_fixgrid.py, test_llm.py, test_levers.py (offline, no AI calls)
 └── nas-frontend/               # static UI, no build step (see its README)
     ├── index.html              # layout + all CSS (light/dark, RTL, responsive)
     ├── config.js               # backend URL, timeouts, offline map switch, fallback areas/heroes
@@ -197,6 +198,16 @@ class MobileUnit(BaseModel):
     day: Day; open: str; close: str
     # Mobile units are ALWAYS walk-in (no appointment) and wheelchair accessible.
 
+Group = Literal["elderly", "disabled", "no_car", "offline", "low_income", "worker", "student"]   # = the tags
+
+class HomeVisits(BaseModel):
+    groups: list[Group] = ["disabled", "elderly"]   # who may get one
+    slots: int = 20                               # visits available for the 1,000 synthetic residents
+
+class TransportVoucher(BaseModel):
+    groups: list[Group]
+    amount_jd: float                              # bus or taxi fares paid up to this per round trip
+
 class Policy(BaseModel):
     service: str = "id_renewal"   # only one service for the MVP
     offices: list[Office]
@@ -214,7 +225,7 @@ class Policy(BaseModel):
     hybrid_pickup: bool = False                   # apply online (self or helper), then a PICKUP_MINUTES visit to collect
 ```
 
-**What Nas can model** is exactly what this schema expresses: where offices are (8 sites), their hours per day, wheelchair access, online on/off/only, appointments at offices, mobile units (area, day, hours), the fee, the number of visits, and the group protections (walk-in exemption, fee discounts, capped home visits, transport vouchers, hybrid apply-online-then-collect). Offices can be opened or closed at any of the 15 sites. Anything else is "not supported yet" (§8.5). The protections are manual/free-text levers only: they are not in the fix grid (§6.4), so the demo path's fixes are unchanged.
+**What Nas can model** is exactly what this schema expresses: where offices are (any of the 15 sites), their hours per day, wheelchair access, online on/off/only, appointments at offices, mobile units (area, day, hours), the fee, the number of visits, and the group protections (walk-in exemption, fee discounts, capped home visits, transport vouchers, hybrid apply-online-then-collect). Offices can be opened or closed at any of the 15 sites. Anything else is "not supported yet" (§8.5). The protections are manual/free-text levers only: they are not in the fix grid (§6.4), so the demo path's fixes are unchanged.
 
 ### Simulation output
 ```python
@@ -226,10 +237,10 @@ ReasonCode = Literal[
 class CitizenOutcome(BaseModel):
     citizen_id: str
     status: Literal["served", "hardship", "left_out"]
-    channel: str | None           # office id, "online", or "mobile:<area>:<day>"
+    channel: str | None           # office id, "online", "mobile:<area>:<day>" or "home_visit"
     channel_name_ar: str | None   # e.g. "مكتب العبدلي", "الوحدة المتنقلة في ماركا يوم السبت", "أونلاين"
     channel_name_en: str | None
-    mode: str | None              # car, helper_car, bus, taxi, online
+    mode: str | None              # car, helper_car, bus, taxi, online, home
     bus_transfers: int = 0        # 0, 1 or 2; from travel.py (cross-city trips need a transfer)
     visit_day: Day | None
     travel_minutes: float
@@ -240,7 +251,7 @@ class CitizenOutcome(BaseModel):
 
 class SimResult(BaseModel):
     outcomes: list[CitizenOutcome]
-    kpis: dict                    # pct_served, pct_hardship, pct_left_out, avg_hours_lost, avg_cost_jd
+    kpis: dict                    # pct_served, pct_hardship, pct_left_out, avg_hours_lost, avg_cost_jd, n_*, n_home_visits
     by_group: dict                # tag -> {served, hardship, left_out} percentages
 
 class CompareResult(BaseModel):
@@ -286,7 +297,7 @@ class SensitivityResult(BaseModel):
 ### 6.1 Per-citizen evaluation
 For each citizen, evaluate every available **channel**: each office, each mobile unit, and online. If `online_only`, online is the only channel.
 
-1. **Visit time:** an in-person visit takes `travel there + SERVICE_MINUTES + travel back`. The cost is `fee_jd + travel cost`.
+1. **Visit time:** an in-person visit takes `travel there + SERVICE_MINUTES + travel back`. The cost is the citizen's fee (`fee_jd` minus their largest group discount, rule 9) `+ travel cost`.
 2. **Online:** feasible if `online_enabled`, `has_smartphone`, and `digital_literacy != "low"`. If they lack a smartphone or literacy but `has_helper`, it's feasible **with hardship**. Otherwise not feasible (reasons `NO_SMARTPHONE` / `LOW_DIGITAL_LITERACY`).
 3. **Appointments (offices only):** if `appointment_required`, an office visit first needs an online booking, using rule 2's feasibility (helper allowed, counts as hardship). If they can't book, they make one wasted trip first: `visits_required + 1`, and the reason is added. **Mobile units never need appointments.**
 4. **Travel mode** for an office or mobile unit, evaluated per open day:
@@ -312,6 +323,13 @@ For each citizen, evaluate every available **channel**: each office, each mobile
    - Hardship: only the reasons attached to the chosen option (e.g. `HOURS_CONFLICT_WORK`, `NO_SMARTPHONE` when a helper booked).
    - Served: empty.
 
+9. **Group protections** (per citizen, by their tags; all optional, all off by default):
+   - `appointment_exempt_groups`: rule 3 doesn't apply to them (they walk in).
+   - `fee_discounts`: the citizen pays `fee_jd × (1 − largest discount %)`, online and in person.
+   - `transport_vouchers`: bus and taxi fares are paid up to `amount_jd` per round trip; the taxi's affordability check (`TAXI_MAX_JD`) uses what's left to pay. Private-car costs are not covered.
+   - `hybrid_pickup`: an extra in-person option, never forced: apply online (rule 2; a helper doing it = hardship), then a `PICKUP_MINUTES` visit instead of `SERVICE_MINUTES`, with no appointment needed. The citizen takes whichever option is better.
+   - `home_visits`: after rules 1-8, eligible citizens who aren't served are ranked worst off first (left out, then the heaviest burden; ties by id). The first `slots` of them get a home visit (`HOME_VISIT_MINUTES × visits_required` at home, their fee, no travel) if it's better than their outcome. Ignored when `online_only`.
+
 The engine must be **deterministic** and run 1,000 citizens in well under 1 second (target: under 0.1 s), because the fix grid and the robustness check run it ~40 times.
 
 ### 6.2 Assumptions: set once, then frozen
@@ -319,7 +337,7 @@ Every constant lives in `sim/assumptions.py` with a comment, a one-line rational
 - `# ANCHORED: <source>` if it comes from a public figure in `anchors.json`.
 - `# ASSUMPTION` otherwise (round, plausible values).
 
-Constants include `SERVICE_MINUTES`, `BUS_SPEED_KMH`, `BUS_WAIT_PLUS_TRANSFER_MIN` (per transfer), `CAR_SPEED_KMH`, taxi base fare and per-km rate, `MAX_TRAVEL_MINUTES`, `TAXI_MAX_JD[band]`, `MAX_WORK_HOURS_MISSED[band]`, `HELPER_FREE_FROM`, `HARDSHIP_THRESHOLD`, `COST_WEIGHT`, `WORK_WEIGHT`.
+Constants include `SERVICE_MINUTES`, `BUS_SPEED_KMH`, `BUS_WAIT_PLUS_TRANSFER_MIN` (per transfer), `CAR_SPEED_KMH`, taxi base fare and per-km rate, `MAX_TRAVEL_MINUTES`, `TAXI_MAX_JD[band]`, `MAX_WORK_HOURS_MISSED[band]`, `HELPER_FREE_FROM`, `HARDSHIP_THRESHOLD`, `COST_WEIGHT`, `WORK_WEIGHT`. Two were added later, with the group protections, and committed (`0387862`) before any code used them: `HOME_VISIT_MINUTES` (120: a 2-hour visit window) and `PICKUP_MINUTES` (15: collecting a card applied for online).
 
 **Freeze rule (do not break this):** *Set assumptions once to round, plausible values with a stated rationale. Freeze them before running any scenario. If a scenario's story doesn't appear, change the scenario, not the assumptions.* Never present any of these values as official statistics.
 
@@ -338,6 +356,8 @@ Given a scenario policy, build and score candidate fixes, each a full Policy = s
 - **3 toggles:** a late Thursday at every office (until 19:00), remove `appointment_required`, make every office wheelchair accessible. Skip any toggle that changes nothing.
 - **Pairs:** take the top 5 singles and combine them two at a time, skipping two vans in the same area. About 9–10 pairs.
 
+The group protections (§6.1 rule 9) are deliberately **not** in the grid: they are levers an official sets by hand or in free text, and leaving them out keeps the demo path's fixes, heroes and cached AI fix stable.
+
 Score each against the scenario: `left_out_drop`, `hardship_drop`, `worsens_any_group`. Drop any candidate that worsens a group. **Rank deterministically** by `left_out_drop`, ties broken by `hardship_drop`, then by fewer changes. Return the top 3. The whole grid must run in about 1 s, with no AI.
 
 ### 6.5 Robustness check (`sim/sensitivity.py`)
@@ -351,7 +371,7 @@ If the ranking flips: **don't retune and don't hide it.** Show it ("the order of
 Downtown/Al-Balad (31.951, 35.934) · Abdali (31.962, 35.910) · Jabal Al-Hussein (31.968, 35.920) · Marka (31.975, 35.985) · Wehdat (31.935, 35.940) · Tabarbour (32.000, 35.940) · Sweileh (32.020, 35.840) · Khalda (31.995, 35.835).
 
 ### Candidate office sites (`sites.json`)
-8 fixed sites, one per area. When an office pin is dragged on the map, it **snaps to the nearest site**. This keeps scenarios realistic and keeps AI cache keys stable.
+15 fixed sites: the 7 real CSPD offices plus 8 generic sites, one per area. Offices can be opened at, closed at or moved to any of them. When an office pin is dragged on the map, it **snaps to the nearest site**. This keeps scenarios realistic and keeps AI cache keys stable.
 
 ## 7. API
 
@@ -433,16 +453,19 @@ Policy Panel · Map · Impact Panel. The Citizen Card opens as a drawer over the
   - Office pins are **draggable** and snap to the nearest site. Dropping one re-runs `/compare`, debounced by 300 ms.
 - **Policy Panel:**
   - Preset scenario buttons.
-  - Per-office hours, toggles (online-only, appointments, wheelchair access), "Add mobile unit" (area, day, hours), fee.
+  - Per-office hours and toggles (late Thursday, wheelchair access), a trash button to close an office, and "Open an office" (pick an area).
+  - Rules: online on/off, online-only, appointments.
+  - "Protections for groups": group chips for walk-in without appointment, fee discount (% stepper), transport voucher (JD stepper), home visits (switch, groups, slots) and "apply online, collect in person".
+  - "Add mobile unit" (area, day, hours), fee, visits.
   - Free-text box: *"اكتب السياسة بكلماتك"* / "Describe the policy in your own words" → `/policy/parse` → `ParsePreview` → Apply.
 - **Impact Panel:**
-  - KPI cards with deltas (▲▼).
+  - KPI cards with deltas (▲▼); "home visits used N / slots" when home visits are on.
   - Equity bars by group (elderly, disabled, no-car, offline, low-income, workers) against everyone.
   - "Who is left out" list grouped by reason.
   - **Robustness badge**: "Ranking held 6/6 at ±20%" (or the honest partial result). Clicking it opens `AssumptionsTable`, showing each constant, its value, tag and source.
   - "Suggest fixes" and "Generate report" buttons.
 - **Fix Suggestions:** top 3 engine fixes appear instantly with before/after numbers and badges; explanations fill in when the AI returns (skeleton until then); the AI fix appears last if verified. "Apply" applies a fix to the map.
-- **Citizen Card:** name, age, area, icons for car/smartphone/mobility, outcome numbers, the Arabic voice bubble (`dir="rtl"`), reason chips in the UI language.
+- **Citizen Card:** name, age, area, icons for car/smartphone/mobility, outcome numbers (no travel facts for a home visit), the Arabic voice bubble (`dir="rtl"`), reason chips in the UI language.
 - `SyntheticBadge` always visible: "Synthetic population — demo data, not real people" / "سكان افتراضيون — بيانات تجريبية وليسوا أشخاصاً حقيقيين".
 - Map and KPIs never wait on the AI.
 
@@ -471,7 +494,8 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 - "Make it online-only but keep a Saturday van in Wehdat"
 - "Double the fee"
 - "Require two visits"
-- One unsupported one, e.g. "Add more staff at the Marka office", to rehearse the honest "not supported yet" answer. ("Make it free for people over 65" is supported since the group protections.)
+- Protections: "Make it free for people over 65" / "خلّوها مجانية لكبار السن", "خلّوا كبار السن وذوي الإعاقة يراجعوا بدون موعد", "Home visits for wheelchair users, 30 visits", "ادفعوا أجرة التكسي لذوي الدخل المحدود لحد 3 دنانير", "Let people apply online and just pick up the card", "افتحوا مكتب جديد في ماركا"
+- One unsupported one, "Add more staff at the Marka office", to rehearse the honest "not supported yet" answer.
 
 ## 11. Team split (3 people)
 
@@ -510,7 +534,7 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 2. **0:45–1:15 What Nas is.** 1,000 synthetic citizens of east and west Amman, AI-voiced, anchored to public statistics. Show the baseline map and the synthetic badge. Flip the language once to show it's fully bilingual, then stay in Arabic.
 3. **1:15–3:00 Break it.** Click the `consolidate` preset: 5 of the 7 real offices close, only Tabarbour and Jabal Amman stay. Then type the `digital_first` rules in Arabic in the free-text box, using the **rehearsed sentence** from `demo_requests.json`; show the "understood as" list; Apply. The result must equal the `consolidate_digital_first` preset (if parsing fails, click that preset). Yellow spreads (hardship roughly doubles) and left-out rises. Click the first hero in `heroes.json` (an elderly woman whose son helps her) and read her voice.
 4. **3:00–4:15 Understand it.** Equity bars: elderly and offline citizens hit hardest. Click the robustness badge: "this ranking holds when we move our uncertain assumptions by ±20%."
-5. **4:15–5:45 Fix it.** Click "Suggest fixes": the engine's verified fixes appear instantly, then the AI explains them and adds its own idea, also verified. Apply the best one. Green returns. Click the hero again: she's served now.
+5. **4:15–5:45 Fix it.** Click "Suggest fixes": the engine's verified fixes appear instantly, then the AI explains them and adds its own idea, also verified. Apply the best one. Green returns. Click the hero again: she's served now. (If time allows, or as a judge answer: keep the policy and protect people instead, e.g. walk-in for elderly and disabled, or 20 home visits; left out drops from 0.9% to 0.5%.)
 6. **5:45–6:30 Impact & business.** Who pays: municipalities, ministries, digital transformation programs. Next steps: calibrate with more public data, add more services and cities. One slide with the relatives' real answers next to the simulated voices.
 7. **6:30–7:00** Close with the pitch line. Invite a judge to name a policy during Q&A.
 
@@ -521,6 +545,7 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 - **"Is the AI making things up?"** No. The engine computes every outcome and number. A grounding check rejects any AI text with a number the engine didn't produce, and every AI fix is re-verified by the engine before it's shown.
 - **"What does the AI do that a spreadsheet couldn't?"** See §1.
 - **"Does it reach the people left out?"** See §1. Plus: the relatives' answers slide.
+- **"Can you keep the policy but protect the vulnerable?"** Yes: walk-in exemptions, fee discounts, transport vouchers, capped home visits and apply-online-then-collect, per group. Show one live on the demo path.
 - **"Show us another policy."** Type it live. If it's outside what Nas models, it says so and suggests the closest supported change.
 - **"Business model?"** SaaS per service/municipality plus a setup engagement to calibrate data. Cheap to run: the engine is CPU-only and AI calls are cached.
 - **"Scalability?"** A new service is a policy template + channel rules; a new city is areas + sites + anchors.
@@ -542,6 +567,7 @@ pytest -q
 
 # demo prep (online, after final scenario work)
 python -m scripts.pick_heroes && python -m scripts.find_ai_fix && python -m scripts.warm_cache   # from backend/
+python -m scripts.warm_cache --parse-only   # only the rehearsed free-text requests (demo_requests.json)
 ```
 
 `.env.example` (repo root) lists every setting with a comment: provider keys, model chains per slot
