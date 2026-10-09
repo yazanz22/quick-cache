@@ -165,6 +165,41 @@ class CompareResult(BaseModel):
     worst_groups: list[str]
 
 
+# ------------------------------------------------------ everyday trips (roads)
+
+class DailyTrip(BaseModel):
+    """One citizen's regular trip (work, university or hospital) with and without the closed roads."""
+    citizen_id: str
+    purpose: Literal["work", "university", "hospital"]
+    hub: str
+    hub_name_ar: str
+    hub_name_en: str
+    mode: str                      # car, helper_car, bus, taxi
+    bus_transfers: int = 0
+    days_per_week: int
+    minutes_open: float            # one way, all roads open
+    minutes_closed: float          # one way, with the closures
+    extra_minutes: float           # one way
+    extra_hours_week: float
+    extra_cost_jd_week: float
+    road: str | None = None        # the closed road behind the detour
+    level: Literal["none", "minor", "moderate", "severe"]   # extra one-way minutes: <1, 1-5, 5-15, 15+
+
+
+class DailyResult(BaseModel):
+    closed_roads: list[str]
+    kpis: dict                     # n, n_affected, pct_affected, n_severe, avg/max_extra_minutes, extra_hours_week, extra_cost_jd_week
+    by_group: dict                 # tag -> same keys as kpis
+    by_purpose: dict               # work / university / hospital -> same keys
+    by_road: dict                  # road id -> trips it lengthened
+    calibrated: bool = False       # True when a closed road's detours are scaled by real traffic (road_calibration.json)
+    trips: list[DailyTrip]
+
+
+class DailyRequest(BaseModel):
+    closed_roads: list[str] = []
+
+
 # --------------------------------------------------- fixes, parse, robustness
 
 class FixCandidate(BaseModel):

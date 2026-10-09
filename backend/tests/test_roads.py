@@ -105,3 +105,44 @@ def test_parser_hint_finds_roads_named_in_the_text():
     assert f("سكروا الجاردنز") == ["gardens"] and f("close the Gardens") == ["gardens"]
     assert f("أغلقوا أوتوستراد عمان الزرقاء") == ["amman_zarqa"]
     assert f("close the Marka office") == [] and f("سكّروا شارع الرينبو") == []
+
+
+# ------------------------------------------------------------------ everyday trips
+
+def test_everyone_18_plus_has_one_regular_trip_with_open_road_times():
+    from app.sim import daily
+    trips, hubs = world.daily_trips(), world.hubs()
+    pop = world.population()
+    assert all((c["id"] in trips) == (c["works"] or "student" in c["tags"] or c["age"] >= 25) for c in pop)
+    for cid, t in trips.items():
+        assert t["hub"] in hubs and t["purpose"] == hubs[t["hub"]]["kind"]
+        assert f"hub:{t['hub']}" in world.hub_matrix()[cid]
+    rows = daily.trips(())
+    assert len(rows) == len(trips) and all(r["extra_minutes"] == 0 and r["level"] == "none" for r in rows)
+
+
+def test_closures_lengthen_everyday_trips_and_never_shorten_them():
+    from app.sim import daily
+    r = daily.impact(["queen_rania"])
+    assert r.kpis["n_affected"] > 50 and r.kpis["extra_hours_week"] > 0
+    assert all(t.minutes_closed >= t.minutes_open for t in r.trips)
+    assert all((t.road == "queen_rania") == (t.extra_minutes >= 0.05) for t in r.trips)
+    both = daily.impact(["queen_rania", "airport_road"])
+    one = {t.citizen_id: t.extra_minutes for t in r.trips}
+    assert all(t.extra_minutes >= one[t.citizen_id] - 1e-9 for t in both.trips)
+
+
+def test_airport_road_hits_students_on_the_airport_road_universities():
+    from app.sim import daily
+    r = daily.impact(["airport_road"])
+    hit = {t.hub for t in r.trips if t.level != "none"}
+    assert hit & {"uni_petra", "uni_zaytoonah", "uni_isra", "work_airport"}
+
+
+def test_daily_route_rejects_unknown_roads():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    c = TestClient(app)
+    assert c.post("/daily", json={"closed_roads": ["nope"]}).status_code == 422
+    d = c.post("/daily", json={"closed_roads": ["zahran"]}).json()
+    assert d["kpis"]["n"] == len(world.daily_trips()) and d["by_purpose"]["work"]["n"] > 0
