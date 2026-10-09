@@ -1,0 +1,89 @@
+{
+ "task": "parse",
+ "output": {
+  "status": "unsupported",
+  "policy": null,
+  "changes_ar": [],
+  "changes_en": [],
+  "message_ar": "لا يمكن نمذجة تعديل عدد الموظفين. يمكنك بدلاً من ذلك فتح مكتب جديد أو تغيير ساعات العمل.",
+  "message_en": "Modifying staff count cannot be modelled. You can instead open a new office or change working hours."
+ },
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "seconds": 1.34,
+  "ts": "2026-10-10T01:04:00"
+ },
+ "inputs": {
+  "text": "add more staff at the marka office",
+  "current_policy": {
+   "service": "id_renewal",
+   "offices": [
+    {
+     "id": "office_tabarbour",
+     "name_ar": "مكتب الأحوال المدنية - طبربور (المكتب الرئيسي)",
+     "name_en": "CSPD office - Tabarbour (head office)",
+     "site_id": "cspd_tabarbour",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "13:00"
+      ],
+      "mon": [
+       "08:30",
+       "13:00"
+      ],
+      "tue": [
+       "08:30",
+       "13:00"
+      ],
+      "wed": [
+       "08:30",
+       "13:00"
+      ],
+      "thu": [
+       "08:30",
+       "13:00"
+      ]
+     },
+     "wheelchair_accessible": true
+    },
+    {
+     "id": "office_jabal_amman",
+     "name_ar": "مكتب الأحوال المدنية - جبل عمان",
+     "name_en": "CSPD office - Jabal Amman",
+     "site_id": "cspd_jabal_amman",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "13:00"
+      ],
+      "mon": [
+       "08:30",
+       "13:00"
+      ],
+      "tue": [
+       "08:30",
+       "13:00"
+      ],
+      "wed": [
+       "08:30",
+       "13:00"
+      ],
+      "thu": [
+       "08:30",
+       "13:00"
+      ]
+     },
+     "wheelchair_accessible": true
+    }
+   ],
+   "online_enabled": true,
+   "online_only": false,
+   "mobile_units": [],
+   "appointment_required": true,
+   "fee_jd": 2.0,
+   "visits_required": 1
+  }
+ }
+}

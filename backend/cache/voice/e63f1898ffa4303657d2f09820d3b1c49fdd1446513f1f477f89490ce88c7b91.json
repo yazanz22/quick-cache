@@ -1,0 +1,39 @@
+{
+ "task": "voice",
+ "output": "جددتُ بطاقتي يوم السبت عبر الوحدة المتنقلة في وسط البلد، وذهبتُ بالسيارة حيث استغرقت الرحلة 18 دقيقة في اتجاه واحد. سارت الأمور بشكل جيد، وكلّفتني العملية قرابة 3 دنانير واستغرقت نحو ساعتين من وقتي.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "seconds": 5.55,
+  "ts": "2026-10-10T01:05:09"
+ },
+ "inputs": {
+  "register": "msa",
+  "profile": {
+   "age": 63,
+   "gender": "f",
+   "area_ar": "الوحدات",
+   "mobility": "none",
+   "has_car": true,
+   "has_smartphone": true,
+   "digital_literacy": "low",
+   "works": false,
+   "work_start": null,
+   "work_end": null,
+   "income_band": "high",
+   "helper_relation_ar": null
+  },
+  "outcome": {
+   "status": "served",
+   "reasons": [],
+   "channel_name_ar": "الوحدة المتنقلة في وسط البلد يوم السبت",
+   "mode": "car",
+   "bus_transfers": 0,
+   "visit_day_ar": "السبت",
+   "travel_minutes_one_way": 18,
+   "total_cost_jd": 2.8,
+   "total_hours_lost_incl_waiting": 1.6,
+   "work_hours_missed": 0.0
+  }
+ }
+}

@@ -1,0 +1,39 @@
+{
+ "task": "voice",
+ "output": "جددتُ هويتي يوم السبت عبر الوحدة المتنقلة في وسط البلد دون أن أتغيب عن عملي. ذهبتُ بسيارة أجرة واستغرقت الرحلة 12 دقيقة، ودفعتُ 5 دنانير كتكلفة إجمالية.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "seconds": 12.92,
+  "ts": "2026-10-10T01:04:15"
+ },
+ "inputs": {
+  "register": "msa",
+  "profile": {
+   "age": 38,
+   "gender": "m",
+   "area_ar": "ماركا",
+   "mobility": "none",
+   "has_car": false,
+   "has_smartphone": false,
+   "digital_literacy": "low",
+   "works": true,
+   "work_start": "07:00",
+   "work_end": "16:00",
+   "income_band": "low",
+   "helper_relation_ar": null
+  },
+  "outcome": {
+   "status": "served",
+   "reasons": [],
+   "channel_name_ar": "الوحدة المتنقلة في وسط البلد يوم السبت",
+   "mode": "taxi",
+   "bus_transfers": 0,
+   "visit_day_ar": "السبت",
+   "travel_minutes_one_way": 12,
+   "total_cost_jd": 5.0,
+   "total_hours_lost_incl_waiting": 1.4,
+   "work_hours_missed": 0.0
+  }
+ }
+}

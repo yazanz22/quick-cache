@@ -1,0 +1,107 @@
+{
+ "task": "report",
+ "output": {
+  "summary_ar": "يقارن هذا الملخص سياسة تجديد الهوية المقترحة في عمان مع السياسة الحالية بناءً على محاكاة حتمية لسكان افتراضيون يبلغ عددهم 1000 مواطن. تؤدي السياسة المقترحة إلى انخفاض نسبة المستفيدين بنسبة 8.8 بالمئة، بينما ترتفع نسبة من يعانون من مشقة بنسبة 8.0 بالمئة وتزيد نسبة المتروكين بنسبة 0.8 بالمئة. تُعد فئات كبار السن والأشخاص غير المتصلين بالإنترنت والأشخاص ذوي الإعاقة الأكثر تضرراً، ويرجع ذلك أساساً إلى انخفاض المعرفة الرقمية وعدم وجود هاتف ذكي. أظهرت اختبارات الحساسية عبر 6 تشغيلات استقرار ترتيب الفئات المتضررة في جميع التشغيلات. ينبغي النظر في الإصلاحات المقترحة لتقييم تأثيرها المستقبلي. أدى تطبيق الإصلاح إلى رفع نسبة المستفيدين إلى 90.9 بالمئة، وانخفاض نسبة المتروكين بنسبة 0.8 نقطة مئوية، وانخفاض نسبة المشقة بنسبة 10.5 نقطة مئوية، وتحسن أحوال 117 شخصاً.",
+  "summary_en": "This summary compares the proposed ID-renewal policy in Amman with the current one based on a deterministic simulation of a synthetic population of 1000 citizens. The proposed policy decreases the served percentage by 8.8 percent, increases hardship by 8.0 percent, and raises the left-out percentage by 0.8 percent. The elderly, offline, and disabled groups are hit hardest, mainly due to low digital literacy and no smartphone. Sensitivity tests across 6 runs showed that the group rankings held in all runs. Look into the suggested fixes next for potential improvements. The applied fix resulted in 90.9 percent served, a left-out drop of 0.8 percentage points, a hardship drop of 10.5 percentage points, and 117 people better off."
+ },
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "seconds": 2.36,
+  "ts": "2026-10-10T01:04:26"
+ },
+ "inputs": {
+  "n_citizens": 1000,
+  "baseline_kpis": {
+   "pct_served": 88.4,
+   "pct_hardship": 11.5,
+   "pct_left_out": 0.1,
+   "avg_hours_lost": 0.54,
+   "avg_cost_jd": 2.15
+  },
+  "scenario_kpis": {
+   "pct_served": 79.6,
+   "pct_hardship": 19.5,
+   "pct_left_out": 0.9,
+   "avg_hours_lost": 0.63,
+   "avg_cost_jd": 2.29
+  },
+  "kpi_delta": {
+   "pct_served": -8.8,
+   "pct_hardship": 8.0,
+   "pct_left_out": 0.8,
+   "avg_hours_lost": 0.09,
+   "avg_cost_jd": 0.14
+  },
+  "worst_groups": [
+   "elderly",
+   "offline",
+   "disabled",
+   "low_income",
+   "no_car",
+   "worker"
+  ],
+  "group_deltas": {
+   "elderly": 46.2,
+   "disabled": 17.5,
+   "no_car": 8.8,
+   "offline": 43.1,
+   "low_income": 13.4,
+   "worker": -0.1
+  },
+  "group_scenario": {
+   "elderly": {
+    "hardship": 84.6,
+    "left_out": 3.1
+   },
+   "disabled": {
+    "hardship": 52.2,
+    "left_out": 5.8
+   },
+   "no_car": {
+    "hardship": 22.5,
+    "left_out": 1.5
+   },
+   "offline": {
+    "hardship": 95.6,
+    "left_out": 4.4
+   },
+   "low_income": {
+    "hardship": 29.0,
+    "left_out": 2.7
+   },
+   "worker": {
+    "hardship": 16.2,
+    "left_out": 1.2
+   }
+  },
+  "people_newly_worse": 93,
+  "top_reasons_not_served": {
+   "LOW_DIGITAL_LITERACY": 204,
+   "NO_SMARTPHONE": 44,
+   "TOO_FAR": 23,
+   "HOURS_CONFLICT_WORK": 23
+  },
+  "sensitivity": {
+   "runs": 6,
+   "ranking_held": 6,
+   "fix_still_helps": 6,
+   "passed": true,
+   "stable_top_group": "elderly",
+   "stable_top2": [
+    "elderly",
+    "offline"
+   ]
+  },
+  "applied_fix": {
+   "kpis": {
+    "pct_served": 90.9,
+    "pct_hardship": 9.0,
+    "pct_left_out": 0.1
+   },
+   "left_out_drop": 0.8,
+   "hardship_drop": 10.5,
+   "people_better_off": 117
+  }
+ }
+}
