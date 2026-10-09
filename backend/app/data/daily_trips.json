@@ -1,0 +1,4746 @@
+{
+"_source": "app/data/seed_daily.py, seed 42. SYNTHETIC: one regular trip per citizen, see the rules in that file.",
+"_format": "citizen_id -> {purpose: work|university|hospital, hub: id in hubs.json, days_per_week}",
+"trips": {
+"c_0003": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0004": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0005": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0006": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0007": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0008": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0009": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0010": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0011": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0012": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0013": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0014": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0015": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0016": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0017": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0018": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0019": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0020": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0021": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0022": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0023": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0024": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0025": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0026": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0027": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0028": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0029": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0030": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0031": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0032": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0033": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0034": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0035": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0036": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0037": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0038": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0039": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0040": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0041": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0042": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0043": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0044": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0046": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0047": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0048": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0049": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0050": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0051": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0052": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0054": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0055": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0056": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0057": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0058": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0059": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0060": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0062": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0063": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0064": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0066": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0067": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0068": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0069": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0070": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0071": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0072": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0073": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0074": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0075": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0076": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0077": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0078": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0079": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0080": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0081": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0082": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0083": {
+"purpose": "work",
+"hub": "work_sweileh",
+"days_per_week": 5
+},
+"c_0084": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0086": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0087": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0088": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0089": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0090": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0091": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0093": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0094": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0095": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0096": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0097": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0098": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0099": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0100": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0101": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0102": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0103": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0104": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0105": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0106": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0107": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0108": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0109": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0110": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0111": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0112": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0113": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0114": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0115": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0116": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0117": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0119": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0120": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0121": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0122": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0124": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0125": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0126": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0127": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0128": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0130": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0131": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0132": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0133": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0134": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0135": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0136": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0137": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0138": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0139": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0140": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0141": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0142": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0143": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0144": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0145": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0146": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0147": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0148": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0149": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0150": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0151": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0152": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0153": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0154": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0155": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0156": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0157": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0158": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0159": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0160": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0161": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0162": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0163": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0164": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0165": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0166": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0167": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0168": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0169": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0170": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0171": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0172": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0173": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0174": {
+"purpose": "work",
+"hub": "work_airport",
+"days_per_week": 5
+},
+"c_0175": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0176": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0177": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0178": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0180": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0181": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0182": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0183": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0184": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0185": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0186": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0187": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0188": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0190": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0191": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0192": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0194": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0195": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0196": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0197": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0198": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0199": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0200": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0201": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0202": {
+"purpose": "university",
+"hub": "uni_isra",
+"days_per_week": 5
+},
+"c_0203": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0204": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0205": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0206": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0207": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0208": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0209": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0210": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0211": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0212": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0213": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0214": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0215": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0216": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0217": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0218": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0219": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0220": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0221": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0222": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0223": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0224": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0225": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0226": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0227": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0228": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0230": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0231": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0233": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0234": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0235": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0237": {
+"purpose": "university",
+"hub": "uni_isra",
+"days_per_week": 5
+},
+"c_0238": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0239": {
+"purpose": "university",
+"hub": "uni_ahliyya",
+"days_per_week": 5
+},
+"c_0240": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0241": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0242": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0243": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0244": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0245": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0246": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0247": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0248": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0249": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0250": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0251": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0252": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0253": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0254": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0255": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0256": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0257": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0258": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0259": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0261": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0262": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0263": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0264": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0265": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0266": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0267": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0268": {
+"purpose": "university",
+"hub": "uni_ahliyya",
+"days_per_week": 5
+},
+"c_0269": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0270": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0271": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0272": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0273": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0274": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0275": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0276": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0277": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0278": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0279": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0280": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0281": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0282": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0283": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0284": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0285": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0286": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0287": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0288": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0289": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0290": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0291": {
+"purpose": "work",
+"hub": "work_sweileh",
+"days_per_week": 5
+},
+"c_0292": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0293": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0294": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0295": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0296": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0297": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0298": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0299": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0300": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0301": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0302": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0303": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0304": {
+"purpose": "work",
+"hub": "work_airport",
+"days_per_week": 5
+},
+"c_0305": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0306": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0307": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0308": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0309": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0310": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0311": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0312": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0313": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0314": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0316": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0317": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0318": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0319": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0320": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0321": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0322": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0323": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0324": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0325": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0326": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0327": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0328": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0329": {
+"purpose": "university",
+"hub": "uni_isra",
+"days_per_week": 5
+},
+"c_0330": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0331": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0332": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0333": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0334": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0335": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0336": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0337": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0338": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0339": {
+"purpose": "university",
+"hub": "uni_ahliyya",
+"days_per_week": 5
+},
+"c_0340": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0341": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0342": {
+"purpose": "work",
+"hub": "work_sweileh",
+"days_per_week": 5
+},
+"c_0343": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0344": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0345": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0347": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0348": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0349": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0350": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0351": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0352": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0353": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0354": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0355": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0356": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0357": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0358": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0359": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0360": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0361": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0362": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0363": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0364": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0365": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0366": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0367": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0368": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0369": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0370": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0371": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0372": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0373": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0374": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0375": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0376": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0377": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0378": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0379": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0380": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0381": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0382": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0383": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0384": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0385": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0386": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0388": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0389": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0390": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0391": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0392": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0393": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0394": {
+"purpose": "university",
+"hub": "uni_isra",
+"days_per_week": 5
+},
+"c_0395": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0396": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0397": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0398": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0399": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0400": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0401": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0402": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0403": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0404": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0406": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0407": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0409": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0410": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0411": {
+"purpose": "work",
+"hub": "work_airport",
+"days_per_week": 5
+},
+"c_0412": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0413": {
+"purpose": "university",
+"hub": "uni_ahliyya",
+"days_per_week": 5
+},
+"c_0415": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0416": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0417": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0418": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0419": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0420": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0421": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0422": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0423": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0424": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0425": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0426": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0427": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0428": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0429": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0430": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0431": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0432": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0433": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0434": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0435": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0436": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0437": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0438": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0439": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0440": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0441": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0442": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0443": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0444": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0445": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0446": {
+"purpose": "university",
+"hub": "uni_ahliyya",
+"days_per_week": 5
+},
+"c_0447": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0448": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0449": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0450": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0451": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0452": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0453": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0454": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0455": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0456": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0457": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0458": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0459": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0460": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0461": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0462": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0463": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0464": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0465": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0466": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0467": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0468": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0469": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0470": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0471": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0472": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0473": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0474": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0475": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0476": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0477": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0478": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0479": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0480": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0481": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0482": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0483": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0484": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0485": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0486": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0487": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0488": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0489": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0490": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0491": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0492": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0493": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0494": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0495": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0496": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0497": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0498": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0499": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0500": {
+"purpose": "work",
+"hub": "work_sweileh",
+"days_per_week": 5
+},
+"c_0501": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0503": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0504": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0505": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0506": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0507": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0508": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0509": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0510": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0512": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0513": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0514": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0515": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0516": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0517": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0519": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0520": {
+"purpose": "work",
+"hub": "work_airport",
+"days_per_week": 5
+},
+"c_0521": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0522": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0523": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0524": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0525": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0526": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0527": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0528": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0529": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0530": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0531": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0532": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0533": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0534": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0535": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0536": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0537": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0538": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0539": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0540": {
+"purpose": "work",
+"hub": "work_sweileh",
+"days_per_week": 5
+},
+"c_0541": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0542": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0543": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0545": {
+"purpose": "work",
+"hub": "work_sweileh",
+"days_per_week": 5
+},
+"c_0546": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0547": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0548": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0549": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0550": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0551": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0552": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0553": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0554": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0555": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0556": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0557": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0558": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0559": {
+"purpose": "university",
+"hub": "uni_isra",
+"days_per_week": 5
+},
+"c_0560": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0561": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0562": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0563": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0564": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0565": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0566": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0567": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0568": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0569": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0570": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0571": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0572": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0573": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0574": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0575": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0576": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0578": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0579": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0580": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0581": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0582": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0583": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0584": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0585": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0586": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0587": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0588": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0589": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0590": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0591": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0592": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0594": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0595": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0597": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0598": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0599": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0600": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0601": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0602": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0603": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0604": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0605": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0606": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0607": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0608": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0609": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0610": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0611": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0612": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0613": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0614": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0615": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0616": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0617": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0618": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0619": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0620": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0621": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0622": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0623": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0625": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0626": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0627": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0628": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0629": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0630": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0631": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0632": {
+"purpose": "university",
+"hub": "uni_isra",
+"days_per_week": 5
+},
+"c_0633": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0634": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0635": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0636": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0637": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0638": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0639": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0640": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0641": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0642": {
+"purpose": "university",
+"hub": "uni_isra",
+"days_per_week": 5
+},
+"c_0643": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0645": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0646": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0648": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0649": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0650": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0651": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0653": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0654": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0655": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0656": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0658": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0659": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0660": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0661": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0662": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0663": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0664": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0665": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0666": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0667": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0668": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0669": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0670": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0671": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0672": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0673": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0674": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0675": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0676": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0677": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0678": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0679": {
+"purpose": "university",
+"hub": "uni_isra",
+"days_per_week": 5
+},
+"c_0680": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0681": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0682": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0683": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0684": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0685": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0686": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0687": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0688": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0689": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0691": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0692": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0693": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0694": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0695": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0696": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0698": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0699": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0700": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0701": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0702": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0703": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0704": {
+"purpose": "university",
+"hub": "uni_ahliyya",
+"days_per_week": 5
+},
+"c_0705": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0706": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0707": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0708": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0709": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0711": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0712": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0713": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0714": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0715": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0716": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0717": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0718": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0719": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0720": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0721": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0722": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0723": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0724": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0726": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0727": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0728": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0729": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0730": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0731": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0732": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0733": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0734": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0735": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0736": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0737": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0738": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0739": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0740": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0741": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0742": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0743": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0744": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0745": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0746": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0747": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0748": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0749": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0750": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0751": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0752": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0753": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0754": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0755": {
+"purpose": "university",
+"hub": "uni_isra",
+"days_per_week": 5
+},
+"c_0756": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0757": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0758": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0759": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0760": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0761": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0762": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0763": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0764": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0765": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0766": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0767": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0768": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0769": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0770": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0771": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0772": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0773": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0774": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0776": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0777": {
+"purpose": "work",
+"hub": "work_sweileh",
+"days_per_week": 5
+},
+"c_0780": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0781": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0782": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0784": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0785": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0786": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0787": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0788": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0789": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0790": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0791": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0792": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0794": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0795": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0796": {
+"purpose": "university",
+"hub": "uni_ahliyya",
+"days_per_week": 5
+},
+"c_0797": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0798": {
+"purpose": "university",
+"hub": "uni_isra",
+"days_per_week": 5
+},
+"c_0799": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0800": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0801": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0802": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0803": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0804": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0805": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0806": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0807": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0808": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0809": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0810": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0811": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0812": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0813": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0814": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0815": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0816": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0817": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0818": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0819": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0820": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0821": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0822": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0824": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0825": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0826": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0827": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0828": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0829": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0830": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0832": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0833": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0834": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0835": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0836": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0837": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0838": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0839": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0840": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0841": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0842": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0843": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0844": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0845": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0846": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0847": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0848": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0849": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0850": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0851": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0852": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0853": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0854": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0856": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0857": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0858": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0859": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0860": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0861": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0862": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0863": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0864": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0865": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0866": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0867": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0868": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0869": {
+"purpose": "work",
+"hub": "work_sweileh",
+"days_per_week": 5
+},
+"c_0870": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0871": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0872": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0873": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0874": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0875": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0876": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0877": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0878": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0879": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0880": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0881": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0882": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0883": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0884": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0885": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0886": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0887": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0888": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0889": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0890": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0891": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0892": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0893": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0894": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0895": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0896": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0897": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0898": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0899": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0900": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0901": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0902": {
+"purpose": "work",
+"hub": "work_marka",
+"days_per_week": 5
+},
+"c_0903": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0904": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0905": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0906": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0907": {
+"purpose": "university",
+"hub": "uni_zaytoonah",
+"days_per_week": 5
+},
+"c_0908": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0909": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0910": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0911": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0912": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0913": {
+"purpose": "work",
+"hub": "work_airport",
+"days_per_week": 5
+},
+"c_0914": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0915": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0916": {
+"purpose": "work",
+"hub": "work_abu_alanda",
+"days_per_week": 5
+},
+"c_0917": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0918": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0919": {
+"purpose": "university",
+"hub": "uni_isra",
+"days_per_week": 5
+},
+"c_0920": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0921": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0923": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0924": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0925": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0926": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0927": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0928": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0929": {
+"purpose": "work",
+"hub": "work_sweileh",
+"days_per_week": 5
+},
+"c_0930": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0931": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0933": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0934": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0935": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0936": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0937": {
+"purpose": "university",
+"hub": "uni_asu",
+"days_per_week": 5
+},
+"c_0938": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0939": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0940": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0941": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0942": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0943": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0944": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0945": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0946": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_0947": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0948": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0949": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0950": {
+"purpose": "work",
+"hub": "work_jabal_amman",
+"days_per_week": 5
+},
+"c_0951": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0952": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0953": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0954": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0955": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0956": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0957": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0958": {
+"purpose": "work",
+"hub": "work_mecca_st",
+"days_per_week": 5
+},
+"c_0959": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0960": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0961": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0962": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0963": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0964": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0965": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0966": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0967": {
+"purpose": "work",
+"hub": "work_gardens",
+"days_per_week": 5
+},
+"c_0969": {
+"purpose": "university",
+"hub": "uni_ju",
+"days_per_week": 5
+},
+"c_0971": {
+"purpose": "work",
+"hub": "work_shmeisani",
+"days_per_week": 5
+},
+"c_0972": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0973": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0974": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0975": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0976": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0977": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0978": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0979": {
+"purpose": "university",
+"hub": "uni_psut",
+"days_per_week": 5
+},
+"c_0980": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0981": {
+"purpose": "work",
+"hub": "work_sahab",
+"days_per_week": 5
+},
+"c_0982": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0983": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0984": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0985": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0986": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0987": {
+"purpose": "work",
+"hub": "work_wehdat",
+"days_per_week": 5
+},
+"c_0988": {
+"purpose": "hospital",
+"hub": "hosp_khmc",
+"days_per_week": 1
+},
+"c_0989": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0990": {
+"purpose": "work",
+"hub": "work_khbp",
+"days_per_week": 5
+},
+"c_0991": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0992": {
+"purpose": "work",
+"hub": "work_sweifieh",
+"days_per_week": 5
+},
+"c_0993": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0994": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+},
+"c_0995": {
+"purpose": "hospital",
+"hub": "hosp_hamzah",
+"days_per_week": 1
+},
+"c_0996": {
+"purpose": "hospital",
+"hub": "hosp_juh",
+"days_per_week": 1
+},
+"c_0997": {
+"purpose": "work",
+"hub": "work_downtown",
+"days_per_week": 5
+},
+"c_0998": {
+"purpose": "work",
+"hub": "work_abdali",
+"days_per_week": 5
+},
+"c_0999": {
+"purpose": "university",
+"hub": "uni_petra",
+"days_per_week": 5
+},
+"c_1000": {
+"purpose": "hospital",
+"hub": "hosp_bashir",
+"days_per_week": 1
+}
+}
+}

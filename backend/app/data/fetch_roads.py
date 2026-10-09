@@ -9,8 +9,8 @@ How a closure is modelled:
    free-flow speeds per road class, see SPEED_KMH). Turn restrictions are ignored.
 2. Each catalogue road is identified by its OSM Arabic name (all ways with that exact name, plus any listed
    variants). Bridges and tunnels of OTHER streets crossing it stay open.
-3. For every citizen and every destination in travel_matrix.json (15 sites + 8 area centres) we route twice on this
-   graph: with all roads open, and with the road's ways removed. The difference (extra seconds, extra metres) is
+3. For every citizen and every destination in travel_matrix.json (15 sites + 8 area centres), and for each citizen's
+   everyday-trip hub (daily_trips.json, hub_matrix.json), we route twice on this graph: with all roads open, and with the road's ways removed. The difference (extra seconds, extra metres) is
    the closure's detour. The engine adds it on top of the OSRM time and distance it already uses, so a closure
    never changes trips that don't use the road, and the open-road numbers stay exactly as before.
 4. Detour metres are clamped at 0 (a detour can be shorter but slower; a closure never makes a trip cheaper).
@@ -31,7 +31,7 @@ from .fetch_map_data import overpass
 
 DATA = Path(__file__).resolve().parent
 RAW = DATA / "_raw" / "road_network.json"
-BBOX = (31.82, 35.72, 32.10, 36.12)  # south, west, north, east: all citizens, sites and areas + a margin for detours
+BBOX = (31.70, 35.72, 32.10, 36.12)  # south, west, north, east: citizens, sites, areas and hubs (airport) + a margin
 
 DRIVE = ("motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|"
          "motorway_link|trunk_link|primary_link|secondary_link|tertiary_link")
@@ -42,14 +42,16 @@ SPEED_KMH = {"motorway": 80, "trunk": 65, "primary": 50, "secondary": 40, "terti
              "secondary_link": 30, "tertiary_link": 25}
 SNAP_CLASSES = {"tertiary", "unclassified", "residential", "living_street"}  # homes and offices sit on local streets
 MIN_DELTA_S = 1.0  # store only detours of at least a second
-# Zarqa city (east of here) has its own streets named Queen Rania, Army, Prince Al-Hasan, Wasfi Al-Tal...; a road
-# only includes ways west of this longitude unless it sets its own "max_lng" (the Amman-Zarqa highway).
+# Zarqa city (east) and the towns south of Amman (Na'ur, Madaba) have their own streets named Queen Rania, Army,
+# Prince Al-Hasan, Al-Quds...; a road only includes ways inside Amman unless it sets its own "max_lng" / "min_lat"
+# (the Amman-Zarqa highway runs east, Airport Road runs south to the airport).
 AMMAN_MAX_LNG = 36.05
+AMMAN_MIN_LAT = 31.82
 
 # The catalogue: 19 major Amman roads. `osm` = exact OSM `name` values (Arabic) of the ways that make up the road.
 ROADS = [
     {"id": "airport_road", "name_ar": "طريق المطار", "name_en": "Airport Road",
-     "osm": ["شارع مطار الملكة علياء"]},
+     "osm": ["شارع مطار الملكة علياء"], "min_lat": 31.70},
     {"id": "zahran", "name_ar": "شارع زهران", "name_en": "Zahran Street", "osm": ["شارع زهران"]},
     {"id": "cairo", "name_ar": "شارع القاهرة", "name_en": "Cairo Street", "osm": ["شارع القاهرة"]},
     {"id": "queen_rania", "name_ar": "شارع الملكة رانيا", "name_en": "Queen Rania Street",
@@ -116,10 +118,10 @@ def _speed(tags: dict) -> float:
     return float(SPEED_KMH.get(tags["highway"], 30))
 
 
-def _road_of(name: str | None, lng: float) -> int:
+def _road_of(name: str | None, lat: float, lng: float) -> int:
     """Catalogue index of a way (by its OSM name and position), or -1 for any other street."""
     for i, r in enumerate(ROADS):
-        if name in r["osm"] and lng <= r.get("max_lng", AMMAN_MAX_LNG):
+        if name in r["osm"] and lng <= r.get("max_lng", AMMAN_MAX_LNG) and lat >= r.get("min_lat", AMMAN_MIN_LAT):
             return i
     return -1
 
@@ -152,7 +154,8 @@ class Graph:
         for w in ways:
             t = w["tags"]
             hw = t["highway"]
-            r = _road_of(t.get("name"), sum(coords[n][1] for n in w["nodes"]) / len(w["nodes"]))
+            r = _road_of(t.get("name"), sum(coords[n][0] for n in w["nodes"]) / len(w["nodes"]),
+                         sum(coords[n][1] for n in w["nodes"]) / len(w["nodes"]))
             ow = t.get("oneway")
             forward_only = ow in ("yes", "true", "1") or hw == "motorway" or t.get("junction") in ("roundabout", "circular")
             backward_only = ow == "-1"
@@ -248,6 +251,32 @@ class Graph:
                     heapq.heappush(pq, (ns, m + em, u))
         return sec, met
 
+    def route(self, src: int, target: int, closed: int = -1) -> tuple[list[int], float]:
+        """Vertices of the fastest route src -> target avoiding road `closed`, and its free-flow seconds."""
+        INF = math.inf
+        sec, par = [INF] * len(self.coords), [-1] * len(self.coords)
+        sec[target] = 0.0
+        pq = [(0.0, target)]
+        while pq:
+            s, v = heapq.heappop(pq)
+            if s > sec[v]:
+                continue
+            if v == src:
+                break
+            for u, es, em, r in self.rev[v]:
+                if r == closed and r >= 0:
+                    continue
+                if s + es < sec[u]:
+                    sec[u], par[u] = s + es, v
+                    heapq.heappush(pq, (s + es, u))
+        if not math.isfinite(sec[src]):
+            return [], INF
+        path, v = [src], src
+        while v != target:
+            v = par[v]
+            path.append(v)
+        return path, sec[src]
+
 
 # --------------------------------------------------------------------- build
 
@@ -268,6 +297,11 @@ def build() -> None:
     sites = json.loads((DATA / "sites.json").read_text(encoding="utf-8"))["sites"]
     areas = json.loads((DATA / "areas.json").read_text(encoding="utf-8"))["areas"]
     dests = [(s["id"], s["lat"], s["lng"]) for s in sites] + [(f"area:{a['id']}", a["lat"], a["lng"]) for a in areas]
+    # Everyday-trip hubs: only the citizens assigned to each hub need its detours.
+    hubs = json.loads((DATA / "hubs.json").read_text(encoding="utf-8"))["hubs"]
+    trips = json.loads((DATA / "daily_trips.json").read_text(encoding="utf-8"))["trips"]
+    dests += [(f"hub:{h['id']}", h["lat"], h["lng"]) for h in hubs]
+    who = {f"hub:{h['id']}": {cid for cid, t in trips.items() if t["hub"] == h["id"]} for h in hubs}
     home = [g.snap(c["lat"], c["lng"]) for c in pop]
     dest_v = {d: g.snap(lat, lng) for d, lat, lng in dests}
 
@@ -288,6 +322,8 @@ def build() -> None:
         for i, r in enumerate(ROADS):
             cs, cm = g.to_target(v, closed=i)
             for c, h in zip(pop, home):
+                if d in who and c["id"] not in who[d]:
+                    continue
                 if not math.isfinite(open_s[h]):
                     continue
                 if not math.isfinite(cs[h]):
