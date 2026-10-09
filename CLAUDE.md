@@ -132,9 +132,10 @@ nas/
 │   │       ├── sites.json      # 15 office sites: the 7 real CSPD offices + 8 generic snap sites
 │   │       ├── population.json # 1,000 synthetic citizens, committed so everyone has the same people
 │   │       ├── travel_matrix.json, home_points.json  # fetched once (OSRM / OpenStreetMap)
-│   │       ├── roads.json, road_deltas.json  # closable roads + per-road detours (fetch_roads.py)
+│   │       ├── roads.json, road_deltas.json, road_calibration.json  # closable roads, detours, TomTom factors
+│   │       ├── hubs.json, daily_trips.json, hub_matrix.json, seed_daily.py  # everyday trips (synthetic, seed 42)
 │   │       └── scenarios/      # baseline + presets (demo one flagged "demo": true), heroes.json, demo_requests.json
-│   ├── scripts/                # pick_heroes.py, find_ai_fix.py, warm_cache.py, road_impact.py
+│   ├── scripts/                # pick_heroes.py, find_ai_fix.py, warm_cache.py, road_impact.py, calibrate_roads.py
 │   ├── cache/                  # AI cache files (committed for offline mode)
 │   └── tests/                  # test_engine.py, test_fixgrid.py, test_llm.py (offline, no AI calls)
 └── nas-frontend/               # static UI, no build step (see its README)
@@ -208,10 +209,10 @@ class Policy(BaseModel):
     appointment_required: bool = False  # applies to OFFICES only, see §6.1 rule 3
     fee_jd: float
     visits_required: int = 1
-    closed_roads: list[str] = []  # ids from roads.json (19 major roads); trips that used them take the detour (§6.1 rule 4)
+    closed_roads: list[str] = []  # ids from roads.json (18 major roads); trips that used them take the detour (§6.1 rule 4)
 ```
 
-**What Nas can model** is exactly what this schema expresses: where offices are (8 sites), their hours per day, wheelchair access, online on/off/only, appointments at offices, mobile units (area, day, hours), the fee, the number of visits, and which of the 19 catalogue roads are closed (all day, every day). Anything else is "not supported yet" (§8.5).
+**What Nas can model** is exactly what this schema expresses: where offices are (8 sites), their hours per day, wheelchair access, online on/off/only, appointments at offices, mobile units (area, day, hours), the fee, the number of visits, and which of the 18 catalogue roads are closed (all day, every day). Anything else is "not supported yet" (§8.5).
 
 ### Simulation output
 ```python
@@ -293,7 +294,7 @@ For each citizen, evaluate every available **channel**: each office, each mobile
    - `taxi` if its cost is within the income band's `TAXI_MAX_JD`. Above that, taxi is **infeasible** with reason `TOO_EXPENSIVE`.
    - Wheelchair users need `wheelchair_accessible` (mobile units always are) and cannot use the bus.
    - A mode whose one-way time exceeds `MAX_TRAVEL_MINUTES` is infeasible with reason `TOO_FAR`. If no mode exists at all (no car, no free helper, no bus, taxi unaffordable): `NO_TRANSPORT`.
-   - **Closed roads:** if the policy closes roads, a trip's road time and distance get that road's detour from `road_deltas.json` (routed once on the OSM network with the road removed, `fetch_roads.py`), so car, taxi and bus all slow down and taxis cost more. Several closures: the largest single-road detour per trip (a lower bound). Homes that open onto the road keep local access. The outcome records `detour_minutes` and `detour_road`.
+   - **Closed roads:** if the policy closes roads, a trip's road time and distance get that road's detour from `road_deltas.json` (routed once on the OSM network with the road removed, `fetch_roads.py`), so car, taxi and bus all slow down and taxis cost more. Several closures: the largest single-road detour per trip (a lower bound). Detour times are scaled per road by `road_calibration.json` (TomTom's measured speeds; no traffic data exists for Amman there, so congestion is not modelled). The same detours drive the everyday-trips module (`sim/daily.py`, `POST /daily`): each citizen's regular trip to work, university or hospital. Homes that open onto the road keep local access. The outcome records `detour_minutes` and `detour_road`.
    - Among feasible modes, pick the lowest burden (rule 6).
 5. **Time slot:** the channel must be open on some day for the full visit duration.
    - Non-workers: any open day works; pick the lowest-burden day.
@@ -359,6 +360,7 @@ Downtown/Al-Balad (31.951, 35.934) · Abdali (31.962, 35.910) · Jabal Al-Hussei
 | GET | `/scenarios` | Preset scenarios (baseline + demo presets) |
 | GET | `/sites` | Candidate office sites |
 | GET | `/roads` | Closable major roads with map geometry |
+| POST | `/daily` | `{closed_roads}` → everyday-trip impact (work, university, hospital) per person, group and purpose |
 | GET | `/assumptions` | All constants with value, rationale, tag and source (for `AssumptionsTable`) |
 | POST | `/simulate` | `{policy}` → `SimResult` |
 | POST | `/compare` | `{baseline, scenario}` → `CompareResult` |
