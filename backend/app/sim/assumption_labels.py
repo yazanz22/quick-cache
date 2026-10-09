@@ -8,7 +8,7 @@ LABELS = {
     "HOME_VISIT_MINUTES": ("مدة الزيارة المنزلية", "Home visit time", "انتظار الموظف في البيت ضمن نافذة زيارة مدتها ساعتان"),
     "PICKUP_MINUTES": ("مدة استلام البطاقة", "Card pickup time", "زيارة قصيرة للشباك لاستلام بطاقة قُدّم طلبها إلكترونياً"),
     "TRAFFIC_FACTOR": ("معامل الازدحام", "Traffic factor", "زمن الرحلة نهاراً مقارنة بأزمنة OSRM دون ازدحام (الأزمنة نفسها من بيانات OpenStreetMap)"),
-    "ROAD_FACTOR": ("معامل طول الطريق (احتياطي)", "Road factor (fallback)", "احتياطي فقط: نسبة طول الطريق إلى الخط المستقيم (الوسيط في OSRM هو 1.51)"),
+    "ROAD_FACTOR": ("معامل طول الطريق (احتياطي)", "Road factor (fallback)", "احتياطي فقط: نسبة طول الطريق إلى الخط المستقيم (الوسيط في OSRM نحو 1.4-1.5)"),
     "CAR_SPEED_KMH": ("سرعة السيارة (احتياطي)", "Car speed (fallback)", "احتياطي فقط: سرعة السيارة في المدينة مع الازدحام"),
     "CAR_PARK_MIN": ("وقت الاصطفاف", "Parking time", "الاصطفاف والمشي حتى الشباك"),
     "CAR_COST_PER_KM_JD": ("كلفة السيارة لكل كم", "Car cost per km", "الوقود والاستهلاك لكل كيلومتر"),
@@ -31,9 +31,21 @@ LABELS = {
     "WORK_WEIGHT": ("وزن ساعات العمل الضائعة", "Work-hours weight", "وزن إضافي لكل ساعة عمل ضائعة"),
 }
 
+# Arabic text of the `source` notes in assumptions.META (same constants, same meaning; the tag stays ASSUMPTION).
+SOURCE_AR = {
+    "TRAFFIC_FACTOR": "يُضرب في أزمنة OSRM دون ازدحام (بيانات OpenStreetMap)؛ لم نجد بيانات ازدحام لعمّان",
+    "ROAD_FACTOR": "مصفوفة OSRM: وسيط نسبة طول الطريق إلى الخط المستقيم 1.44",
+    "BUS_FIRST_WAIT_MIN": "دراسة من عام 2017 أوردها بحثنا قاست انتظاراً يقارب 25 دقيقة وقت الذروة (غير مُتحقَّق منها)؛ نفترض 10 دقائق، و15 دقيقة لكل تبديل، خارج الذروة",
+    "BUS_WAIT_PLUS_TRANSFER_MIN": "دراسة انتظار الذروة نفسها من عام 2017 (غير مُتحقَّق منها)؛ تُختبر هذه القيمة عند ±20%",
+    "BUS_FARE_JD": "الأجرة العامة بين 0.34 و0.55 دينار لكل ركوب، من بحثنا، غير مُتحقَّق منها",
+    "TAXI_BASE_JD": "لم نجد تعرفة موثَّقة لسيارات الأجرة صادرة عن هيئة تنظيم النقل البري",
+    "TAXI_PER_KM_JD": "لم نجد تعرفة موثَّقة لسيارات الأجرة صادرة عن هيئة تنظيم النقل البري",
+}
+
 
 def label_rows(rows: list[dict]) -> list[dict]:
     for r in rows:
         ar, en, why_ar = LABELS.get(r["name"], (None, None, None))
-        r.update(label_ar=ar, label_en=en, rationale_en=r["rationale"], rationale_ar=why_ar or r["rationale"])
+        r.update(label_ar=ar, label_en=en, rationale_en=r["rationale"], rationale_ar=why_ar or r["rationale"],
+                 source_en=r.get("source"), source_ar=SOURCE_AR.get(r["name"]) if r.get("source") else None)
     return rows

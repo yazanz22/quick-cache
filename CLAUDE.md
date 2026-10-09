@@ -36,7 +36,7 @@ Nas then **finds fixes**. The engine searches a grid of candidate fixes and veri
 |---|---|
 | Impact on Jordan | Directly answers "who is left out?" for elderly, disabled, low-income, no-car and no-smartphone residents. |
 | Innovation | Policy testing on a synthetic population, with an engine that searches and verifies fixes and an AI that turns Arabic sentences into policies and numbers into human voices. |
-| Feasibility & Scalability | Population anchored to public Department of Statistics figures; add services and cities by data, not code. Sold as SaaS to municipalities and ministries. |
+| Feasibility & Scalability | Population anchored to published figures where we found them (MoDEE 2024 ICT survey, verified; DoS and census figures quoted by our desk research, labelled CITED); add services and cities by data, not code. Sold as SaaS to municipalities and ministries. |
 | Technical Implementation | Deterministic, tested engine; robustness check; structured AI outputs with fallbacks; offline demo mode. Synthetic data clearly labelled. |
 | UX & Design | Map-first UI for officials, fully bilingual Arabic/English with an RTL layout and a language toggle. |
 | Pitch | A live "change the policy → watch who falls out → fix it → watch them come back" moment. |
@@ -44,7 +44,7 @@ Nas then **finds fixes**. The engine searches a grid of candidate fixes and veri
 ### The answers to have ready
 - **"Does your app reach the people left out?"** *"We reach them before the policy does. Excluded people are counted before launch instead of discovered after."*
 - **"What does the AI do that a spreadsheet couldn't?"** *"The engine makes it honest; the AI makes it usable. It turns an official's Arabic sentence into a testable policy, turns 1,000 rows into the voice of the person left out, and proposes fixes nobody listed. The engine verifies every one."*
-- **"Didn't you just tune the numbers to get this result?"** *"No. Assumptions were frozen before we ran any scenario, the key ones are anchored to public statistics, and the result holds when we move the uncertain ones by ±20%. Click the badge."*
+- **"Didn't you just tune the numbers to get this result?"** *"No. The population is anchored to published figures where we found them; the engine constants are labelled assumptions, frozen before any scenario ran and tested at ±20%: the result holds. Click the badge."*
 
 ## 2. Core design principle (do not break this)
 
@@ -93,8 +93,12 @@ Nas then **finds fixes**. The engine searches a grid of candidate fixes and veri
 ```
 nas/
 ├── CLAUDE.md
-├── README.md
+├── README.md                   # run it, API, data, "What is real and what is assumed"
+├── HANDOFF.md                  # project state and demo numbers for the next person (or AI session)
+├── render.yaml                 # Render blueprint (free web service: one server for UI + API)
 ├── .env.example                # see §15
+├── .gitignore                  # also ignores .claude/ (desktop-app local config)
+├── "Amman in a Box_ A Verified Statistical Blueprint for Policy Simulation.md"  # AI-assisted desk research (Qwen), unverified unless ANCHORED in anchors.json
 ├── backend/
 │   ├── requirements.txt
 │   ├── app/
@@ -105,7 +109,7 @@ nas/
 │   │   │   ├── sim_routes.py   # /population, /scenarios, /sites, /areas, /heroes, /assumptions, /simulate, /compare, /fixgrid, /sensitivity
 │   │   │   └── llm_routes.py   # /policy/parse, /citizen/voice, /report, /fixes, /llm/status
 │   │   ├── sim/
-│   │   │   ├── assumptions.py  # every tunable constant, each with a comment, a rationale and an "ASSUMPTION" or "ANCHORED" tag
+│   │   │   ├── assumptions.py  # every tunable constant, each with a comment, a rationale, a tag (all 26 are ASSUMPTION) and an optional context source
 │   │   │   ├── assumption_labels.py # Arabic/English labels for the assumptions table (text only, no values)
 │   │   │   ├── travel.py       # OSRM road distances/times, mode times and costs, bus transfers
 │   │   │   ├── engine.py       # simulate(policy, population, assumptions=None) -> SimResult
@@ -127,7 +131,7 @@ nas/
 │   │       ├── seed.py         # shared helpers for seed_census: names, shifts, helper relations, tag rules
 │   │       ├── census/         # seed_census outputs: VALIDATION.md, targets.json, reference CSV/JSON sets
 │   │       ├── fetch_map_data.py # one-time OSM/OSRM fetches: home_points.json, travel_matrix.json
-│   │       ├── anchors.json    # public figures, each with status, source name, URL, year
+│   │       ├── anchors.json    # public figures, each with status (ANCHORED / TEAM_CONFIRMED / CITED_UNVERIFIED), source name, URL, year (docs only, not read at runtime)
 │   │       ├── areas.json      # the 8 engine areas: name_ar, name_en, lat, lng, side
 │   │       ├── sites.json      # 15 office sites: the 7 real CSPD offices + 8 generic snap sites
 │   │       ├── population.json # 1,000 synthetic citizens, committed so everyone has the same people
@@ -135,13 +139,14 @@ nas/
 │   │       └── scenarios/      # baseline + presets (demo one flagged "demo": true), heroes.json, demo_requests.json
 │   ├── scripts/                # pick_heroes.py, find_ai_fix.py, warm_cache.py
 │   ├── cache/                  # AI cache files (committed for offline mode)
-│   └── tests/                  # test_engine.py, test_fixgrid.py, test_llm.py, test_levers.py (offline, no AI calls)
+│   └── tests/                  # test_engine.py, test_fixgrid.py, test_llm.py, test_levers.py, test_demo.py (offline, no AI calls)
 └── nas-frontend/               # static UI, no build step (see its README)
     ├── index.html              # layout + all CSS (light/dark, RTL, responsive)
     ├── config.js               # backend URL, timeouts, offline map switch, fallback areas/heroes
     ├── api.js                  # the ONLY file that knows routes and JSON shapes (normalisers)
     ├── i18n.js                 # every UI string, ar + en
-    └── app.js                  # UI logic: rendering, map, events, request ordering
+    ├── app.js                  # UI logic: rendering, map, events, request ordering
+    └── vendor/                 # local copies of Leaflet, Phosphor icons, IBM Plex fonts (offline demo; see vendor/README.md)
 ```
 
 ## 5. Data model (contract, freeze it in the first hour)
@@ -168,6 +173,10 @@ class Citizen(BaseModel):
     helper_relation_ar: str | None  # e.g. "ابني", "بنتي", "جاري"; voices may only mention this person
     helper_relation_en: str | None  # "my son", "my daughter", "my neighbour"
     tags: list[str]               # derived by seed.derive_tags, see rules below
+    # Optional display fields from seed_census.py, ignored by the engine:
+    district: str | None = None          # GAM district id, e.g. "bader"
+    neighbourhood: str | None = None     # e.g. "Jabal Nazzal"
+    neighbourhood_ar: str | None = None  # e.g. "جبل النزال"
 ```
 
 Tag rules (derived, never set by hand):
@@ -337,16 +346,24 @@ Every constant lives in `sim/assumptions.py` with a comment, a one-line rational
 - `# ANCHORED: <source>` if it comes from a public figure in `anchors.json`.
 - `# ASSUMPTION` otherwise (round, plausible values).
 
+**Today all 26 constants are `ASSUMPTION`.** Where our desk research gives context for one (bus fare range, a peak
+bus-wait study, the OSRM road ratio), the assumptions table shows it in a `source` note (`META` in `assumptions.py`,
+Arabic in `assumption_labels.SOURCE_AR`); that note never upgrades the tag.
+
 Constants include `SERVICE_MINUTES`, `BUS_SPEED_KMH`, `BUS_WAIT_PLUS_TRANSFER_MIN` (per transfer), `CAR_SPEED_KMH`, taxi base fare and per-km rate, `MAX_TRAVEL_MINUTES`, `TAXI_MAX_JD[band]`, `MAX_WORK_HOURS_MISSED[band]`, `HELPER_FREE_FROM`, `HARDSHIP_THRESHOLD`, `COST_WEIGHT`, `WORK_WEIGHT`. Two were added later, with the group protections, and committed (`0387862`) before any code used them: `HOME_VISIT_MINUTES` (120: a 2-hour visit window) and `PICKUP_MINUTES` (15: collecting a card applied for online).
 
 **Freeze rule (do not break this):** *Set assumptions once to round, plausible values with a stated rationale. Freeze them before running any scenario. If a scenario's story doesn't appear, change the scenario, not the assumptions.* Never present any of these values as official statistics.
 
 ### 6.3 Population anchors
 `anchors.json` records the public figures (the census generator, `seed_census.py`, documents its own targets in `data/census/VALIDATION.md`). Spend at most **30 minutes** sourcing real public figures; anything not found stays an `# ASSUMPTION`. Never invent a value and label it as sourced. Targets:
-1. Share of residents aged 65+ in Amman governorate (Department of Statistics population estimates or Census).
-2. Household car ownership rate (DoS household surveys or the Jordan Statistical Yearbook).
-3. Smartphone or internet use, ideally by age group (DoS / Ministry of Digital Economy ICT household survey).
-4. Optional: disability prevalence (Census).
+1. Share of residents aged 65+ in Amman governorate (DoS population estimates or Census). *Result: not found; ~6.5% of adults is an ASSUMPTION.*
+2. Household car ownership rate (DoS household surveys or the Jordan Statistical Yearbook). *Result: not found; "drives own car" 46.6% is DERIVED from two CITED figures.*
+3. Smartphone or internet use, ideally by age group (MoDEE ICT household survey). *Result: MoDEE 2024, 95.6% internet use, 99% smartphone households in Amman, 38.1% e-gov use: ANCHORED (no age breakdown, so the age gradient is an ASSUMPTION).*
+4. Optional: disability prevalence (Census). *Result: 11.2% (5+, 2015 census) and 49.3% (65+), CITED_UNVERIFIED.*
+
+Status words (`anchors.json`, `VALIDATION.md`): **ANCHORED** = the team opened the source and checked it;
+**TEAM_CONFIRMED** = confirmed by the team, link not yet recorded (the JD 2 fee, the 08:30-15:30 hours);
+**CITED** / CITED_UNVERIFIED = quoted by the AI-assisted desk research, not verified by us.
 
 Per-area variation (some areas older, poorer, fewer cars) stays a labelled synthetic assumption.
 
@@ -408,7 +425,7 @@ Every AI task except voices returns JSON, validated with Pydantic. On a validati
 Extract every number from AI text (Arabic-Indic and Western digits). Each must match a number in the inputs (rounded). If any doesn't, discard the text and use the fallback. Same check for the report and fix explanations.
 
 ### 8.4 Caching
-`llm/cache.py` keys each call by `sha256(task + canonical_json(inputs))`, deliberately **without** provider or model. Free text is normalized before hashing (trim, collapse whitespace, unify Arabic letter variants such as أ/إ/آ→ا and ى→ي, strip tashkeel), so a stray space doesn't miss the cache. Leaving the provider out of the key means the fallback provider's answer still counts as a hit. Provider, model and timestamp are stored inside the entry as metadata. Entries go in `backend/cache/`.
+`llm/cache.py` keys each call by `sha256(task + canonical_json(inputs))`, deliberately **without** provider or model. Free text is normalized before hashing (trim, collapse whitespace, lowercase, unify Arabic letter variants: أ/إ/آ/ٱ→ا, ى→ي, ة→ه; strip tashkeel), so a stray space doesn't miss the cache. Leaving the provider out of the key means the fallback provider's answer still counts as a hit. Provider, model and timestamp are stored inside the entry as metadata. Entries go in `backend/cache/`.
 
 **Modes:**
 - **Live (default, `DEMO_OFFLINE=0`):** read the cache first; on a miss, call the AI and store the result. **Any new request, including one a judge asks for, works live.**
@@ -518,7 +535,7 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 
 | Hours | Goal | Done when |
 |---|---|---|
-| H1–2 | Scaffold backend + frontend, freeze schemas, areas/sites, `.env`, i18n skeleton (`ar`/`en`, RTL switch), repo pushed. Start anchor sourcing. | `uvicorn` and `npm run dev` run; toggle flips the empty layout |
+| H1–2 | Scaffold backend + frontend, freeze schemas, areas/sites, `.env`, i18n skeleton (`ar`/`en`, RTL switch), repo pushed. Start anchor sourcing. | `uvicorn app.main:app` serves UI + API on one port; toggle flips the empty layout |
 | H2–4 | **A:** seed + engine + `/simulate` + `/compare`, assumptions frozen. **B:** map with dots + Policy Panel on mock data, bilingual. **C:** client + cache + fallbacks + voice + parse, tested in a script. Native-speaker voice review at H3. | Each part works in isolation |
 | H4–6 | **Integration checkpoint.** Scenarios 1–3 tuned *by changing scenarios only*. Citizen Card with voices (AI or fallback). | Change policy → dots recolor → KPIs update → click hero → voice, end to end |
 | H6–7 | **A:** `fixgrid.py` + `/fixgrid`. **B:** Fix Suggestions with instant engine fixes + Apply. **C:** ParsePreview flow end to end. | Break → red → voice → engine fix → green, **with no AI dependency** |
@@ -531,22 +548,23 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 ## 13. Demo script (7 minutes)
 
 1. **0:00–0:45 Problem.** "Every new policy in Jordan is tested on real people after launch. The ones who fall through the cracks are the ones who can't complain: elderly, disabled, no car, no smartphone. Nas reaches them before the policy does."
-2. **0:45–1:15 What Nas is.** 1,000 synthetic citizens of east and west Amman, AI-voiced, anchored to public statistics. Show the baseline map and the synthetic badge. Flip the language once to show it's fully bilingual, then stay in Arabic.
-3. **1:15–3:00 Break it.** Click the `consolidate` preset: 5 of the 7 real offices close, only Tabarbour and Jabal Amman stay. Then type the `digital_first` rules in Arabic in the free-text box, using the **rehearsed sentence** from `demo_requests.json`; show the "understood as" list; Apply. The result must equal the `consolidate_digital_first` preset (if parsing fails, click that preset). Yellow spreads (hardship roughly doubles) and left-out rises. Click the first hero in `heroes.json` (an elderly woman whose son helps her) and read her voice.
+2. **0:45–1:15 What Nas is.** 1,000 synthetic citizens of east and west Amman, AI-voiced, anchored to published figures where we found them (see README "What is real and what is assumed"). Show the baseline map and the synthetic badge. Flip the language once to show it's fully bilingual, then stay in Arabic.
+3. **1:15–3:00 Break it.** Click the `consolidate` preset: 5 of the 7 real offices close, only Tabarbour and Jabal Amman stay. Then type the `digital_first` rules in Arabic in the free-text box, using the **rehearsed sentence** from `demo_requests.json`; show the "understood as" list; Apply. The result must equal the `consolidate_digital_first` preset (if parsing fails, click that preset). Yellow spreads: from `consolidate` to the demo path, hardship goes from 14.4% to 19.5% and left-out from 0.6% to 0.9% (baseline: 11.5% and 0.1%). Click the first hero in `heroes.json` (an elderly woman whose son helps her) and read her voice.
 4. **3:00–4:15 Understand it.** Equity bars: elderly and offline citizens hit hardest. Click the robustness badge: "this ranking holds when we move our uncertain assumptions by ±20%."
-5. **4:15–5:45 Fix it.** Click "Suggest fixes": the engine's verified fixes appear instantly, then the AI explains them and adds its own idea, also verified. Apply the best one. Green returns. Click the hero again: she's served now. (If time allows, or as a judge answer: keep the policy and protect people instead, e.g. walk-in for elderly and disabled, or 20 home visits; left out drops from 0.9% to 0.5%.)
+5. **4:15–5:45 Fix it.** Click "Suggest fixes": the engine's verified fixes appear instantly, then the AI explains them and adds its own idea, also verified. Apply the best one. Green returns. Click the hero again: she's served now. (If time allows, or as a judge answer: keep the policy and protect people instead: walk-in for elderly and disabled lifts served from 79.6% to 81.6%; 20 home visits take left-out from 0.9% to 0.5%.)
 6. **5:45–6:30 Impact & business.** Who pays: municipalities, ministries, digital transformation programs. Next steps: calibrate with more public data, add more services and cities. One slide with the relatives' real answers next to the simulated voices.
 7. **6:30–7:00** Close with the pitch line. Invite a judge to name a policy during Q&A.
 
 ## 14. Judge Q&A prep
 
-- **"Are these real people?"** No. A clearly labelled synthetic population, anchored to public figures where we could source them. The engine is data-agnostic; better data drops in.
-- **"Didn't you tune it to get this result?"** Assumptions were frozen before any scenario ran; the key ones are anchored; the ranking holds 6/6 at ±20% (badge). If a story didn't show up, we changed the scenario, never the assumptions.
+- **"Are these real people?"** No. A clearly labelled synthetic population, anchored to published figures where we found them (only the three MoDEE 2024 figures and the CSPD office list are verified by us; the other research figures are labelled CITED). The engine is data-agnostic; better data drops in. Slide-ready list: README, "What is real and what is assumed".
+- **"Didn't you tune it to get this result?"** The population is anchored to published figures where we found them; the engine constants are labelled assumptions (all 26), frozen before any scenario ran and tested at ±20%: the ranking holds 6/6 (badge). If a story didn't show up, we changed the scenario, never the assumptions.
 - **"Is the AI making things up?"** No. The engine computes every outcome and number. A grounding check rejects any AI text with a number the engine didn't produce, and every AI fix is re-verified by the engine before it's shown.
 - **"What does the AI do that a spreadsheet couldn't?"** See §1.
 - **"Does it reach the people left out?"** See §1. Plus: the relatives' answers slide.
 - **"Can you keep the policy but protect the vulnerable?"** Yes: walk-in exemptions, fee discounts, transport vouchers, capped home visits and apply-online-then-collect, per group. Show one live on the demo path.
 - **"Show us another policy."** Type it live. If it's outside what Nas models, it says so and suggests the closest supported change.
+- **"Why doesn't closing Thursdays change anything?"** Nas doesn't model office capacity or queues yet, so the open days are interchangeable: anyone who went on Thursday goes on another workday instead (on the demo path nobody changes status). Capacity and queues are the next module. "Add more staff" is unsupported for the same reason.
 - **"Business model?"** SaaS per service/municipality plus a setup engagement to calibrate data. Cheap to run: the engine is CPU-only and AI calls are cached.
 - **"Scalability?"** A new service is a policy template + channel rules; a new city is areas + sites + anchors.
 

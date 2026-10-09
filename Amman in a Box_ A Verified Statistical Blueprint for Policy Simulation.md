@@ -1,3 +1,7 @@
+> **Read this first.** AI-assisted desk research (Qwen). Its figures are unverified unless listed as ANCHORED in `backend/app/data/anchors.json`.
+> Some figures conflict with each other (see the notes in `backend/app/data/census/VALIDATION.md`).
+> The title ("Verified") is kept for history; it does not mean the team verified these numbers.
+
 # Amman in a Box: A Verified Statistical Blueprint for Policy Simulation
 
 ## Demographics and Household Structure

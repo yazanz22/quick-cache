@@ -1,7 +1,6 @@
 # secrets
 .env
 .env.local
-frontend/.env.local
 
 # python
 __pycache__/
@@ -9,10 +8,8 @@ __pycache__/
 .venv/
 .pytest_cache/
 
-# node
-node_modules/
-.next/
-out/
+# Claude desktop app: local session config
+.claude/
 
 # os / editors
 .DS_Store

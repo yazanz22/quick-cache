@@ -2,8 +2,9 @@
 
 FREEZE RULE: these values were set once, to round plausible numbers, BEFORE any
 scenario was run. If a scenario's story doesn't appear, change the scenario,
-never these values. None of them is an official statistic unless tagged
-ANCHORED with a source in data/anchors.json.
+never these values. All 26 are tagged ASSUMPTION: none is an official statistic.
+Where the desk research gives context for one (data/anchors.json, CITED_UNVERIFIED),
+its `source` field in the assumptions table says so; the tag stays ASSUMPTION.
 
 The engine takes an optional `Assumptions` override so sensitivity.py can
 perturb SERVICE_MINUTES, BUS_WAIT_PLUS_TRANSFER_MIN and HARDSHIP_THRESHOLD.
@@ -30,7 +31,7 @@ class Assumptions:
     # ASSUMPTION: OSRM times are free-flow; daytime Amman traffic makes trips this many times longer.
     TRAFFIC_FACTOR: float = 1.6
     # ASSUMPTION (fallback only, for citizens missing from the matrix): road km per straight-line km.
-    # Rounded from the OSRM matrix median of 1.51.
+    # Rounded from the OSRM matrix median, about 1.4-1.5 (1.44 in the current matrix).
     ROAD_FACTOR: float = 1.5
     # ASSUMPTION (fallback only): average urban driving speed incl. traffic, km/h.
     CAR_SPEED_KMH: float = 30.0
@@ -45,18 +46,20 @@ class Assumptions:
     BUS_WALK_MIN: float = 10.0
     # ASSUMPTION: people with limited mobility walk to stops this many times slower.
     LIMITED_MOBILITY_WALK_FACTOR: float = 2.0
-    # ASSUMPTION: waiting for the first bus, minutes.
+    # ASSUMPTION: waiting for the first bus, minutes (off-peak; a 2017 study cited by the research measured
+    # ~25 min at peak: anchors.json bus_wait_peak_minutes, CITED_UNVERIFIED).
     BUS_FIRST_WAIT_MIN: float = 10.0
     # ASSUMPTION: extra wait + walk for each transfer, minutes.
     BUS_WAIT_PLUS_TRANSFER_MIN: float = 15.0
-    # ASSUMPTION: fare per bus boarding, JD.
+    # ASSUMPTION: fare per bus boarding, JD (the research cites 0.34-0.55 JD: anchors.json bus_fare_jd_range,
+    # CITED_UNVERIFIED).
     BUS_FARE_JD: float = 0.45
 
     # ASSUMPTION: waiting for / hailing a taxi, minutes.
     TAXI_WAIT_MIN: float = 5.0
-    # ASSUMPTION: taxi flag-fall, JD (pending LTRC figure in anchors.json).
+    # ASSUMPTION: taxi flag-fall, JD (no verified LTRC tariff found; not in anchors.json).
     TAXI_BASE_JD: float = 0.40
-    # ASSUMPTION: taxi rate per road km, JD (pending LTRC figure in anchors.json).
+    # ASSUMPTION: taxi rate per road km, JD (no verified LTRC tariff found; not in anchors.json).
     TAXI_PER_KM_JD: float = 0.30
     # ASSUMPTION: most a household would spend on a round-trip taxi for one visit, JD.
     TAXI_MAX_JD: dict = field(default_factory=lambda: {"low": 3.0, "middle": 8.0, "high": 25.0})
@@ -97,34 +100,35 @@ UNITS = {
     "COST_WEIGHT": "h/JD", "WORK_WEIGHT": "×",
 }
 
-# Shown in the AssumptionsTable. Tag is ASSUMPTION unless a real source exists in anchors.json.
+# Shown in the AssumptionsTable: name -> (rationale, tag, source). Every tag is ASSUMPTION. `source` is a short
+# note on where context for the value comes from (None if there is none); it never upgrades the tag.
 META = {
-    "SERVICE_MINUTES": ("Queue + counter time for one visit", "ASSUMPTION"),
-    "ONLINE_MINUTES": ("Time to finish online or book an appointment", "ASSUMPTION"),
-    "HOME_VISIT_MINUTES": ("Home visit: waiting at home for a 2-hour visit window", "ASSUMPTION"),
-    "PICKUP_MINUTES": ("Collecting a card applied for online: a short counter visit", "ASSUMPTION"),
-    "TRAFFIC_FACTOR": ("Daytime traffic vs OSRM free-flow car times (road times themselves are OpenStreetMap data)", "ASSUMPTION"),
-    "ROAD_FACTOR": ("Fallback only: road vs straight-line km (OSRM median is 1.51)", "ASSUMPTION"),
-    "CAR_SPEED_KMH": ("Fallback only: urban car speed incl. traffic", "ASSUMPTION"),
-    "CAR_PARK_MIN": ("Parking and walking to the counter", "ASSUMPTION"),
-    "CAR_COST_PER_KM_JD": ("Fuel and wear per km", "ASSUMPTION"),
-    "BUS_SPEED_KMH": ("Bus speed incl. stops", "ASSUMPTION"),
-    "BUS_WALK_MIN": ("Walking to and from stops", "ASSUMPTION"),
-    "LIMITED_MOBILITY_WALK_FACTOR": ("Slower walking with limited mobility", "ASSUMPTION"),
-    "BUS_FIRST_WAIT_MIN": ("Waiting for the first bus", "ASSUMPTION"),
-    "BUS_WAIT_PLUS_TRANSFER_MIN": ("Extra wait per transfer", "ASSUMPTION"),
-    "BUS_FARE_JD": ("Fare per boarding", "ASSUMPTION"),
-    "TAXI_WAIT_MIN": ("Waiting for a taxi", "ASSUMPTION"),
-    "TAXI_BASE_JD": ("Taxi flag-fall", "ASSUMPTION"),
-    "TAXI_PER_KM_JD": ("Taxi rate per km", "ASSUMPTION"),
-    "TAXI_MAX_JD": ("Most a household spends on a round-trip taxi, by income", "ASSUMPTION"),
-    "MAX_TRAVEL_MINUTES": ("Longest realistic one-way trip for an errand", "ASSUMPTION"),
-    "LONG_TRIP_MINUTES": ("One-way trip counted as 'far' in hardship reasons", "ASSUMPTION"),
-    "MAX_WORK_HOURS_MISSED": ("Most work hours one can miss, by income", "ASSUMPTION"),
-    "HELPER_FREE_FROM": ("When a working family member can drive on workdays", "ASSUMPTION"),
-    "HARDSHIP_THRESHOLD": ("Burden that counts as hardship: half a working day", "ASSUMPTION"),
-    "COST_WEIGHT": ("Hours of burden per JD spent", "ASSUMPTION"),
-    "WORK_WEIGHT": ("Extra weight on missed work hours", "ASSUMPTION"),
+    "SERVICE_MINUTES": ("Queue + counter time for one visit", "ASSUMPTION", None),
+    "ONLINE_MINUTES": ("Time to finish online or book an appointment", "ASSUMPTION", None),
+    "HOME_VISIT_MINUTES": ("Home visit: waiting at home for a 2-hour visit window", "ASSUMPTION", None),
+    "PICKUP_MINUTES": ("Collecting a card applied for online: a short counter visit", "ASSUMPTION", None),
+    "TRAFFIC_FACTOR": ("Daytime traffic vs OSRM free-flow car times (road times themselves are OpenStreetMap data)", "ASSUMPTION", "Multiplies OSRM free-flow car times (OpenStreetMap); no Amman congestion data found"),
+    "ROAD_FACTOR": ("Fallback only: road vs straight-line km (OSRM median about 1.4-1.5)", "ASSUMPTION", "OSRM matrix: median road/straight-line ratio 1.44"),
+    "CAR_SPEED_KMH": ("Fallback only: urban car speed incl. traffic", "ASSUMPTION", None),
+    "CAR_PARK_MIN": ("Parking and walking to the counter", "ASSUMPTION", None),
+    "CAR_COST_PER_KM_JD": ("Fuel and wear per km", "ASSUMPTION", None),
+    "BUS_SPEED_KMH": ("Bus speed incl. stops", "ASSUMPTION", None),
+    "BUS_WALK_MIN": ("Walking to and from stops", "ASSUMPTION", None),
+    "LIMITED_MOBILITY_WALK_FACTOR": ("Slower walking with limited mobility", "ASSUMPTION", None),
+    "BUS_FIRST_WAIT_MIN": ("Waiting for the first bus", "ASSUMPTION", "A 2017 study cited by our research measured ~25 min peak waits (unverified); we assume 10 + 15 per transfer, off-peak"),
+    "BUS_WAIT_PLUS_TRANSFER_MIN": ("Extra wait per transfer", "ASSUMPTION", "Same 2017 peak-wait study as the first wait (unverified); tested at ±20%"),
+    "BUS_FARE_JD": ("Fare per boarding", "ASSUMPTION", "Public fares 0.34-0.55 JD per boarding, from our research, unverified"),
+    "TAXI_WAIT_MIN": ("Waiting for a taxi", "ASSUMPTION", None),
+    "TAXI_BASE_JD": ("Taxi flag-fall", "ASSUMPTION", "No verified LTRC taxi tariff found"),
+    "TAXI_PER_KM_JD": ("Taxi rate per km", "ASSUMPTION", "No verified LTRC taxi tariff found"),
+    "TAXI_MAX_JD": ("Most a household spends on a round-trip taxi, by income", "ASSUMPTION", None),
+    "MAX_TRAVEL_MINUTES": ("Longest realistic one-way trip for an errand", "ASSUMPTION", None),
+    "LONG_TRIP_MINUTES": ("One-way trip counted as 'far' in hardship reasons", "ASSUMPTION", None),
+    "MAX_WORK_HOURS_MISSED": ("Most work hours one can miss, by income", "ASSUMPTION", None),
+    "HELPER_FREE_FROM": ("When a working family member can drive on workdays", "ASSUMPTION", None),
+    "HARDSHIP_THRESHOLD": ("Burden that counts as hardship: half a working day", "ASSUMPTION", None),
+    "COST_WEIGHT": ("Hours of burden per JD spent", "ASSUMPTION", None),
+    "WORK_WEIGHT": ("Extra weight on missed work hours", "ASSUMPTION", None),
 }
 
 # The three uncertain constants perturbed by the robustness check (§6.5).
@@ -138,10 +142,10 @@ def perturbed(base: Assumptions, name: str, factor: float) -> Assumptions:
 def as_table(a: Assumptions = DEFAULT) -> list[dict]:
     rows = []
     for name, value in asdict(a).items():
-        rationale, tag = META[name]
+        rationale, tag, source = META[name]
         rows.append({
             "name": name, "value": value, "unit": UNITS.get(name, ""),
-            "rationale": rationale, "tag": tag, "source": None,
+            "rationale": rationale, "tag": tag, "source": source,
             "perturbed_in_robustness_check": name in SENSITIVITY_PARAMS,
         })
     return rows

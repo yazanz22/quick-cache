@@ -12,14 +12,19 @@ Two datasets come out of one generator (same seed, same rules):
                               (Syrian, Egyptian, Palestinian, Iraqi, Yemeni, other). Research-faithful.
   population_jordanian.json   Jordanian nationals aged 16+ only: the people who can actually renew a
                               Jordanian national ID at CSPD. This is the one the engine should run on.
-                              Same schema as population.json (+ an extra "district" key, ignored by the engine).
+                              Same schema as population.json: the engine's Citizen fields plus three optional
+                              display fields (district, neighbourhood, neighbourhood_ar) that the engine ignores.
 
 How "to scale" is enforced: headline marginals are hit EXACTLY with quota allocation (largest-remainder
 counts, then weighted sampling without replacement to decide WHO gets the attribute). The weights carry the
 realistic correlations (older -> fewer smartphones, poorer -> fewer cars, ...). Every number is tagged:
-  ANCHORED     value quoted in the research doc, with its source
-  DERIVED      computed from anchored values with one stated step
-  ASSUMPTION   not in the research; a labelled modelling choice
+  ANCHORED       checked by the team against its source: only the MoDEE 2024 figures listed as ANCHORED in
+                 data/anchors.json (95.6% internet use, 38.1% e-gov use; 99% smartphone households is context)
+  CITED          quoted in the research doc with its source, NOT verified by the team (anchors.json: CITED_UNVERIFIED
+                 or not listed). Never present a CITED figure as an official statistic.
+  DERIVED        computed from cited/anchored values with one stated step
+  ASSUMPTION     not in the research; a labelled modelling choice
+(The JD 2 fee is TEAM_CONFIRMED in anchors.json; it lives in the scenarios, not here.)
 Per-district variation (income, nationality mix) is always an ASSUMPTION.
 """
 from __future__ import annotations
@@ -39,37 +44,37 @@ OUT = DATA / "census"
 SEED = 42
 N_DEFAULT = 1000
 
-# ============================================================== TARGETS (all sourced from the research doc)
+# ============================================================== TARGETS (all quoted in the research doc; see tags)
 W = "https://en.wikipedia.org/wiki/Amman"
 T = {
-    "share_male": (0.53, "ANCHORED", "DoS via Jordan Times (research §1)"),
-    "disability_65plus": (0.493, "ANCHORED", "UNFPA Jordan country profile 2024"),
-    "disability_male": (0.117, "ANCHORED", "Higher Council for Persons with Disabilities"),
-    "disability_female": (0.108, "ANCHORED", "Higher Council for Persons with Disabilities"),
-    "difficulty_seeing": (0.09, "ANCHORED", "2015 census via 2023 PFHS reporting"),
-    "difficulty_walking": (0.07, "ANCHORED", "2015 census via 2023 PFHS reporting"),
-    "difficulty_cognition": (0.04, "ANCHORED", "2015 census via 2023 PFHS reporting"),
+    "share_male": (0.53, "CITED", "DoS via Jordan Times (research §1)"),
+    "disability_65plus": (0.493, "CITED", "UNFPA Jordan country profile 2024"),
+    "disability_male": (0.117, "CITED", "Higher Council for Persons with Disabilities"),
+    "disability_female": (0.108, "CITED", "Higher Council for Persons with Disabilities"),
+    "difficulty_seeing": (0.09, "CITED", "2015 census via 2023 PFHS reporting"),
+    "difficulty_walking": (0.07, "CITED", "2015 census via 2023 PFHS reporting"),
+    "difficulty_cognition": (0.04, "CITED", "2015 census via 2023 PFHS reporting"),
     "disabled_employment_ratio": (16.1 / 36.6, "DERIVED", "16.1% employed (PwD) vs 36.6% (all), 2015 census"),
-    "lfpr_male": (0.625, "ANCHORED", "World Bank Gender Data Portal"),
-    "lfpr_female": (0.16, "ANCHORED", "World Bank Gender Data Portal"),
-    "unemp_male": (0.19, "ANCHORED", "ERF Forum 2025 (late-2024 DoS LFS)"),
-    "unemp_female": (0.31, "ANCHORED", "ERF Forum 2025 (late-2024 DoS LFS)"),
-    "unemp_youth_male": (0.40, "ANCHORED", "ERF Forum 2025, ages 15-24"),
-    "unemp_youth_female": (0.66, "ANCHORED", "ERF Forum 2025, ages 15-24"),
-    "informal_25plus": (0.524, "ANCHORED", "World Bank HCI 2022"),
-    "informal_youth": (0.59, "ANCHORED", "World Bank HCI 2022"),
-    "poverty_rate_amman": (0.083, "ANCHORED", "OCHA Jordan fact sheet"),
-    "poverty_line_pc_month_jd": (100.0, "ANCHORED", "DoS HEIS 2017/18 national line, JD 100 per person per month"),
+    "lfpr_male": (0.625, "CITED", "World Bank Gender Data Portal"),
+    "lfpr_female": (0.16, "CITED", "World Bank Gender Data Portal"),
+    "unemp_male": (0.19, "CITED", "ERF Forum 2025 (late-2024 DoS LFS)"),
+    "unemp_female": (0.31, "CITED", "ERF Forum 2025 (late-2024 DoS LFS)"),
+    "unemp_youth_male": (0.40, "CITED", "ERF Forum 2025, ages 15-24"),
+    "unemp_youth_female": (0.66, "CITED", "ERF Forum 2025, ages 15-24"),
+    "informal_25plus": (0.524, "CITED", "World Bank HCI 2022"),
+    "informal_youth": (0.59, "CITED", "World Bank HCI 2022"),
+    "poverty_rate_amman": (0.083, "CITED", "OCHA Jordan fact sheet"),
+    "poverty_line_pc_month_jd": (100.0, "CITED", "DoS HEIS 2017/18 national line, JD 100 per person per month"),
     "drives_own_car": (0.50 * 0.932, "DERIVED", "~half of residents use own car (DoS) x 93.2% of car users hold a licence (MDPI 2023)"),
-    "public_transport_share": (0.14, "ANCHORED", "C40 BRT case study: PT mode share 14%"),
+    "public_transport_share": (0.14, "CITED", "C40 BRT case study: PT mode share 14%"),
     "internet_user": (0.956, "ANCHORED", "MoDEE ICT household survey 2024 (proxy for personal smartphone)"),
-    "skill_copy_paste": (0.796, "ANCHORED", "MoDEE 2024"),
-    "skill_presentation": (0.324, "ANCHORED", "MoDEE 2024"),
+    "skill_copy_paste": (0.796, "CITED", "MoDEE 2024"),
+    "skill_presentation": (0.324, "CITED", "MoDEE 2024"),
     "egov_used": (0.381, "ANCHORED", "MoDEE 2024"),
-    "household_size_mean": (4.8, "ANCHORED", "DoS"),
+    "household_size_mean": (4.8, "CITED", "DoS"),
 }
 
-# 22 GAM districts, 2015 census population (ANCHORED, Wikipedia "Amman" table quoted in the research).
+# 22 GAM districts, 2015 census population (CITED: Wikipedia "Amman" table quoted in the research, not verified).
 # Coordinates: centre of the populated part, ESTIMATED to ~1-2 km (no sourced coordinate was reachable).
 # side: informal east/west split (ASSUMPTION). inc: household-income multiplier (ASSUMPTION).
 # spread: jitter in degrees around the centre (ASSUMPTION, bigger for spread-out peri-urban districts).
@@ -103,7 +108,7 @@ DISTRICTS = [
 DISTRICT_SUM = sum(d[3] for d in DISTRICTS)
 assert DISTRICT_SUM == 3_521_207
 
-# Non-Jordanian residents, 2015 census (ANCHORED). The named groups sum to 1,431,044 while the stated total is
+# Non-Jordanian residents, 2015 census (CITED). The named groups sum to 1,431,044 while the stated total is
 # 1,452,693; the 21,649 gap is added to "other" (DERIVED).
 TOTAL_2015, NON_JO_2015 = 4_007_526, 1_452_693
 NATIONALITY = {"jordanian": TOTAL_2015 - NON_JO_2015, "syrian": 435_578, "egyptian": 390_631,
@@ -116,15 +121,15 @@ NATIONALITY["other"] = NON_JO_2015 - sum(v for k, v in NATIONALITY.items() if k 
 AGE_BANDS = [(16, 17, 0.055), (18, 24, 0.205), (25, 34, 0.250), (35, 44, 0.190),
              (45, 54, 0.140), (55, 64, 0.095), (65, 74, 0.045), (75, 90, 0.020)]
 # WG disability ("a lot of difficulty") under 65, by age. Chosen so the 5-64 rate stays near the 11.2% national
-# figure once the anchored 49.3% for 65+ is added. ASSUMPTION (shape).
+# figure once the cited 49.3% for 65+ is added. ASSUMPTION (shape).
 DISABILITY_UNDER_65 = {(16, 24): 0.05, (25, 44): 0.07, (45, 54): 0.13, (55, 64): 0.22}
 # Domains not quoted in the research (WG short set has six). ASSUMPTION.
 DIFFICULTY_OTHER = {"hearing": 0.25, "self_care": 0.15, "communication": 0.10}  # P(domain | disabled)
 # Share of people with walking difficulty who use a wheelchair. Research: NOT FOUND. ASSUMPTION.
 WHEELCHAIR_GIVEN_WALKING = {(16, 64): 0.10, (65, 74): 0.20, (75, 120): 0.30}
-# Household-level size distribution, mean ~4.8 (anchored mean, ASSUMED shape). Persons are drawn size-biased.
+# Household-level size distribution, mean ~4.8 (cited mean, ASSUMED shape). Persons are drawn size-biased.
 HH_SIZE = {1: .04, 2: .10, 3: .12, 4: .16, 5: .19, 6: .16, 7: .11, 8: .06, 9: .04, 10: .02}
-# Labour-force propensity by age (ASSUMPTION shape; totals are rescaled to the anchored LFPR by sex).
+# Labour-force propensity by age (ASSUMPTION shape; totals are rescaled to the cited LFPR by sex).
 LF_AGE = [(16, 17, 0.10), (18, 24, 0.60), (25, 54, 1.00), (55, 64, 0.55), (65, 120, 0.08)]
 # Nationality effects. ASSUMPTION (direction from the literature on migrant work / refugee livelihoods).
 NAT = {  # (lf_weight, income_mult, car_weight, egov_weight, informal_weight, east_bias)
@@ -314,7 +319,7 @@ def generate(n: int = N_DEFAULT, scope: str = "jordanian", seed_: int = SEED) ->
                 rng, [(s, e, w * (early if s == "07:00" else 1.0)) for s, e, w in SHIFTS])
 
     # 8. Income: log-normal household income, then ONE scale factor so exactly 8.3% fall under the
-    #    JD 100 per person per month line (DERIVED calibration to the anchored Amman poverty rate).
+    #    JD 100 per person per month line (DERIVED calibration to the cited Amman poverty rate).
     for p in P:
         mult = dist[p["district"]][7] * NAT[p["nationality"]][1]
         mult *= 0.85 if p["disabled"] else 1.0
@@ -349,7 +354,7 @@ def generate(n: int = N_DEFAULT, scope: str = "jordanian", seed_: int = SEED) ->
     for p in P:
         p["has_car"] = p["_i"] in cars
 
-    # 10. Main way of getting around: 14% public transport (ANCHORED), rest split by ASSUMPTION.
+    # 10. Main way of getting around: 14% public transport (CITED), rest split by ASSUMPTION.
     non_drivers = [p for p in P if not p["has_car"]]
     pt = {p["_i"] for p in pick(rng, non_drivers, round(T["public_transport_share"][0] * n),
                                 lambda p: (2.0 if p["employment_status"] in ("student", "employed") else 1.0)
@@ -449,12 +454,12 @@ NEIGHBOURHOODS = {
                 ("Prince Hassan Camp", "مخيم الأمير حسن", 31.9665, 35.9600), ("Al-Manara", "المنارة", 31.9465, 35.9600),
                 ("Al-Hussein Al-Sharqi", "الحسين الشرقي", 31.9555, 35.9487)],                                                 # W
     "al_yarmouk": [("Al-Wehdat", "الوحدات", 31.9330, 35.9440), ("Hay Al-Awda", "حي العودة", 31.9280, 35.9500),
-                   ("Jabal Al-Ashrafiyeh", "جبل الأشرفية", 31.9469, 35.9287), ("Al-Hilal (east)", "الهلال", 31.9380, 35.9370)],  # W
+                   ("Jabal Al-Ashrafiyeh", "جبل الأشرفية", 31.9469, 35.9287), ("Al-Hilal (Al-Yarmouk)", "الهلال (اليرموك)", 31.9380, 35.9370)],  # W
     "ras_al_ein": [("Ras Al-Ein", "رأس العين", 31.9436, 35.9188), ("Al-Muhajireen", "المهاجرين", 31.9494, 35.9316),        # W
                    ("Jabal Al-Rawda", "جبل الروضة", 31.9172, 35.9280), ("Jabal Al-Nadhif", "جبل النظيف", 31.9412, 35.9297),  # W W
                    ("Al-Zuhour", "الزهور", 31.9250, 35.9150)],
-    "bader": [("Jabal Nazzal", "جبل النزال", 31.9390, 35.9050), ("Al-Hilal", "الهلال", 31.9312, 35.9033),                       # W
-              ("Al-Dustour", "الدستور", 31.9350, 35.8960), ("Al-Qwesmeh road side", "طريق المطار - بدر", 31.9270, 35.9100)],
+    "bader": [("Jabal Nazzal", "جبل النزال", 31.9390, 35.9050), ("Al-Hilal (Bader)", "الهلال (بدر)", 31.9312, 35.9033),                       # W
+              ("Al-Dustour", "الدستور", 31.9350, 35.8960), ("Airport Road (Bader)", "طريق المطار - بدر", 31.9270, 35.9100)],
     "zahran": [("Abdoun", "عبدون", 31.9440, 35.8830), ("Hay Zahran", "حي زهران", 31.9471, 35.8860),                            # W
                ("Jabal Amman", "جبل عمان", 31.9520, 35.9080), ("Umm Uthaina", "أم أذينة", 31.9663, 35.8693),                   # W
                ("Deir Ghbar", "دير غبار", 31.9440, 35.8650), ("Wadi Abdoun", "وادي عبدون", 31.9452, 35.9006),                  # W
@@ -559,30 +564,30 @@ def report(pop, title) -> str:
     yl_m = [p for p in lf_m if p["age"] <= 24]; yl_f = [p for p in lf_f if p["age"] <= 24]
     wk = [p for p in pop if p["works"]]
     rows = [
-        ("Male", "53%", pct(sh(lambda p: p["gender"] == "m")), "ANCHORED"),
+        ("Male", "53%", pct(sh(lambda p: p["gender"] == "m")), "CITED"),
         ("Aged 65+ (of 16+)", "~6.5%", pct(sh(lambda p: p["age"] >= 65)), "ASSUMPTION"),
-        ("Disability (WG), 65+", "49.3%", pct(sh(lambda p: p["disabled"], old)), "ANCHORED"),
+        ("Disability (WG), 65+", "49.3%", pct(sh(lambda p: p["disabled"], old)), "CITED"),
         ("Disability (WG), all 16+", "≥11.2% (11.2% is for 5+)", pct(sh(lambda p: p["disabled"])), "check"),
-        ("Difficulty seeing", "9% (see note)", pct(sh(lambda p: "seeing" in p["difficulties"])), "ANCHORED*"),
-        ("Difficulty walking", "7% (see note)", pct(sh(lambda p: "walking" in p["difficulties"])), "ANCHORED*"),
-        ("Difficulty remembering", "4% (see note)", pct(sh(lambda p: "cognition" in p["difficulties"])), "ANCHORED*"),
+        ("Difficulty seeing", "9% (see note)", pct(sh(lambda p: "seeing" in p["difficulties"])), "CITED*"),
+        ("Difficulty walking", "7% (see note)", pct(sh(lambda p: "walking" in p["difficulties"])), "CITED*"),
+        ("Difficulty remembering", "4% (see note)", pct(sh(lambda p: "cognition" in p["difficulties"])), "CITED*"),
         ("Wheelchair users", "NOT FOUND", pct(sh(lambda p: p["mobility"] == "wheelchair")), "ASSUMPTION"),
-        ("Labour-force participation, men", "62.5%", pct(sh(lambda p: p["in_labour_force"], males)), "ANCHORED"),
-        ("Labour-force participation, women", "16%", pct(sh(lambda p: p["in_labour_force"], females)), "ANCHORED"),
-        ("Unemployment, men", "19%", pct(sh(lambda p: p["unemployed"], lf_m)), "ANCHORED"),
-        ("Unemployment, women", "31%", pct(sh(lambda p: p["unemployed"], lf_f)), "ANCHORED"),
-        ("Youth unemployment, men 16-24", "40%", pct(sh(lambda p: p["unemployed"], yl_m)), "ANCHORED"),
-        ("Youth unemployment, women 16-24", "66%", pct(sh(lambda p: p["unemployed"], yl_f)), "ANCHORED"),
-        ("Informal, workers 25+", "52.4%", pct(sh(lambda p: p["informal_job"], [p for p in wk if p["age"] > 24])), "ANCHORED"),
-        ("Informal, workers 16-24", "59%", pct(sh(lambda p: p["informal_job"], [p for p in wk if p["age"] <= 24])), "ANCHORED"),
-        ("Employment rate, people with disability", "16.1%", pct(sh(lambda p: p["works"], [p for p in pop if p["disabled"]])), "ANCHORED"),
+        ("Labour-force participation, men", "62.5%", pct(sh(lambda p: p["in_labour_force"], males)), "CITED"),
+        ("Labour-force participation, women", "16%", pct(sh(lambda p: p["in_labour_force"], females)), "CITED"),
+        ("Unemployment, men", "19%", pct(sh(lambda p: p["unemployed"], lf_m)), "CITED"),
+        ("Unemployment, women", "31%", pct(sh(lambda p: p["unemployed"], lf_f)), "CITED"),
+        ("Youth unemployment, men 16-24", "40%", pct(sh(lambda p: p["unemployed"], yl_m)), "CITED"),
+        ("Youth unemployment, women 16-24", "66%", pct(sh(lambda p: p["unemployed"], yl_f)), "CITED"),
+        ("Informal, workers 25+", "52.4%", pct(sh(lambda p: p["informal_job"], [p for p in wk if p["age"] > 24])), "CITED"),
+        ("Informal, workers 16-24", "59%", pct(sh(lambda p: p["informal_job"], [p for p in wk if p["age"] <= 24])), "CITED"),
+        ("Employment rate, people with disability", "16.1%", pct(sh(lambda p: p["works"], [p for p in pop if p["disabled"]])), "CITED"),
         ("Employment rate, everyone", "36.6% (conflicts with LFPR x unemployment = 32%)", pct(sh(lambda p: p["works"])), "check"),
-        ("Below poverty line (JD 100/person/month)", "8.3%", pct(sh(lambda p: p["below_poverty_line"])), "ANCHORED"),
+        ("Below poverty line (JD 100/person/month)", "8.3%", pct(sh(lambda p: p["below_poverty_line"])), "CITED"),
         ("Drives own car", "46.6%", pct(sh(lambda p: p["has_car"])), "DERIVED"),
-        ("Public transport main mode", "14%", pct(sh(lambda p: p["main_mode"] in ("bus_brt", "service_taxi"))), "ANCHORED"),
+        ("Public transport main mode", "14%", pct(sh(lambda p: p["main_mode"] in ("bus_brt", "service_taxi"))), "CITED"),
         ("Smartphone / internet user", "95.6%", pct(sh(lambda p: p["has_smartphone"])), "ANCHORED"),
-        ("Digital skill: copy/paste (medium+high)", "79.6%", pct(sh(lambda p: p["digital_literacy"] != "low")), "ANCHORED"),
-        ("Digital skill: presentation (high)", "32.4%", pct(sh(lambda p: p["digital_literacy"] == "high")), "ANCHORED"),
+        ("Digital skill: copy/paste (medium+high)", "79.6%", pct(sh(lambda p: p["digital_literacy"] != "low")), "CITED"),
+        ("Digital skill: presentation (high)", "32.4%", pct(sh(lambda p: p["digital_literacy"] == "high")), "CITED"),
         ("Used an e-government service", "38.1%", pct(sh(lambda p: p["used_egov"])), "ANCHORED"),
     ]
     hh = sum(p["household_size"] for p in pop) / n
@@ -591,7 +596,7 @@ def report(pop, title) -> str:
     out = [f"## {title}  (n = {n})", "",
            "| Indicator | Research target | Generated | Tag |", "|---|---|---|---|"]
     out += [f"| {a} | {b} | {c} | {d} |" for a, b, c, d in rows]
-    out += [f"| Household size (household-level mean) | 4.8 | {hh_level:.2f} (person-level {hh:.2f}) | ANCHORED |",
+    out += [f"| Household size (household-level mean) | 4.8 | {hh_level:.2f} (person-level {hh:.2f}) | CITED |",
             f"| Median income per person | not in research | JD {med_pc:.0f}/month | ASSUMPTION shape, calibrated to poverty rate |", ""]
     dc = Counter(p["district_en"] for p in pop)
     tot = sum(d[3] for d in DISTRICTS)
@@ -634,9 +639,12 @@ def main() -> None:
 Generated by `python -m app.data.seed_census` (seed 42). Source: *Amman in a Box: A Verified Statistical
 Blueprint for Policy Simulation* (repo root). Synthetic people, not real residents.
 
-**Tags.** ANCHORED = value quoted in the research. DERIVED = computed from anchored values in one stated step.
-ASSUMPTION = not in the research, a labelled modelling choice. Headline marginals are hit exactly by quota;
-small gaps come from rounding.
+**Legend.** ANCHORED = checked by the team against its source: only the MoDEE 2024 figures marked ANCHORED in
+`data/anchors.json` (95.6% internet use and 38.1% e-gov use here; the third, 99% smartphone households, is context).
+CITED = quoted in the desk research with a source, NOT verified by the team (CITED_UNVERIFIED or not listed in
+`anchors.json`); never present it as an official statistic. DERIVED = computed from cited or anchored values in one
+stated step. ASSUMPTION = not in the research, a labelled modelling choice. "check" = the research figures conflict
+(see notes). Headline marginals are hit exactly by quota; small gaps come from rounding.
 
 **Notes on the research figures**
 - *Difficulty types (9% / 7% / 4%)* add up to more than the 11.2% disability rate, so they can't all be

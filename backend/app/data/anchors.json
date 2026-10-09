@@ -1,5 +1,5 @@
 {
-  "_note": "Public figures for the synthetic population. seed.py uses a value ONLY when status is ANCHORED (checked against the source URL by us). CITED_UNVERIFIED = reported by our desk research (Qwen) with a source we could not open or confirm; never presented as sourced. Checked 2026-10-09.",
+  "_note": "Documentation only: no code reads this file at runtime. It records the public figures behind Nas, with the status of each, for the team and for the assumptions table. Status: ANCHORED = the team opened the source URL and checked the figure (MoDEE figures on 2026-10-09; 'retrieved' where recorded); TEAM_CONFIRMED = confirmed by the team, no source link recorded yet; CITED_UNVERIFIED = quoted by our AI-assisted desk research (Qwen, 'Amman in a Box') with a source we could not open or confirm (VALIDATION.md and seed_census.py call these CITED). The 26 engine constants in sim/assumptions.py are all ASSUMPTION; entries here only give context for them. Never present a CITED_UNVERIFIED figure as an official statistic. Last checked 2026-10-10.",
   "anchors": {
     "internet_use_individuals_jordan": {
       "value": 0.956,
@@ -9,7 +9,7 @@
       "source_name": "MoDEE 2024 Household ICT Usage and Access Survey (results announcement)",
       "url": "https://jordan.gov.jo/EN/NewsDetails/Ministry_of_Digital_Economy_and_Entrepreneurship_Announces_Results_of_the_2024_Household_ICT_Usage_and_Access_Survey",
       "quote": "The proportion of individuals who used the internet increased from 92.5% in 2023 to 95.6% in 2024.",
-      "notes": "National, all ages; no age breakdown on the page. Our seed's smartphone-by-age bands are an ASSUMPTION; their population average should stay below this figure because elderly use is lower."
+      "notes": "National, all ages; no age breakdown on the page. seed_census.py uses it as the share of synthetic adults with a smartphone and hits it exactly (95.6%, 956 of 1,000). The age gradient (older people more often without one) is an ASSUMPTION."
     },
     "smartphone_households_amman": {
       "value": 0.99,
@@ -47,7 +47,7 @@
       "scope": "Jordan national",
       "source_name": "DoS figures as reported by The Jordan Times (Facebook post)",
       "url": "https://www.facebook.com/thejordantimes/posts/director-general-of-the-department-of-statistics-dos-haidar-fraihat-said-jordans/1482363837271805/",
-      "notes": "Includes non-Jordanians (male-skewed migrant workforce). Seed uses its own 0.49 ASSUMPTION until a DoS table is checked."
+      "notes": "Includes non-Jordanians (male-skewed migrant workforce). seed_census.py uses 53% male / 47% female, i.e. this figure as quoted by the research (tagged CITED there), for both its datasets."
     },
     "disability_65_plus": {
       "value": 0.493,
@@ -95,7 +95,7 @@
       "scope": "Amman intra-urban",
       "source_name": "Transportation Research Interdisciplinary Perspectives article; BRT fare from expat guides",
       "url": "https://www.sciencedirect.com/science/article/pii/S2590198222001762",
-      "notes": "Publisher blocked automated access (403). Our frozen BUS_FARE_JD 0.45 lies inside this range."
+      "notes": "Context for BUS_FARE_JD only. Publisher blocked automated access (403). Our frozen BUS_FARE_JD 0.45 is an ASSUMPTION set before any scenario ran; it happens to lie inside this range."
     },
     "bus_wait_peak_minutes": {
       "value": 25.4,
@@ -104,7 +104,7 @@
       "scope": "Amman, peak hours",
       "source_name": "The Open Transportation Journal, vol 13, p 227",
       "url": "https://opentransportationjournal.com/VOLUME/13/PAGE/227/FULLTEXT/",
-      "notes": "Peak-hour wait. Our frozen BUS_FIRST_WAIT_MIN is 10 (visits happen off-peak); BUS_WAIT_PLUS_TRANSFER_MIN is in the ±20% robustness check. Known gap, stated honestly."
+      "notes": "Context for BUS_FIRST_WAIT_MIN and BUS_WAIT_PLUS_TRANSFER_MIN only. A peak-hour wait; our frozen values (10 min first wait + 15 min per transfer) are ASSUMPTIONS, set for off-peak visits. BUS_WAIT_PLUS_TRANSFER_MIN is in the ±20% robustness check. A known gap, stated honestly."
     },
     "district_population_2015": {
       "value": {
@@ -121,7 +121,7 @@
       "scope": "Greater Amman Municipality districts",
       "source_name": "2015 Census via GAM, as tabulated on Wikipedia 'Amman'",
       "url": "https://en.wikipedia.org/wiki/Amman",
-      "notes": "Could replace the synthetic area weights in areas.json once checked against a GAM/DoS table. Our 8 areas only approximate these districts."
+      "notes": "Seven of the 22 districts shown here; seed_census.py holds all 22 rows as quoted by the research and draws every citizen's district from their relative shares (VALIDATION.md, district table). Each district then maps to one of our 8 engine areas. Not yet checked against a GAM/DoS table, hence CITED_UNVERIFIED."
     },
     "cspd_offices_amman": {
       "value": [
@@ -133,11 +133,31 @@
         "Marka",
         "Tla' Al-Ali"
       ],
-      "status": "CITED_UNVERIFIED",
-      "year": null,
-      "source_name": "CSPD directorates and offices list",
+      "status": "ANCHORED",
+      "year": 2026,
+      "source_name": "CSPD directorates and offices list (cspd.gov.jo)",
       "url": "https://cspd.gov.jo/EN/ListDetails/Department_Directorates_and_Offices/17/1",
-      "notes": "Real office network for context. Our scenarios are hypothetical policies on 8 candidate sites, not a model of today's network."
+      "notes": "The baseline scenario IS this network: the 7 offices are in sites.json (real: true) with their addresses from this page, located once with OpenStreetMap Nominatim (precision recorded per site). The 8 other sites are generic snap sites, one per engine area.",
+      "retrieved": "2026-10-09"
+    },
+    "cspd_office_hours": {
+      "value": {
+        "days": [
+          "sun",
+          "mon",
+          "tue",
+          "wed",
+          "thu"
+        ],
+        "open": "08:30",
+        "close": "15:30"
+      },
+      "status": "TEAM_CONFIRMED",
+      "year": 2026,
+      "scope": "CSPD offices in Amman",
+      "source_name": "CSPD's published office hours (cspd.gov.jo), read by the team on 2026-10-09",
+      "url": null,
+      "notes": "Used as the baseline hours of all 7 offices. The exact page URL was not recorded, so this stays TEAM_CONFIRMED; add the URL here (and 'retrieved') to make it ANCHORED. A Fri/Sat 10:00-14:00 line on CSPD's site is not modelled: it may be contact-centre hours."
     }
   }
 }
