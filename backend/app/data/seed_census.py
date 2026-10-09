@@ -109,8 +109,6 @@ TOTAL_2015, NON_JO_2015 = 4_007_526, 1_452_693
 NATIONALITY = {"jordanian": TOTAL_2015 - NON_JO_2015, "syrian": 435_578, "egyptian": 390_631,
                "palestinian": 308_091, "iraqi": 121_893, "yemeni": 27_109}
 NATIONALITY["other"] = NON_JO_2015 - sum(v for k, v in NATIONALITY.items() if k != "jordanian")
-NAT_AR = {"jordanian": "أردني", "syrian": "سوري", "egyptian": "مصري", "palestinian": "فلسطيني (غير أردني)",
-          "iraqi": "عراقي", "yemeni": "يمني", "other": "أخرى"}
 
 # ---------------------------------------------------------------- ASSUMPTIONS (not in the research doc)
 # Age of residents 16+. The research says the census has single-year ages but quotes no bands; these shares
@@ -507,7 +505,6 @@ class HomePoints:
         self.grid = {}
         for lat, lng in pts:
             self.grid.setdefault((int(lat / self.CELL), int(lng / self.CELL)), []).append((lat, lng))
-        self.last_hit = False
 
     @classmethod
     def load(cls):
@@ -520,7 +517,6 @@ class HomePoints:
         ci, cj = int(lat / self.CELL), int(lng / self.CELL)
         cand = [q for di in (-1, 0, 1) for dj in (-1, 0, 1) for q in self.grid.get((ci + di, cj + dj), [])
                 if haversine_km(lat, lng, q[0], q[1]) <= STREET_RADIUS_KM]
-        self.last_hit = bool(cand)
         if not cand:
             return None
         q = rng.choice(sorted(cand))

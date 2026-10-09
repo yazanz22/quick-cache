@@ -39,15 +39,6 @@ def post_fixes(req: CompareRequest):
     return tasks.explain_and_propose_fixes(req.baseline, req.scenario)
 
 
-@router.get("/labels")
-def get_labels():
-    """Arabic/English labels for reason codes, groups, modes and statuses (handy for the UI)."""
-    pack = lambda d: {k: {"ar": v[0], "en": v[1]} for k, v in d.items()}
-    return {"reasons": pack(fallbacks.REASON_LABELS), "groups": pack(fallbacks.GROUP_LABELS),
-            "modes": pack(fallbacks.MODE_LABELS), "statuses": pack(fallbacks.STATUS_LABELS),
-            "days": {d: {"ar": world.DAY_AR[d], "en": world.DAY_EN[d]} for d in world.DAY_AR}}
-
-
 @router.get("/llm/status")
 def llm_status():
     """Configured model chains, calls per model since start, and which models are cooling down."""

@@ -1,13 +1,69 @@
 {
-  "_note": "Centroids are approximate (CLAUDE.md §6). 'side' drives bus transfers. 'weight' is the share of synthetic citizens per area: a labelled SYNTHETIC ASSUMPTION, not a census figure.",
-  "areas": [
-    {"id": "downtown",        "name_ar": "وسط البلد",   "name_en": "Downtown",        "lat": 31.951, "lng": 35.934, "side": "east", "weight": 0.10},
-    {"id": "abdali",          "name_ar": "العبدلي",     "name_en": "Abdali",          "lat": 31.962, "lng": 35.910, "side": "west", "weight": 0.10},
-    {"id": "jabal_al_hussein","name_ar": "جبل الحسين",  "name_en": "Jabal Al-Hussein","lat": 31.968, "lng": 35.920, "side": "east", "weight": 0.12},
-    {"id": "marka",           "name_ar": "ماركا",       "name_en": "Marka",           "lat": 31.975, "lng": 35.985, "side": "east", "weight": 0.16},
-    {"id": "wehdat",          "name_ar": "الوحدات",     "name_en": "Wehdat",          "lat": 31.935, "lng": 35.940, "side": "east", "weight": 0.15},
-    {"id": "tabarbour",       "name_ar": "طبربور",      "name_en": "Tabarbour",       "lat": 32.000, "lng": 35.940, "side": "east", "weight": 0.13},
-    {"id": "sweileh",         "name_ar": "صويلح",       "name_en": "Sweileh",         "lat": 32.020, "lng": 35.840, "side": "west", "weight": 0.12},
-    {"id": "khalda",          "name_ar": "خلدا",        "name_en": "Khalda",          "lat": 31.995, "lng": 35.835, "side": "west", "weight": 0.12}
-  ]
+ "_note": "The 8 engine areas. Centroids are approximate (CLAUDE.md §6). 'side' drives bus transfers. Citizens' GAM districts map to these in seed_census.py.",
+ "areas": [
+  {
+   "id": "downtown",
+   "name_ar": "وسط البلد",
+   "name_en": "Downtown",
+   "lat": 31.951,
+   "lng": 35.934,
+   "side": "east"
+  },
+  {
+   "id": "abdali",
+   "name_ar": "العبدلي",
+   "name_en": "Abdali",
+   "lat": 31.962,
+   "lng": 35.91,
+   "side": "west"
+  },
+  {
+   "id": "jabal_al_hussein",
+   "name_ar": "جبل الحسين",
+   "name_en": "Jabal Al-Hussein",
+   "lat": 31.968,
+   "lng": 35.92,
+   "side": "east"
+  },
+  {
+   "id": "marka",
+   "name_ar": "ماركا",
+   "name_en": "Marka",
+   "lat": 31.975,
+   "lng": 35.985,
+   "side": "east"
+  },
+  {
+   "id": "wehdat",
+   "name_ar": "الوحدات",
+   "name_en": "Wehdat",
+   "lat": 31.935,
+   "lng": 35.94,
+   "side": "east"
+  },
+  {
+   "id": "tabarbour",
+   "name_ar": "طبربور",
+   "name_en": "Tabarbour",
+   "lat": 32.0,
+   "lng": 35.94,
+   "side": "east"
+  },
+  {
+   "id": "sweileh",
+   "name_ar": "صويلح",
+   "name_en": "Sweileh",
+   "lat": 32.02,
+   "lng": 35.84,
+   "side": "west"
+  },
+  {
+   "id": "khalda",
+   "name_ar": "خلدا",
+   "name_en": "Khalda",
+   "lat": 31.995,
+   "lng": 35.835,
+   "side": "west"
+  }
+ ]
 }

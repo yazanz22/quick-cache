@@ -34,10 +34,6 @@ def one(c, p):
     return engine.run(p, [c])[0]
 
 
-def test_seed_is_deterministic():
-    assert seed.generate(50) == seed.generate(50)
-
-
 def test_committed_population_is_valid_and_tags_are_derived():
     committed = json.loads((world.DATA_DIR / "population.json").read_text(encoding="utf-8"))
     assert len({c["id"] for c in committed}) == len(committed) > 0

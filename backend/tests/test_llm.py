@@ -20,7 +20,9 @@ def test_cache_key_normalises_text():
 
 
 def test_every_reason_has_voice_text():
-    assert set(fallbacks.REASON_VOICE) == set(fallbacks.REASON_LABELS)
+    from typing import get_args
+    from app.models import ReasonCode
+    assert set(fallbacks.REASON_VOICE) == set(get_args(ReasonCode))
 
 
 def test_offline_tasks_fall_back_never_blank():

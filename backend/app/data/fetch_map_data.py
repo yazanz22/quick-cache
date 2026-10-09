@@ -1,7 +1,6 @@
 """One-time fetch of real map data. Run while online; outputs are committed so the
 engine never calls an API at simulate time (deterministic, offline-safe).
 
-    python -m app.data.fetch_map_data stops     # Overpass -> bus_stops.json, cspd_offices.json
     python -m app.data.fetch_map_data matrix    # OSRM     -> travel_matrix.json
     python -m app.data.fetch_map_data homes     # Overpass -> home_points.json (residential streets, for seed_census)
 
@@ -26,7 +25,6 @@ OVERPASS_MIRRORS = [
     "https://overpass.private.coffee/api/interpreter",
 ]
 OSRM = "https://router.project-osrm.org/table/v1/driving/"
-BBOX = (31.90, 35.79, 32.06, 36.03)  # south, west, north, east: covers the 8 areas
 
 
 def _get(url: str, data: bytes | None = None, timeout: int = 120) -> dict:
@@ -44,44 +42,6 @@ def overpass(query: str) -> list[dict]:
                 print("overpass busy:", url, type(e).__name__, getattr(e, "code", ""))
         time.sleep(10)
     raise RuntimeError("Overpass unavailable")
-
-
-def fetch_stops() -> None:
-    s, w, n, e = BBOX
-    q = f"""[out:json][timeout:90];
-(
-  node["highway"="bus_stop"]({s},{w},{n},{e});
-  node["public_transport"="platform"]["bus"="yes"]({s},{w},{n},{e});
-  node["public_transport"="stop_position"]["bus"="yes"]({s},{w},{n},{e});
-);
-out;"""
-    els = overpass(q)
-    stops = sorted({(round(x["lat"], 5), round(x["lon"], 5)) for x in els})
-    (DATA / "bus_stops.json").write_text(json.dumps({
-        "_source": "OpenStreetMap via Overpass API, ODbL. highway=bus_stop + bus platforms/stop positions.",
-        "_fetched": date.today().isoformat(), "bbox": BBOX, "count": len(stops),
-        "stops": [[a, b] for a, b in stops]}, indent=0), encoding="utf-8")
-    print("bus stops:", len(stops))
-
-    q2 = """[out:json][timeout:90];
-(
-  nwr["name"~"أحوال المدنية|الأحوال المدنية|Civil Status|Civil Registry",i](31.80,35.70,32.15,36.10);
-  nwr["name:en"~"Civil Status|Civil Registry",i](31.80,35.70,32.15,36.10);
-);
-out center tags;"""
-    offices = []
-    for x in overpass(q2):
-        lat = x.get("lat") or x.get("center", {}).get("lat")
-        lon = x.get("lon") or x.get("center", {}).get("lon")
-        t = x.get("tags", {})
-        offices.append({"osm": f'{x["type"]}/{x["id"]}', "lat": lat, "lng": lon,
-                        "name": t.get("name"), "name_en": t.get("name:en"), "tags": t})
-    (DATA / "cspd_offices.json").write_text(json.dumps({
-        "_source": "OpenStreetMap via Overpass API, ODbL. Features named like Civil Status offices.",
-        "_fetched": date.today().isoformat(), "offices": offices}, ensure_ascii=False, indent=1), encoding="utf-8")
-    print("civil status features:", len(offices))
-    for o in offices:
-        print(" ", o["osm"], o["lat"], o["lng"], o["name"], "|", o["name_en"])
 
 
 GAM_BBOX = (31.84, 35.74, 32.09, 36.10)  # south, west, north, east: all 22 GAM districts
@@ -155,8 +115,6 @@ def fetch_matrix() -> None:
 
 if __name__ == "__main__":
     what = sys.argv[1] if len(sys.argv) > 1 else "all"
-    if what in ("stops", "all"):
-        fetch_stops()
     if what in ("homes", "all"):
         fetch_homes()
     if what in ("matrix", "all"):

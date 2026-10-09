@@ -7,17 +7,6 @@ from __future__ import annotations
 from ..models import ParseResult
 from ..sim.world import DAY_AR, DAY_EN
 
-# Neutral labels (chips, lists).
-REASON_LABELS = {
-    "TOO_FAR": ("بعيد جداً", "Too far"),
-    "NO_TRANSPORT": ("لا توجد وسيلة نقل", "No transport"),
-    "HOURS_CONFLICT_WORK": ("الدوام يتعارض مع العمل", "Hours clash with work"),
-    "NO_SMARTPHONE": ("لا يملك هاتفاً ذكياً", "No smartphone"),
-    "LOW_DIGITAL_LITERACY": ("مهارات رقمية ضعيفة", "Low digital literacy"),
-    "NOT_WHEELCHAIR_ACCESSIBLE": ("المكان غير مهيأ للكرسي المتحرك", "Not wheelchair accessible"),
-    "TOO_EXPENSIVE": ("التكلفة مرتفعة", "Too expensive"),
-    "OFFICE_CLOSED_ON_AVAILABLE_DAYS": ("مغلق في الأوقات المتاحة", "Closed when they can go"),
-}
 # First-person clauses for voices, in Modern Standard Arabic (فصحى).
 REASON_VOICE = {
     "TOO_FAR": ("المكتب بعيد عني", "the office is too far for me"),
@@ -43,11 +32,6 @@ GROUP_LABELS = {
     "low_income": ("ذوو الدخل المحدود", "low income"), "worker": ("العاملون", "workers"),
     "student": ("الطلاب", "students"), "all": ("الجميع", "everyone"),
 }
-MODE_LABELS = {
-    "car": ("سيارة", "car"), "helper_car": ("مع أحد الأقارب بالسيارة", "driven by family"),
-    "bus": ("حافلة", "bus"), "taxi": ("سيارة أجرة", "taxi"), "online": ("عبر الإنترنت", "online"),
-}
-STATUS_LABELS = {"served": ("تمت الخدمة", "Served"), "hardship": ("بصعوبة", "Hardship"), "left_out": ("مستبعد", "Left out")}
 
 
 def _n(x: float) -> str:
