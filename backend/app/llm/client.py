@@ -101,6 +101,8 @@ def _next_daily_reset() -> float:
 def _classify(e: Exception) -> tuple[float, str] | None:
     """Cooldown for a failed call, or None if the error isn't about limits/availability."""
     s = f"{type(e).__name__} {e}".lower()
+    if any(k in s for k in ("insufficient_quota", "no credits", "billing")):
+        return _next_daily_reset(), "no credits"
     if "perday" in s or "per day" in s or "requests per day" in s or "rpd" in s:
         return _next_daily_reset(), "daily limit"
     if any(k in s for k in ("429", "rate limit", "rate_limit", "resource_exhausted", "quota", "tokens per minute")):

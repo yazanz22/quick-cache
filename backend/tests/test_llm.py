@@ -44,6 +44,8 @@ def test_rate_limits_put_models_on_cooldown():
     assert daily[1] == "daily limit" and daily[0] > time.time() + 60
     assert minute[1] == "rate limit" and busy[1] == "overloaded"
     assert client._classify(ValueError("bad json")) is None
+    no_credit = client._classify(Exception("429 insufficient_quota: You have no credits remaining"))
+    assert no_credit[1] == "no credits" and no_credit[0] > time.time() + 60
 
 
 def test_voice_style_checks():
