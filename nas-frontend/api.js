@@ -103,6 +103,11 @@
     });
   }
 
+  // -> [{ id, name_ar, name_en, km, lines: [[[lat, lng], ...], ...] }]  (closable roads, catalogue order)
+  function normRoads(raw) {
+    return (arr(raw, "roads") || []).map(function (r) { return { id: r.id, name_ar: r.name_ar || r.id, name_en: r.name_en || r.id, km: +r.km || 0, lines: r.lines || [] }; });
+  }
+
   // -> [{ id, note_ar, note_en }]
   function normHeroes(raw) {
     const list = arr(raw, "heroes") || [];
@@ -163,6 +168,7 @@
     // Optional extras, not in §7. The UI falls back to config.js if they 404.
     areas: function () { return get("/areas").then(normAreas); },
     heroes: function () { return get("/heroes").then(normHeroes); },
+    roads: function () { return get("/roads").then(normRoads); },
 
     simulate: function (policy) { return post("/simulate", { policy: policy }).then(normSim); },
     compare: function (baseline, scenario) { return post("/compare", { baseline: baseline, scenario: scenario }).then(normCompare); },

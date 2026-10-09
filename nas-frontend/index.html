@@ -161,6 +161,15 @@ textarea.input { height: auto; min-height: 76px; padding: 9px 10px; resize: vert
 .unit .x:hover { background: var(--surface-3); color: var(--left); }
 .empty { font-size: 12.5px; color: var(--muted); padding: 10px 12px; border: 1px dashed var(--line-strong); border-radius: var(--r-card); }
 
+.roadchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.roadchip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line-strong); background: var(--surface); font-size: 12px; padding: 4px 10px; border-radius: 999px; color: var(--ink-2); }
+.roadchip i { font-size: 13px; color: var(--faint); }
+.roadchip[aria-pressed="true"] { background: var(--left-soft); border-color: var(--left); color: var(--ink); font-weight: 600; }
+.roadchip[aria-pressed="true"] i { color: var(--left); }
+.roadchip:disabled { opacity: .4; }
+.road-closed { stroke: var(--left); stroke-dasharray: 8 6; stroke-linecap: round; fill: none; }
+.detour-sub { margin-top: 8px; color: var(--ink-2); }
+.sec-title .count { font-size: 11px; font-weight: 600; background: var(--left-soft); color: var(--left); border-radius: 999px; padding: 1px 7px; margin-inline-start: 4px; }
 .examples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .ex { border: 1px solid var(--line); background: var(--surface-2); font-size: 12px; padding: 3px 10px; border-radius: 999px; color: var(--ink-2); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ex:hover { border-color: var(--accent-line); color: var(--ink); }
@@ -240,7 +249,7 @@ html[dir="rtl"] .drawer[hidden] { transform: translateX(calc(-100% - 24px)); }
 .drawer-head h3 { margin: 0; font-size: 17px; font-weight: 600; }
 .drawer-head .sub { color: var(--muted); font-size: 12.5px; }
 .drawer-head .icon-btn { margin-inline-start: auto; width: 30px; height: 30px; font-size: 15px; }
-.drawer-body { overflow-y: auto; padding: 0 16px 16px; display: grid; gap: 14px; align-content: start; }
+.drawer-body { overflow-y: auto; padding: 0 16px 16px; display: grid; gap: 14px; align-content: start; grid-auto-rows: max-content; }
 .status-flow { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
 .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
 .pill.served { background: var(--served-soft); color: var(--served); }

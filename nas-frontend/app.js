@@ -27,7 +27,7 @@
     lang: store.get("nas.lang") === "en" ? "en" : "ar",
     theme: store.get("nas.theme"),
     // reference data (GET)
-    pop: [], byId: new Map(), sites: {}, areas: {}, scenarios: [], assumptions: [], heroes: [],
+    pop: [], byId: new Map(), sites: {}, areas: {}, scenarios: [], assumptions: [], heroes: [], roads: [], roadsOpen: false,
     baseline: null, policy: null, preset: null,
     prePolicy: null, preKpis: null, appliedFix: null,
     view: "after", reason: null, sel: null, tab: "impact",
@@ -44,6 +44,8 @@
   const loc = function (o, base) { return o ? (o[base + "_" + S.lang] || o[base + "_" + (S.lang === "ar" ? "en" : "ar")] || "") : ""; };
   const areaName = function (k) { return S.areas[k] ? loc(S.areas[k], "name") : k; };
   const siteName = function (id) { return S.sites[id] ? loc(S.sites[id], "name") : id; };
+  const roadName = function (id) { const r = S.roads.find(function (x) { return x.id === id; }); return r ? loc(r, "name") : id; };
+  const roadNameEn = function (id) { const r = S.roads.find(function (x) { return x.id === id; }); return r ? r.name_en : id; };
   const dayName = function (d) { return t("day_" + d); };
   const shortDay = function (d) { return S.lang === "ar" ? dayName(d).replace("ال", "").slice(0, 3) : dayName(d).slice(0, 2); };
   const name = function (c) { return (S.lang === "ar" ? c.name_ar : c.name_en) || c.name_ar || c.name_en || c.id; };
@@ -81,9 +83,9 @@
     bootScreen("loading");
     try {
       const opt = function (p, fb) { return p.catch(function (e) { if (e.status === 404 || e.status === 405) return fb; throw e; }); };
-      const r = await Promise.all([API.population(), API.sites(), API.scenarios(), opt(API.assumptions(), []), opt(API.areas(), null), opt(API.heroes(), null)]);
+      const r = await Promise.all([API.population(), API.sites(), API.scenarios(), opt(API.assumptions(), []), opt(API.areas(), null), opt(API.heroes(), null), opt(API.roads(), [])]);
       S.pop = r[0]; S.byId = new Map(S.pop.map(function (c) { return [c.id, c]; }));
-      S.sites = r[1]; S.scenarios = r[2]; S.assumptions = r[3];
+      S.sites = r[1]; S.scenarios = r[2]; S.assumptions = r[3]; S.roads = r[6] || [];
       S.areas = r[4] && Object.keys(r[4]).length ? r[4] : CFG.AREAS;
       S.heroes = (r[5] && r[5].length ? r[5] : CFG.HERO_IDS.map(function (id) { return { id: id }; })).filter(function (h) { return S.byId.has(h.id); });
       if (!S.scenarios.length) throw new API.ApiError("no scenarios", 0, "/scenarios");
@@ -204,6 +206,7 @@
     if (o.mode === "online") return o.status === "hardship" ? "Hardship: done online with help from " + (c.helper_relation_en || "a helper") + "." : "Served: done online from home.";
     const m = o.mode === "bus" ? ((o.bus_transfers || 0) + 1) + " bus" + ((o.bus_transfers || 0) ? "es" : "") + ", " + Math.round(o.travel_minutes) + " min each way" : (DICT.en["m_" + o.mode] || o.mode || "").toLowerCase();
     let s = (o.status === "served" ? "Served: " : "Hardship: ") + (o.channel_name_en || "") + (o.visit_day ? " on " + DICT.en["day_" + o.visit_day] : "") + (m ? ", " + m : "");
+    if (o.detour_minutes > 0) s += "; +" + Math.round(o.detour_minutes) + " min detour (" + roadNameEn(o.detour_road) + " closed)";
     if (o.work_hours_missed > 0) s += "; " + f1(o.work_hours_missed) + " h of work missed";
     return s + ". " + f1(o.hours_lost) + " h, " + f1(o.cost_jd) + " JD in total.";
   }
@@ -245,7 +248,7 @@
         return '<button class="preset" data-preset="' + esc(sc.id) + '" aria-pressed="' + (S.preset === sc.id) + '"><b>' + esc(scenarioName(sc)) + "</b>" + (note ? "<small>" + esc(note) + "</small>" : "<small></small>") + '<i class="ph ph-check tick" aria-hidden="true"></i></button>';
       }).join("") + "</div></div>";
 
-    const ex = [1, 2, 3, 4].map(function (i) { return t("example_" + i); });
+    const ex = [1, 2, 3, 4, 5].map(function (i) { return t("example_" + i); });
     h += '<div class="sec"><label class="sec-title" for="nl">' + t("describe") + '</label>' +
       '<textarea class="input" id="nl" rows="3" placeholder="' + esc(t("describe_ph")) + '">' + esc(S.text) + "</textarea>" +
       '<div class="examples">' + ex.map(function (e, i) { return '<button class="ex" data-ex="' + i + '" title="' + esc(e) + '">' + esc(e) + "</button>"; }).join("") + "</div>" +
@@ -272,6 +275,14 @@
 
     h += '<div class="sec"><h3 class="sec-title">' + t("rules") + "</h3>" +
       sw("online", p.online_enabled, t("online_enabled"), p.online_only) + sw("onlineOnly", p.online_only, t("online_only")) + sw("appt", p.appointment_required, t("appointment"), p.online_only) + "</div>";
+
+    if (S.roads.length) {
+      const closed = p.closed_roads || [], open = S.roadsOpen || closed.length > 0;
+      h += '<div class="sec"><h3 class="sec-title"><span>' + t("roads") + (closed.length ? ' <span class="count num">' + t("roads_closed_n", { n: closed.length }) + "</span>" : "") + '</span><button class="btn sm ghost" id="roadsBtn" aria-expanded="' + open + '"><i class="ph ph-traffic-cone"></i>' + t(open ? "roads_hide" : "roads_show") + "</button></h3>" +
+        (open ? '<p class="help" style="margin:0 0 8px">' + t("roads_help") + '</p><div class="roadchips">' + S.roads.map(function (r) {
+          return '<button class="roadchip" data-road="' + esc(r.id) + '" aria-pressed="' + (closed.indexOf(r.id) >= 0) + '"' + (p.online_only ? " disabled" : "") + '><i class="ph ph-prohibit" aria-hidden="true"></i>' + esc(loc(r, "name")) + "</button>";
+        }).join("") + "</div>" : "") + "</div>";
+    }
 
     const units = p.mobile_units || [];
     h += '<div class="sec"><h3 class="sec-title"><span>' + t("mobile_units") + '</span><button class="btn sm ghost" id="addUnit"' + (p.online_only ? " disabled" : "") + '><i class="ph ph-plus"></i>' + t("add_unit") + "</button></h3>" +
@@ -313,7 +324,7 @@
   }
 
   /* ---------------- map ---------------- */
-  let map, tiles, zoom, dotLayer, ringLayer, pinLayer, labelLayer, siteLayer, areaLayer;
+  let map, tiles, zoom, dotLayer, ringLayer, pinLayer, labelLayer, siteLayer, areaLayer, roadLayer;
   const dots = new Map();
   function currentDark() {
     if (S.theme) return S.theme === "dark";
@@ -335,6 +346,7 @@
     setTiles();
     const r = L.svg({ padding: 0.4 });
     areaLayer = L.layerGroup().addTo(map);
+    roadLayer = L.layerGroup().addTo(map);
     siteLayer = L.layerGroup().addTo(map);
     labelLayer = L.layerGroup().addTo(map);
     dotLayer = L.layerGroup().addTo(map);
@@ -396,6 +408,15 @@
     }
     pinLayer.clearLayers();
     const p = viewPolicy(), editable = S.view === "after";
+    roadLayer.clearLayers();
+    const rr2 = L.svg({ padding: 0.4 });
+    (p.closed_roads || []).forEach(function (id) {
+      const r = S.roads.find(function (x) { return x.id === id; }); if (!r) return;
+      r.lines.forEach(function (ln) {
+        L.polyline(ln, { className: "road-closed", weight: 5, opacity: 0.9, renderer: rr2, bubblingMouseEvents: false })
+          .bindTooltip(esc(t("road_closed_tip", { r: loc(r, "name") })), { sticky: true }).addTo(roadLayer);
+      });
+    });
     if (p.online_only) return;
     p.offices.forEach(function (o, i) {
       const s = S.sites[o.site_id]; if (!s) return;
@@ -494,6 +515,7 @@
       if (o.mode !== "online") facts.push(fact("visit_day", o.visit_day ? dayName(o.visit_day) : "-"), fact("travel", '<span class="num">' + Math.round(o.travel_minutes || 0) + "</span> " + t("min")));
       facts.push(fact("hours_lost", '<span class="num">' + f1(o.hours_lost) + "</span> " + t("hrs")), fact("cost", '<span class="num">' + f1(o.cost_jd) + "</span> " + t("jd")));
       h += '<div class="facts">' + facts.join("") + "</div>";
+      if (o.detour_minutes > 0) h += '<div class="facts" style="grid-template-columns:1fr"><div class="fact" style="border:0"><small>' + t("detour") + '</small><b><span class="num">+' + f1(o.detour_minutes) + "</span> " + t("min") + " · " + esc(roadName(o.detour_road)) + "</b></div></div>";
       if (o.work_hours_missed > 0) h += '<div class="facts" style="grid-template-columns:1fr"><div class="fact" style="border:0"><small>' + t("work_missed") + '</small><b><span class="num">' + f1(o.work_hours_missed) + "</span> " + t("hrs") + "</b></div></div>";
     }
     if ((o.reasons || []).length) h += '<div><h4 class="sec-title" style="margin-bottom:8px">' + t("reasons") + '</h4><div class="chips">' + o.reasons.map(function (r) { return '<span class="rchip"><i class="ph ' + (REASON_ICON[r] || "ph-warning") + '"></i>' + t("r_" + r) + "</span>"; }).join("") + "</div></div>";
@@ -542,6 +564,8 @@
     let h = '<div class="sec"><div class="kpis">' + [["pct_served", "served", false], ["pct_hardship", "hardship", true], ["pct_left_out", "left_out", true]].map(function (x) {
       return '<div class="kpi"><div class="kpi-label"><span class="sw-dot ' + x[1] + '"></span>' + t(x[1]) + '</div><div class="kpi-val num">' + f1(K[x[0]]) + "<small>%</small></div>" + (showD ? delta(D[x[0]], x[2]) : '<span class="delta flat">' + (S.view === "before" ? t("step_baseline") : t("vs_baseline")) + "</span>") + "</div>";
     }).join("") + "</div>";
+    const closedNow = (viewPolicy().closed_roads || []).length;
+    if (closedNow) h += '<div class="kpi-sub detour-sub"><span><i class="ph ph-traffic-cone"></i> ' + t("detour_kpi") + ' <b class="num">' + (K.n_detour || 0) + "</b> " + t("people") + (K.n_detour ? " · " + t("detour_avg", { m: '<b class="num">' + f1(K.avg_detour_min) + "</b>" }) : "") + "</span></div>";
     h += '<div class="kpi-sub"><span>' + t("avg_hours") + ' <b class="num">' + f1(K.avg_hours_lost) + "</b> " + t("hrs") + " " + (showD ? delta(D.avg_hours_lost, true, t("hrs")) : "") + "</span><span>" + t("avg_cost") + ' <b class="num">' + f1(K.avg_cost_jd) + "</b> " + t("jd") + " " + (showD ? delta(D.avg_cost_jd, true, t("jd")) : "") + "</span></div>";
     if (changed()) h += robustHTML();
     h += "</div>";
@@ -801,6 +825,15 @@
         if (o.schedule[d]) delete o.schedule[d];
         else { const ref = DAYS.filter(function (x) { return o.schedule[x] && x !== "thu"; })[0]; o.schedule[d] = ref ? o.schedule[ref].slice() : ["08:00", "15:00"]; }
       });
+    }
+    if (q("#roadsBtn")) { S.roadsOpen = !(S.roadsOpen || (S.policy.closed_roads || []).length > 0); return renderPolicy(); }
+    if ((el = q("[data-road]"))) {
+      const id = el.dataset.road;
+      return edit(function (p) {
+        const c = p.closed_roads || [], i = c.indexOf(id);
+        if (i >= 0) c.splice(i, 1); else c.push(id);
+        p.closed_roads = c; S.roadsOpen = true;
+      }, { now: true });
     }
     if (q("#addUnit")) return edit(function (p) {
       p.mobile_units = p.mobile_units || [];
