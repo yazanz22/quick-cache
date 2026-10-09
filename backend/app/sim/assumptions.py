@@ -19,6 +19,12 @@ class Assumptions:
     SERVICE_MINUTES: float = 60.0
     # ASSUMPTION: time to complete the service (or book an appointment) online.
     ONLINE_MINUTES: float = 20.0
+    # ASSUMPTION: a home visit means waiting at home for a 2-hour visit window (policy lever "home visits").
+    # Added 2026-10-09 with the lever, set before any scenario using it was run.
+    HOME_VISIT_MINUTES: float = 120.0
+    # ASSUMPTION: collecting a card already applied for online: a short counter visit (lever "hybrid pickup").
+    # Added 2026-10-09 with the lever, set before any scenario using it was run.
+    PICKUP_MINUTES: float = 15.0
 
     # Car times and road distances come from the OSRM matrix (data/travel_matrix.json, OpenStreetMap).
     # ASSUMPTION: OSRM times are free-flow; daytime Amman traffic makes trips this many times longer.
@@ -82,7 +88,7 @@ class Assumptions:
 DEFAULT = Assumptions()
 
 UNITS = {
-    "SERVICE_MINUTES": "min", "ONLINE_MINUTES": "min", "TRAFFIC_FACTOR": "×", "ROAD_FACTOR": "×", "CAR_SPEED_KMH": "km/h",
+    "SERVICE_MINUTES": "min", "ONLINE_MINUTES": "min", "HOME_VISIT_MINUTES": "min", "PICKUP_MINUTES": "min", "TRAFFIC_FACTOR": "×", "ROAD_FACTOR": "×", "CAR_SPEED_KMH": "km/h",
     "CAR_PARK_MIN": "min", "CAR_COST_PER_KM_JD": "JD/km", "BUS_SPEED_KMH": "km/h", "BUS_WALK_MIN": "min",
     "LIMITED_MOBILITY_WALK_FACTOR": "×", "BUS_FIRST_WAIT_MIN": "min", "BUS_WAIT_PLUS_TRANSFER_MIN": "min/transfer",
     "BUS_FARE_JD": "JD", "TAXI_WAIT_MIN": "min", "TAXI_BASE_JD": "JD", "TAXI_PER_KM_JD": "JD/km",
@@ -95,6 +101,8 @@ UNITS = {
 META = {
     "SERVICE_MINUTES": ("Queue + counter time for one visit", "ASSUMPTION"),
     "ONLINE_MINUTES": ("Time to finish online or book an appointment", "ASSUMPTION"),
+    "HOME_VISIT_MINUTES": ("Home visit: waiting at home for a 2-hour visit window", "ASSUMPTION"),
+    "PICKUP_MINUTES": ("Collecting a card applied for online: a short counter visit", "ASSUMPTION"),
     "TRAFFIC_FACTOR": ("Daytime traffic vs OSRM free-flow car times (road times themselves are OpenStreetMap data)", "ASSUMPTION"),
     "ROAD_FACTOR": ("Fallback only: road vs straight-line km (OSRM median is 1.51)", "ASSUMPTION"),
     "CAR_SPEED_KMH": ("Fallback only: urban car speed incl. traffic", "ASSUMPTION"),

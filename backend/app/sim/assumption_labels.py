@@ -5,6 +5,8 @@ so the frozen numbers in assumptions.py are untouched (CLAUDE.md §6.2)."""
 LABELS = {
     "SERVICE_MINUTES": ("مدة الخدمة في المكتب", "Service time at the office", "وقت الانتظار والمعاملة عند الشباك في زيارة واحدة"),
     "ONLINE_MINUTES": ("مدة الخدمة الإلكترونية", "Online service time", "وقت إنجاز المعاملة أو حجز الموعد عبر الإنترنت"),
+    "HOME_VISIT_MINUTES": ("مدة الزيارة المنزلية", "Home visit time", "انتظار الموظف في البيت ضمن نافذة زيارة مدتها ساعتان"),
+    "PICKUP_MINUTES": ("مدة استلام البطاقة", "Card pickup time", "زيارة قصيرة للشباك لاستلام بطاقة قُدّم طلبها إلكترونياً"),
     "TRAFFIC_FACTOR": ("معامل الازدحام", "Traffic factor", "زمن الرحلة نهاراً مقارنة بأزمنة OSRM دون ازدحام (الأزمنة نفسها من بيانات OpenStreetMap)"),
     "ROAD_FACTOR": ("معامل طول الطريق (احتياطي)", "Road factor (fallback)", "احتياطي فقط: نسبة طول الطريق إلى الخط المستقيم (الوسيط في OSRM هو 1.51)"),
     "CAR_SPEED_KMH": ("سرعة السيارة (احتياطي)", "Car speed (fallback)", "احتياطي فقط: سرعة السيارة في المدينة مع الازدحام"),
