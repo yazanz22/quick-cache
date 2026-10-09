@@ -19,3 +19,6 @@ out/
 Thumbs.db
 .vscode/
 .idea/
+
+# raw downloads (rebuilt by app/data/fetch_roads.py)
+backend/app/data/_raw/
