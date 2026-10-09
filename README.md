@@ -25,7 +25,7 @@ uvicorn app.main:app --reload --port 8000
 - Copy `.env.example` to `.env` (repo root) and add your own free Gemini and Groq keys (an OpenAI key is optional: set `OPENAI_MODEL_*` too).
 - `pytest -q` runs the offline test suite (no AI calls).
 - `DEMO_OFFLINE=1` in `.env`: cache + templates only, never a network call. `?offline=1` in the URL draws no map tiles.
-- The UI still loads Leaflet, icons and fonts from CDNs, so vendor those before a fully offline demo.
+- Leaflet, icons and fonts are vendored in `nas-frontend/vendor/`, so with both switches on the demo needs no internet.
 - Production: https://nas-rbo5.onrender.com (Render free plan from `render.yaml`; sleeps when idle, ~30-60 s to wake).
   Deploy from the Render dashboard (Manual Deploy → latest commit) if a push doesn't trigger one.
 

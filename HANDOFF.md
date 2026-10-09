@@ -58,6 +58,7 @@ backend/
   cache/     committed AI cache: parse 17, voice 10, report 3, fixes 1
   tests/     test_engine.py, test_fixgrid.py, test_llm.py, test_levers.py
 nas-frontend/  index.html, config.js, api.js, i18n.js, app.js, README.md   # static, no build step
+  vendor/      Leaflet, Phosphor icons, IBM Plex fonts (local copies of the old CDN files; see vendor/README.md)
 ```
 
 ## 5. Data (what is real and what is assumed)
@@ -156,7 +157,9 @@ rehearsal is "Add more staff at the Marka office" (and any road closure, e.g. "Ø
 1. **2 hero voices still use the template**: Bilal (c_0837) and Amina (c_0020) *after the engine's top grid fix* (the demo applies
    the AI fix, so they rarely show). After the Gemini reset: from `backend/`, `.venv/Scripts/python -m scripts.warm_cache`, then commit `backend/cache/`.
    Voices for citizens served by home visits are generated on click (AI or template); none are pre-cached.
-2. **Fully offline demo**: the UI still loads Leaflet, Phosphor icons and Google Fonts from CDNs. Vendor them into `nas-frontend/` before a no-wifi demo.
+2. **Fully offline demo: DONE.** Leaflet 1.9.4, Phosphor icons (regular + fill) and IBM Plex (arabic/latin subsets) are vendored in
+   `nas-frontend/vendor/` (~1 MB). Verified: with `?offline=1` the page makes no request outside the server, in Arabic and English.
+   Add `DEMO_OFFLINE=1` in `.env` and nothing needs the internet.
 3. **Native-speaker review** of the cached voices: the user said leave it.
 4. Staff / operating-cost readout: **ruled out of scope** by the user (on stage: "operating cost is the next module").
 5. `app.js` has its own *dialect* voice template (`fallbackVoiceAr`), used only if `/citizen/voice` fails outright. Our backend
@@ -165,7 +168,6 @@ rehearsal is "Add more staff at the Marka office" (and any road closure, e.g. "Ø
 7. A fee discount alone changes no statuses on the demo path (hardship there comes from appointments and helpers, not cost);
    it shows in the average cost. Opening a Marka office on the demo path also moves no statuses (it does on `consolidate`: 85.0 â†’ 85.6).
    Both are honest results; don't tune them.
-8. The user's local `.env` still has a `TOMTOM_API_KEY` from the removed road work; nothing reads it.
 
 ## 11. Group protections + opening offices (DONE, 2026-10-09)
 Five Policy levers (models.py, engine.py), all per citizen by their tags, deterministic, manual/free-text only:
