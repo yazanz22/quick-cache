@@ -50,6 +50,10 @@ class Citizen(BaseModel):
     helper_relation_ar: str | None = None
     helper_relation_en: str | None = None
     tags: list[str] = []
+    # Optional, from seed_census.py: GAM district and neighbourhood of the home (display only, ignored by the engine).
+    district: str | None = None
+    neighbourhood: str | None = None
+    neighbourhood_ar: str | None = None
 
 
 class Area(BaseModel):

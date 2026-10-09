@@ -18,6 +18,8 @@ export interface Citizen {
   income_band: "low" | "middle" | "high";
   has_helper: boolean; helper_relation_ar: string | null; helper_relation_en: string | null;
   tags: Tag[];
+  // extra, from seed_census.py (display only): GAM district id and neighbourhood of the home
+  district?: string | null; neighbourhood?: string | null; neighbourhood_ar?: string | null;
 }
 
 // extra: GET /areas, GET /sites
