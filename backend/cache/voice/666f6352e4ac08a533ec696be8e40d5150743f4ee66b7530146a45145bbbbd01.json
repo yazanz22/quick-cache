@@ -1,0 +1,42 @@
+{
+ "task": "voice",
+ "output": "ما قدرت أجدد هويتي لأنه ما عندي هاتف ذكي. والمكان كتير بعيد علي وتكلفته غالية وما بقدر عليها.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash",
+  "seconds": 3.62,
+  "ts": "2026-10-09T15:49:05"
+ },
+ "inputs": {
+  "profile": {
+   "age": 73,
+   "gender": "m",
+   "area_ar": "ماركا",
+   "mobility": "limited",
+   "has_car": false,
+   "has_smartphone": false,
+   "digital_literacy": "medium",
+   "works": false,
+   "work_start": null,
+   "work_end": null,
+   "income_band": "low",
+   "helper_relation_ar": null
+  },
+  "outcome": {
+   "status": "left_out",
+   "reasons": [
+    "NO_SMARTPHONE",
+    "TOO_FAR",
+    "TOO_EXPENSIVE"
+   ],
+   "channel_name_ar": null,
+   "mode": null,
+   "bus_transfers": 0,
+   "visit_day_ar": null,
+   "travel_minutes_one_way": 0,
+   "total_cost_jd": 0.0,
+   "total_hours_lost_incl_waiting": 0.0,
+   "work_hours_missed": 0.0
+  }
+ }
+}

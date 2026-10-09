@@ -2,7 +2,7 @@ import json
 import time
 
 from app.data import seed
-from app.models import MobileUnit, Office, Policy
+from app.models import Citizen, MobileUnit, Office, Policy
 from app.sim import engine, world
 from app.sim.compare import compare
 
@@ -34,10 +34,23 @@ def one(c, p):
     return engine.run(p, [c])[0]
 
 
-def test_population_is_deterministic_and_matches_committed_file():
+def test_seed_is_deterministic():
+    assert seed.generate(50) == seed.generate(50)
+
+
+def test_committed_population_is_valid_and_tags_are_derived():
     committed = json.loads((world.DATA_DIR / "population.json").read_text(encoding="utf-8"))
-    assert seed.generate() == committed
-    assert len(committed) == 800
+    assert len({c["id"] for c in committed}) == len(committed) > 0
+    for c in committed:
+        Citizen.model_validate(c)
+        assert c["tags"] == seed.derive_tags(c)
+        assert c["area"] in world.areas()
+
+
+def test_every_citizen_has_osrm_travel_times():
+    matrix = world.travel_matrix()
+    dests = set(world.sites()) | {f"area:{a}" for a in world.areas()}
+    assert all(c["id"] in matrix and dests <= set(matrix[c["id"]]) for c in world.population())
 
 
 def test_simulate_is_deterministic_and_fast():

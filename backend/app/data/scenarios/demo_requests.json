@@ -1,0 +1,18 @@
+{
+ "_note": "Rehearsed free-text requests (CLAUDE.md §10). scripts/warm_cache.py runs each once so its parse is cached. 'demo' is the sentence typed on stage; applied to the move_to_abdali policy it must equal the abdali_digital_first preset.",
+ "demo": {
+  "text": "خلّوا الكاونترات تسكر الساعة 1 الظهر، وما حدا يراجع المكتب إلا بموعد مسبق أونلاين",
+  "apply_to": "move_to_abdali",
+  "expected": "abdali_digital_first"
+ },
+ "requests": [
+  {"text": "اسكروا المكتب يوم الخميس", "apply_to": "baseline", "expect": "ok"},
+  {"text": "Close the office on Thursdays", "apply_to": "baseline", "expect": "ok"},
+  {"text": "Move the office to Sweileh", "apply_to": "baseline", "expect": "ok"},
+  {"text": "Make it online-only but keep a Saturday van in Wehdat", "apply_to": "baseline", "expect": "ok"},
+  {"text": "Double the fee", "apply_to": "baseline", "expect": "ok"},
+  {"text": "Require two visits", "apply_to": "baseline", "expect": "ok"},
+  {"text": "Make it free for people over 65", "apply_to": "baseline", "expect": "unsupported"},
+  {"text": "خلّوها مجانية لكبار السن", "apply_to": "baseline", "expect": "unsupported"}
+ ]
+}
