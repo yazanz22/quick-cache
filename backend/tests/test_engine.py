@@ -145,3 +145,10 @@ def test_compare_flips_and_groups():
     assert set(cr.worst_groups) == set(world.EQUITY_GROUPS)
     assert cr.kpi_delta["pct_left_out"] > 0
     assert abs(sum(cr.scenario.kpis[k] for k in ["pct_served", "pct_hardship", "pct_left_out"]) - 100) < 0.2
+
+
+def test_every_assumption_has_arabic_and_english_labels():
+    from app.sim import assumptions as A
+    from app.sim.assumption_labels import label_rows
+    rows = label_rows(A.as_table())
+    assert all(r["label_ar"] and r["label_en"] and r["rationale_ar"] for r in rows)

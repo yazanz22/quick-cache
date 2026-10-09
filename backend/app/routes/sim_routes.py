@@ -10,6 +10,7 @@ from ..config import SCENARIOS_DIR
 from ..models import (CompareRequest, CompareResult, FixCandidate, Policy, SensitivityRequest, SensitivityResult,
                       SimResult, SimulateRequest)
 from ..sim import assumptions as A
+from ..sim.assumption_labels import label_rows
 from ..sim import fixgrid, sensitivity, world
 from ..sim.compare import compare
 from ..sim.engine import simulate
@@ -66,7 +67,7 @@ def get_areas():
 
 @router.get("/assumptions")
 def get_assumptions():
-    return A.as_table()
+    return label_rows(A.as_table())
 
 
 @router.post("/simulate", response_model=SimResult)

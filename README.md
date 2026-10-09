@@ -24,6 +24,17 @@ uvicorn app.main:app --reload --port 8000
 - `pytest -q` runs 25 offline tests (no AI calls).
 - `DEMO_OFFLINE=1` in `.env`: cache + templates only, never a network call.
 
+## Run the frontend
+
+The UI is a static app in [nas-frontend/](nas-frontend/) (no build step; see its README). With the backend running:
+
+```bash
+python -m http.server 3000 --directory nas-frontend
+```
+
+Open http://localhost:3000 (`?api=http://<host>:8000` for another backend, `?offline=1` for no map tiles).
+It still loads Leaflet, icons and fonts from CDNs, so vendor those before an offline demo.
+
 ## API (for the frontend)
 
 Types: [frontend/lib/types.ts](frontend/lib/types.ts) mirrors [backend/app/models.py](backend/app/models.py).
@@ -35,6 +46,7 @@ Types: [frontend/lib/types.ts](frontend/lib/types.ts) mirrors [backend/app/model
 | GET | `/sites`, `/areas` | → `Site[]`, `Area[]` |
 | GET | `/sites/nearest?lat=&lng=` | → `Site` (snap a dragged office pin) |
 | GET | `/assumptions` | → `AssumptionRow[]` (for AssumptionsTable) |
+| GET | `/heroes` | → `[{id, note_ar, note_en, profile}]` hero citizens for the demo path |
 | GET | `/labels` | → Arabic/English labels for reasons, groups, modes, statuses, days |
 | GET | `/llm/status` | → model chains, calls per model, which models are cooling down (rate limits) |
 | POST | `/simulate` | `{policy}` → `SimResult` |

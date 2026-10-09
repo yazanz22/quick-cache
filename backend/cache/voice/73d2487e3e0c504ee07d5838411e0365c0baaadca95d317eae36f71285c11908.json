@@ -1,0 +1,39 @@
+{
+ "task": "voice",
+ "output": "جددتُ هويتي يوم السبت عبر الوحدة المتنقلة في وسط البلد وذهبتُ بواسطة الحافلة. استغرقت الرحلة في الاتجاه الواحد 42 دقيقة، وكلّفني الأمر نحو 3 دنانير. استغرقت العملية مع الانتظار حوالي ساعتين ونصف وتمكنتُ من إتمامها بنجاح.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "seconds": 3.82,
+  "ts": "2026-10-09T17:59:41"
+ },
+ "inputs": {
+  "register": "msa",
+  "profile": {
+   "age": 71,
+   "gender": "f",
+   "area_ar": "وسط البلد",
+   "mobility": "none",
+   "has_car": false,
+   "has_smartphone": false,
+   "digital_literacy": "low",
+   "works": false,
+   "work_start": null,
+   "work_end": null,
+   "income_band": "middle",
+   "helper_relation_ar": "ابني"
+  },
+  "outcome": {
+   "status": "served",
+   "reasons": [],
+   "channel_name_ar": "الوحدة المتنقلة في وسط البلد يوم السبت",
+   "mode": "bus",
+   "bus_transfers": 0,
+   "visit_day_ar": "السبت",
+   "travel_minutes_one_way": 42,
+   "total_cost_jd": 2.9,
+   "total_hours_lost_incl_waiting": 2.4,
+   "work_hours_missed": 0.0
+  }
+ }
+}
