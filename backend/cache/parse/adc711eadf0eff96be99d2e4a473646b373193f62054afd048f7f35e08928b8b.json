@@ -217,16 +217,16 @@
    "visits_required": 1,
    "closed_roads": [
     "zahran",
-    "cairo"
+    "medina"
    ]
   },
   "changes_ar": [
    "إغلاق شارع زهران",
-   "إغلاق شارع القاهرة"
+   "إغلاق شارع المدينة المنورة"
   ],
   "changes_en": [
-   "Closed Zahran Street",
-   "Closed Cairo Street"
+   "Close Zahran Street",
+   "Close Medina Street"
   ],
   "message_ar": null,
   "message_en": null
@@ -234,11 +234,11 @@
  "meta": {
   "provider": "gemini",
   "model": "gemini-3.5-flash-lite",
-  "seconds": 4.0,
-  "ts": "2026-10-09T20:04:15"
+  "seconds": 4.04,
+  "ts": "2026-10-09T20:49:30"
  },
  "inputs": {
-  "text": "سكروا شارع زهران وشارع القاهره",
+  "text": "سكروا شارع زهران وشارع المدينه المنوره",
   "current_policy": {
    "service": "id_renewal",
    "offices": [

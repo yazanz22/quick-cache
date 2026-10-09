@@ -60,9 +60,9 @@ def test_more_closures_never_shorten_a_trip():
 def test_validation_canonical_and_change_count():
     p = world.scenario_policy("baseline")
     assert any("unknown road" in e for e in policy_errors(_with(p, ["not_a_road"])))
-    assert not policy_errors(_with(p, ["zahran", "cairo"]))
-    assert canonical(_with(p, ["zahran", "cairo"])) == canonical(_with(p, ["cairo", "zahran", "zahran"]))
-    assert count_changes(p, _with(p, ["zahran", "cairo"])) == 2
+    assert not policy_errors(_with(p, ["zahran", "medina"]))
+    assert canonical(_with(p, ["zahran", "medina"])) == canonical(_with(p, ["medina", "zahran", "zahran"]))
+    assert count_changes(p, _with(p, ["zahran", "medina"])) == 2
 
 
 def test_cache_keys_without_closures_are_unchanged():
@@ -100,7 +100,8 @@ def test_roads_route_and_unknown_road_is_a_422():
 
 def test_parser_hint_finds_roads_named_in_the_text():
     f = tasks.roads_named_in
-    assert f("سكّروا شارع زهران وشارع القاهرة") == ["zahran", "cairo"]
+    assert f("سكّروا شارع زهران وشارع المدينة المنورة") == ["zahran", "medina"]
+    assert f("close Cairo Street") == []
     assert f("Close Prince Al-Hasan Street") == ["prince_hasan"]
     assert f("سكروا الجاردنز") == ["gardens"] and f("close the Gardens") == ["gardens"]
     assert f("أغلقوا أوتوستراد عمان الزرقاء") == ["amman_zarqa"]

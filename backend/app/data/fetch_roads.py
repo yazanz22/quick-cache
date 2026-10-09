@@ -48,12 +48,11 @@ MIN_DELTA_S = 1.0  # store only detours of at least a second
 AMMAN_MAX_LNG = 36.05
 AMMAN_MIN_LAT = 31.82
 
-# The catalogue: 19 major Amman roads. `osm` = exact OSM `name` values (Arabic) of the ways that make up the road.
+# The catalogue: 18 major Amman roads. `osm` = exact OSM `name` values (Arabic) of the ways that make up the road.
 ROADS = [
     {"id": "airport_road", "name_ar": "طريق المطار", "name_en": "Airport Road",
      "osm": ["شارع مطار الملكة علياء"], "min_lat": 31.70},
     {"id": "zahran", "name_ar": "شارع زهران", "name_en": "Zahran Street", "osm": ["شارع زهران"]},
-    {"id": "cairo", "name_ar": "شارع القاهرة", "name_en": "Cairo Street", "osm": ["شارع القاهرة"]},
     {"id": "queen_rania", "name_ar": "شارع الملكة رانيا", "name_en": "Queen Rania Street",
      "osm": ["شارع الملكة رانيا العبد الله", "شارع الملكة رانيا العبدالله"]},
     {"id": "mecca", "name_ar": "شارع مكة المكرمة", "name_en": "Mecca Street", "osm": ["شارع مكة المكرمة"]},

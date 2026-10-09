@@ -68,11 +68,11 @@
    ]
   },
   {
-   "text": "سكّروا شارع زهران وشارع القاهرة",
+   "text": "سكّروا شارع زهران وشارع المدينة المنورة",
    "apply_to": "baseline",
    "expect": "ok",
    "expect_roads": [
-    "cairo",
+    "medina",
     "zahran"
    ]
   },
