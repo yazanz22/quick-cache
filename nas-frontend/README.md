@@ -69,4 +69,4 @@ Change `api.js` only. Each endpoint function returns the normalised shape above;
 
 - Requests that come back out of order are ignored (only the latest `/compare` wins).
 - Language and theme are remembered in `localStorage` (wrapped in try/catch).
-- Needs internet for map tiles (OpenStreetMap), fonts (Google Fonts), Leaflet and icons (unpkg). For the venue: set `OFFLINE_MAP: true` (or open with `?offline=1`) to draw areas without tiles, and vendor the three CDN files if wifi is unreliable.
+- Leaflet, the Phosphor icons and the IBM Plex fonts are vendored in `vendor/` (sources and licences in `vendor/README.md`). Only map tiles (OpenStreetMap) need internet: for the venue, set `OFFLINE_MAP: true` (or open with `?offline=1`) to draw areas without tiles.
