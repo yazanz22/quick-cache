@@ -45,3 +45,17 @@ def test_sensitivity_without_a_fix_checks_the_ranking_only():
     s = sensitivity.check(base, scen, None)
     assert s.runs == 6 and not s.fix_checked and not s.passed and s.fix_still_helps == 0
     assert all("fix_still_helps" not in d for d in s.details)
+
+
+def test_warm_up_primes_the_robustness_cache():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.routes import sim_routes
+    sim_routes._SENS_CACHE.clear()
+    with TestClient(app) as c:  # runs the start-up warm-up
+        assert len(sim_routes._SENS_CACHE) == 2
+        base = world.scenarios()["baseline"]["policy"]
+        demo = world.scenarios()[world.demo_scenario_id()]["policy"]
+        r = c.post("/sensitivity", json={"baseline": base, "scenario": demo, "fix": None})
+        assert r.status_code == 200 and r.json()["ranking_held"] == 6
+        assert len(sim_routes._SENS_CACHE) == 2  # served from the primed cache, nothing new computed

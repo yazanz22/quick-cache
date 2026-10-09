@@ -11,7 +11,7 @@ from ..models import (Area, Citizen, CompareRequest, CompareResult, FixCandidate
                       SensitivityRequest, SensitivityResult, SimResult, SimulateRequest, Site)
 from ..sim import assumptions as A
 from ..sim.assumption_labels import label_rows
-from ..sim import fixgrid, sensitivity, world
+from ..sim import fixgrid, sensitivity, warmup, world
 from ..sim.compare import compare
 from ..sim.engine import simulate
 from ..sim.validate import policy_errors
@@ -82,12 +82,27 @@ def post_fixgrid(req: CompareRequest):
     return fixgrid.top_fixes(req.scenario)
 
 
+def _sens_key(req: SensitivityRequest) -> str:
+    return hashlib.sha256(json.dumps(req.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
+
+
+def warm_up() -> float:
+    """Run the demo path once at start-up (engine memo + robustness results). Returns seconds taken."""
+    w = warmup.warm()
+    s = w["sensitivity"]
+    _SENS_CACHE[_sens_key(SensitivityRequest(baseline=w["base"], scenario=w["demo"]))] = s["ranking_only"]
+    if "top_fix" in s:
+        fix = SensitivityRequest(baseline=w["base"], scenario=w["demo"], fix=w["top"][0]["policy"])
+        _SENS_CACHE[_sens_key(fix)] = s["top_fix"]
+    return w["seconds"]
+
+
 @router.post("/sensitivity", response_model=SensitivityResult)
 def post_sensitivity(req: SensitivityRequest):
     for p in (req.baseline, req.scenario, req.fix):
         if p is not None:
             validate_policy(p)
-    key = hashlib.sha256(json.dumps(req.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
+    key = _sens_key(req)
     if key not in _SENS_CACHE:
         _SENS_CACHE[key] = sensitivity.check(req.baseline, req.scenario, req.fix)
     return _SENS_CACHE[key]

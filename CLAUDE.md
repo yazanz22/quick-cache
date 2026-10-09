@@ -97,7 +97,7 @@ nas/
 ├── backend/
 │   ├── requirements.txt
 │   ├── app/
-│   │   ├── main.py             # FastAPI app: the two routers + serves nas-frontend/ at /. Keep it tiny.
+│   │   ├── main.py             # FastAPI app: the two routers, serves nas-frontend/ at /, warms the demo path at start-up
 │   │   ├── config.py           # loads the repo-root .env
 │   │   ├── models.py           # ALL Pydantic schemas (source of truth for the API contract)
 │   │   ├── routes/
@@ -112,6 +112,7 @@ nas/
 │   │   │   ├── fixgrid.py      # build + score the candidate-fix grid (§6.4)
 │   │   │   ├── sensitivity.py  # ±20% robustness check (§6.5)
 │   │   │   ├── validate.py     # policy checks beyond the schema (known sites/areas, hours)
+│   │   │   ├── warmup.py       # pre-computes the demo path at start-up (fast first request after a cold start)
 │   │   │   └── world.py        # loads population, areas, sites, scenarios, travel matrix once
 │   │   ├── llm/
 │   │   │   ├── client.py       # provider-agnostic complete(): model chains, cooldowns, time budget

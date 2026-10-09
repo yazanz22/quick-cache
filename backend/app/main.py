@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -5,7 +7,14 @@ from fastapi.staticfiles import StaticFiles
 from .config import REPO_ROOT
 from .routes import llm_routes, sim_routes
 
-app = FastAPI(title="Nas API")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    sim_routes.warm_up()  # demo path pre-computed before the first request (fast after cold starts)
+    yield
+
+
+app = FastAPI(title="Nas API", lifespan=lifespan)
 
 # Only needed if the frontend is served from another port (e.g. python -m http.server 3000).
 app.add_middleware(
