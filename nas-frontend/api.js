@@ -103,11 +103,6 @@
     });
   }
 
-  // -> [{ id, name_ar, name_en, km, lines: [[[lat, lng], ...], ...] }]  (closable roads, catalogue order)
-  function normRoads(raw) {
-    return (arr(raw, "roads") || []).map(function (r) { return { id: r.id, name_ar: r.name_ar || r.id, name_en: r.name_en || r.id, km: +r.km || 0, lines: r.lines || [] }; });
-  }
-
   // -> [{ id, note_ar, note_en }]
   function normHeroes(raw) {
     const list = arr(raw, "heroes") || [];
@@ -155,12 +150,6 @@
     return r;
   }
 
-  // DailyResult -> adds .byId (citizen id -> trip). Everything else is the backend's own numbers.
-  function normDaily(r) {
-    r.byId = new Map((r.trips || []).map(function (t) { return [t.citizen_id, t]; }));
-    return r;
-  }
-
   const fixList = function (raw) { return (arr(raw, "fixes") || arr(raw, "top") || arr(raw, "candidates") || []).map(normFix); };
 
   /* ---------- endpoints ---------- */
@@ -174,10 +163,7 @@
     // Optional extras, not in §7. The UI falls back to config.js if they 404.
     areas: function () { return get("/areas").then(normAreas); },
     heroes: function () { return get("/heroes").then(normHeroes); },
-    roads: function () { return get("/roads").then(normRoads); },
 
-    // -> DailyResult + .byId: everyday trips (work, university, hospital) with these roads closed
-    daily: function (closedRoads) { return post("/daily", { closed_roads: closedRoads || [] }).then(normDaily); },
     simulate: function (policy) { return post("/simulate", { policy: policy }).then(normSim); },
     compare: function (baseline, scenario) { return post("/compare", { baseline: baseline, scenario: scenario }).then(normCompare); },
     fixgrid: function (baseline, scenario) { return post("/fixgrid", { baseline: baseline, scenario: scenario }).then(fixList); },

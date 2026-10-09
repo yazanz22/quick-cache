@@ -28,8 +28,7 @@
     lang: store.get("nas.lang") === "en" ? "en" : "ar",
     theme: store.get("nas.theme"),
     // reference data (GET)
-    pop: [], byId: new Map(), sites: {}, areas: {}, scenarios: [], assumptions: [], heroes: [], roads: [], roadsOpen: false,
-    daily: null, mapMode: "service",
+    pop: [], byId: new Map(), sites: {}, areas: {}, scenarios: [], assumptions: [], heroes: [],
     feePct: 100, voucherJd: 3, newOfficeArea: null,
     baseline: null, policy: null, preset: null,
     prePolicy: null, preKpis: null, appliedFix: null,
@@ -47,8 +46,6 @@
   const loc = function (o, base) { return o ? (o[base + "_" + S.lang] || o[base + "_" + (S.lang === "ar" ? "en" : "ar")] || "") : ""; };
   const areaName = function (k) { return S.areas[k] ? loc(S.areas[k], "name") : k; };
   const siteName = function (id) { return S.sites[id] ? loc(S.sites[id], "name") : id; };
-  const roadName = function (id) { const r = S.roads.find(function (x) { return x.id === id; }); return r ? loc(r, "name") : id; };
-  const roadNameEn = function (id) { const r = S.roads.find(function (x) { return x.id === id; }); return r ? r.name_en : id; };
   const dayName = function (d) { return t("day_" + d); };
   const shortDay = function (d) { return S.lang === "ar" ? dayName(d).replace("ال", "").slice(0, 3) : dayName(d).slice(0, 2); };
   const name = function (c) { return (S.lang === "ar" ? c.name_ar : c.name_en) || c.name_ar || c.name_en || c.id; };
@@ -86,9 +83,9 @@
     bootScreen("loading");
     try {
       const opt = function (p, fb) { return p.catch(function (e) { if (e.status === 404 || e.status === 405) return fb; throw e; }); };
-      const r = await Promise.all([API.population(), API.sites(), API.scenarios(), opt(API.assumptions(), []), opt(API.areas(), null), opt(API.heroes(), null), opt(API.roads(), [])]);
+      const r = await Promise.all([API.population(), API.sites(), API.scenarios(), opt(API.assumptions(), []), opt(API.areas(), null), opt(API.heroes(), null)]);
       S.pop = r[0]; S.byId = new Map(S.pop.map(function (c) { return [c.id, c]; }));
-      S.sites = r[1]; S.scenarios = r[2]; S.assumptions = r[3]; S.roads = r[6] || [];
+      S.sites = r[1]; S.scenarios = r[2]; S.assumptions = r[3];
       S.areas = r[4] && Object.keys(r[4]).length ? r[4] : CFG.AREAS;
       S.heroes = (r[5] && r[5].length ? r[5] : CFG.HERO_IDS.map(function (id) { return { id: id }; })).filter(function (h) { return S.byId.has(h.id); });
       if (!S.scenarios.length) throw new API.ApiError("no scenarios", 0, "/scenarios");
@@ -115,13 +112,11 @@
     S.busy = true; renderBusy();
     S.preset = (S.scenarios.find(function (s) { return same(s.policy, S.policy); }) || {}).id || null;
     try {
-      const closed = S.policy.closed_roads || [];
-      const jobs = [API.compare(S.baseline, S.policy), closed.length ? API.daily(closed) : Promise.resolve(null)];
+      const jobs = [API.compare(S.baseline, S.policy)];
       if (S.appliedFix) jobs.push(API.compare(S.prePolicy, S.policy));
       const r = await Promise.all(jobs);
       if (seq !== cmpSeq) return;
-      S.cmp = r[0]; S.daily = r[1]; S.cmpFix = r[2] || null;
-      if (!S.daily) S.mapMode = "service";
+      S.cmp = r[0]; S.cmpFix = r[1] || null;
     } catch (e) {
       if (seq !== cmpSeq) return;
       toast(e, recompute);
@@ -212,7 +207,6 @@
     if (o.mode === "online") return o.status === "hardship" ? "Hardship: done online with help from " + (c.helper_relation_en || "a helper") + "." : "Served: done online from home.";
     const m = o.mode === "bus" ? ((o.bus_transfers || 0) + 1) + " bus" + ((o.bus_transfers || 0) ? "es" : "") + ", " + Math.round(o.travel_minutes) + " min each way" : (DICT.en["m_" + o.mode] || o.mode || "").toLowerCase();
     let s = (o.status === "served" ? "Served: " : "Hardship: ") + (o.channel_name_en || "") + (o.visit_day ? " on " + DICT.en["day_" + o.visit_day] : "") + (m ? ", " + m : "");
-    if (o.detour_minutes > 0) s += "; +" + Math.round(o.detour_minutes) + " min detour (" + roadNameEn(o.detour_road) + " closed)";
     if (o.work_hours_missed > 0) s += "; " + f1(o.work_hours_missed) + " h of work missed";
     return s + ". " + f1(o.hours_lost) + " h, " + f1(o.cost_jd) + " JD in total.";
   }
@@ -254,7 +248,7 @@
         return '<button class="preset" data-preset="' + esc(sc.id) + '" aria-pressed="' + (S.preset === sc.id) + '"><b>' + esc(scenarioName(sc)) + "</b>" + (note ? "<small>" + esc(note) + "</small>" : "<small></small>") + '<i class="ph ph-check tick" aria-hidden="true"></i></button>';
       }).join("") + "</div></div>";
 
-    const ex = [1, 2, 3, 4, 5].map(function (i) { return t("example_" + i); });
+    const ex = [1, 2, 3, 4].map(function (i) { return t("example_" + i); });
     h += '<div class="sec"><label class="sec-title" for="nl">' + t("describe") + '</label>' +
       '<textarea class="input" id="nl" rows="3" placeholder="' + esc(t("describe_ph")) + '">' + esc(S.text) + "</textarea>" +
       '<div class="examples">' + ex.map(function (e, i) { return '<button class="ex" data-ex="' + i + '" title="' + esc(e) + '">' + esc(e) + "</button>"; }).join("") + "</div>" +
@@ -287,14 +281,6 @@
 
     h += protectHTML(p);
 
-    if (S.roads.length) {
-      const closed = p.closed_roads || [], open = S.roadsOpen || closed.length > 0;
-      h += '<div class="sec"><h3 class="sec-title"><span>' + t("roads") + (closed.length ? ' <span class="count num">' + t("roads_closed_n", { n: closed.length }) + "</span>" : "") + '</span><button class="btn sm ghost" id="roadsBtn" aria-expanded="' + open + '"><i class="ph ph-traffic-cone"></i>' + t(open ? "roads_hide" : "roads_show") + "</button></h3>" +
-        (open ? '<p class="help" style="margin:0 0 8px">' + t("roads_help") + '</p><div class="roadchips">' + S.roads.map(function (r) {
-          return '<button class="roadchip" data-road="' + esc(r.id) + '" aria-pressed="' + (closed.indexOf(r.id) >= 0) + '"' + (p.online_only ? " disabled" : "") + '><i class="ph ph-prohibit" aria-hidden="true"></i>' + esc(loc(r, "name")) + "</button>";
-        }).join("") + "</div>" : "") + "</div>";
-    }
-
     const units = p.mobile_units || [];
     h += '<div class="sec"><h3 class="sec-title"><span>' + t("mobile_units") + '</span><button class="btn sm ghost" id="addUnit"' + (p.online_only ? " disabled" : "") + '><i class="ph ph-plus"></i>' + t("add_unit") + "</button></h3>" +
       (units.length ? units.map(function (u, i) {
@@ -315,8 +301,8 @@
 
   // Group chips for one protection; `on` is the list of selected groups.
   function groupChips(kind, on, dis) {
-    return '<div class="roadchips">' + PROTECT_GROUPS.map(function (g) {
-      return '<button class="roadchip gchip" data-gx="' + kind + ":" + g + '" aria-pressed="' + (on.indexOf(g) >= 0) + '"' + (dis ? " disabled" : "") + ">" + esc(groupLabel(g)) + "</button>";
+    return '<div class="gchips">' + PROTECT_GROUPS.map(function (g) {
+      return '<button class="gchip" data-gx="' + kind + ":" + g + '" aria-pressed="' + (on.indexOf(g) >= 0) + '"' + (dis ? " disabled" : "") + ">" + esc(groupLabel(g)) + "</button>";
     }).join("") + "</div>";
   }
   function stepper(attr, val, unit) {
@@ -364,7 +350,7 @@
   }
 
   /* ---------------- map ---------------- */
-  let map, tiles, zoom, dotLayer, ringLayer, pinLayer, labelLayer, siteLayer, areaLayer, roadLayer;
+  let map, tiles, zoom, dotLayer, ringLayer, pinLayer, labelLayer, siteLayer, areaLayer;
   const dots = new Map();
   function currentDark() {
     if (S.theme) return S.theme === "dark";
@@ -386,7 +372,6 @@
     setTiles();
     const r = L.svg({ padding: 0.4 });
     areaLayer = L.layerGroup().addTo(map);
-    roadLayer = L.layerGroup().addTo(map);
     siteLayer = L.layerGroup().addTo(map);
     labelLayer = L.layerGroup().addTo(map);
     dotLayer = L.layerGroup().addTo(map);
@@ -423,7 +408,6 @@
     });
   }
 
-  const dailyMode = function () { return S.mapMode === "daily" && !!S.daily; };
   const viewSim = function () { return S.view === "before" ? S.cmp.baseline : S.cmp.scenario; };
   const viewPolicy = function () { return S.view === "before" ? S.baseline : S.policy; };
 
@@ -434,15 +418,12 @@
       const o = sim.byId.get(c.id), m = dots.get(c.id);
       if (!o || !m) return;
       let cls = "dot " + o.status;
-      if (dailyMode()) {
-        const tr = S.daily.byId.get(c.id);
-        cls = "dot d-" + (!tr ? "skip" : S.view === "before" ? "none" : tr.level);
-      } else if (S.reason && !(o.status === "left_out" && (o.reasons || []).indexOf(S.reason) >= 0)) cls += " dim";
+      if (S.reason && !(o.status === "left_out" && (o.reasons || []).indexOf(S.reason) >= 0)) cls += " dim";
       if (S.sel === c.id) cls += " sel";
       if (m._path) m._path.setAttribute("class", cls + " leaflet-interactive");
     });
     ringLayer.clearLayers();
-    if (S.view === "after" && !S.reason && !dailyMode()) {
+    if (S.view === "after" && !S.reason) {
       const rr = L.svg({ padding: 0.4 });
       const ids = S.cmpFix ? S.cmpFix.flipped_better : S.cmp.flipped_worse;
       ids.forEach(function (id) {
@@ -452,15 +433,6 @@
     }
     pinLayer.clearLayers();
     const p = viewPolicy(), editable = S.view === "after";
-    roadLayer.clearLayers();
-    const rr2 = L.svg({ padding: 0.4 });
-    (p.closed_roads || []).forEach(function (id) {
-      const r = S.roads.find(function (x) { return x.id === id; }); if (!r) return;
-      r.lines.forEach(function (ln) {
-        L.polyline(ln, { className: "road-closed", weight: 5, opacity: 0.9, renderer: rr2, bubblingMouseEvents: false })
-          .bindTooltip(esc(t("road_closed_tip", { r: loc(r, "name") })), { sticky: true }).addTo(roadLayer);
-      });
-    });
     if (p.online_only) return;
     p.offices.forEach(function (o, i) {
       const s = S.sites[o.site_id]; if (!s) return;
@@ -495,17 +467,11 @@
   function renderMapTools() {
     if (!S.cmp) return;
     $("viewSeg").setAttribute("aria-label", t("map_before") + " / " + t("map_after"));
-    $("viewSeg").innerHTML = ["before", "after"].map(function (v) { return '<button data-view="' + v + '" aria-pressed="' + (S.view === v) + '"' + (v === "before" && !changed() ? " disabled" : "") + ">" + t("map_" + v) + "</button>"; }).join("") +
-      (S.daily ? '<span class="seg-div" aria-hidden="true"></span>' + ["service", "daily"].map(function (m) { return '<button data-mode="' + m + '" aria-pressed="' + (S.mapMode === m) + '">' + t("mode_" + m) + "</button>"; }).join("") : "");
+    $("viewSeg").innerHTML = ["before", "after"].map(function (v) { return '<button data-view="' + v + '" aria-pressed="' + (S.view === v) + '"' + (v === "before" && !changed() ? " disabled" : "") + ">" + t("map_" + v) + "</button>"; }).join("");
     const k = viewSim().counts;
     let rings = "";
     if (S.view === "after" && S.cmpFix && S.cmpFix.flipped_better.length) rings = '<span class="lg-div"></span><span class="lg rings"><span class="sw-ring" style="border-color:var(--served)"></span><b class="num">' + S.cmpFix.flipped_better.length + "</b> " + t("got_better") + "</span>";
     else if (S.view === "after" && S.cmp.flipped_worse.length) rings = '<span class="lg-div"></span><span class="lg rings"><span class="sw-ring"></span><b class="num">' + S.cmp.flipped_worse.length + "</b> " + t("got_worse") + "</span>";
-    if (dailyMode()) {
-      const lv = { none: 0, minor: 0, moderate: 0, severe: 0 };
-      S.daily.trips.forEach(function (tr) { lv[S.view === "before" ? "none" : tr.level]++; });
-      $("legend").innerHTML = ["none", "minor", "moderate", "severe"].map(function (l) { return '<span class="lg"><span class="sw-dot d-' + l + '"></span>' + t("lv_" + l) + ' <b class="num">' + lv[l] + "</b></span>"; }).join("");
-    } else
     $("legend").innerHTML = ["served", "hardship", "left_out"].map(function (s) { return '<span class="lg"><span class="sw-dot ' + s + '"></span>' + t(s) + ' <b class="num">' + (k[s] || 0) + "</b></span>"; }).join("") + rings;
     $("filterSlot").innerHTML = S.reason ? '<div class="float filter-chip"><i class="ph ph-funnel"></i>' + t("r_" + S.reason) + '<button data-clear-reason>' + t("clear_filter") + "</button></div>" : "";
     const sim = viewSim();
@@ -565,16 +531,7 @@
       if (o.mode !== "online" && o.mode !== "home") facts.push(fact("visit_day", o.visit_day ? dayName(o.visit_day) : "-"), fact("travel", '<span class="num">' + Math.round(o.travel_minutes || 0) + "</span> " + t("min")));
       facts.push(fact("hours_lost", '<span class="num">' + f1(o.hours_lost) + "</span> " + t("hrs")), fact("cost", '<span class="num">' + f1(o.cost_jd) + "</span> " + t("jd")));
       h += '<div class="facts">' + facts.join("") + "</div>";
-      if (o.detour_minutes > 0) h += '<div class="facts" style="grid-template-columns:1fr"><div class="fact" style="border:0"><small>' + t("detour") + '</small><b><span class="num">+' + f1(o.detour_minutes) + "</span> " + t("min") + " · " + esc(roadName(o.detour_road)) + "</b></div></div>";
       if (o.work_hours_missed > 0) h += '<div class="facts" style="grid-template-columns:1fr"><div class="fact" style="border:0"><small>' + t("work_missed") + '</small><b><span class="num">' + f1(o.work_hours_missed) + "</span> " + t("hrs") + "</b></div></div>";
-    }
-    const tr = S.daily && S.daily.byId.get(c.id);
-    if (tr) {
-      const hub = S.lang === "ar" ? tr.hub_name_ar : tr.hub_name_en;
-      const line = tr.extra_minutes >= 0.05 && S.view === "after"
-        ? '<span class="num">' + t("daily_change", { a: Math.round(tr.minutes_open), b: Math.round(tr.minutes_closed) }) + '</span> <span class="delta bad">+' + f1(tr.extra_minutes) + " " + t("min") + "</span> · " + esc(roadName(tr.road))
-        : '<span class="num">' + Math.round(tr.minutes_open) + "</span> " + t("min") + " · " + t("daily_same");
-      h += '<div class="facts" style="grid-template-columns:1fr"><div class="fact" style="border:0"><small>' + t("daily_trip") + '</small><b><i class="ph ' + (MODE_ICON[tr.mode] || "ph-dot") + '"></i> ' + esc(t("daily_trip_val", { p: t("p_" + tr.purpose), hub: hub })) + '</b><small class="daily-line">' + line + "</small></div></div>";
     }
     if ((o.reasons || []).length) h += '<div><h4 class="sec-title" style="margin-bottom:8px">' + t("reasons") + '</h4><div class="chips">' + o.reasons.map(function (r) { return '<span class="rchip"><i class="ph ' + (REASON_ICON[r] || "ph-warning") + '"></i>' + t("r_" + r) + "</span>"; }).join("") + "</div></div>";
     h += "</div>";
@@ -623,13 +580,10 @@
       return '<div class="kpi"><div class="kpi-label"><span class="sw-dot ' + x[1] + '"></span>' + t(x[1]) + '</div><div class="kpi-val num">' + f1(K[x[0]]) + "<small>%</small></div>" + (showD ? delta(D[x[0]], x[2]) : '<span class="delta flat">' + (S.view === "before" ? t("step_baseline") : t("vs_baseline")) + "</span>") + "</div>";
     }).join("") + "</div>";
     const hvNow = viewPolicy().home_visits;
-    if (hvNow) h += '<div class="kpi-sub detour-sub"><span><i class="ph ph-house-line"></i> ' + t("home_used") + ' <b class="num">' + (K.n_home_visits || 0) + "</b> / " + hvNow.slots + "</span></div>";
-    const closedNow = (viewPolicy().closed_roads || []).length;
-    if (closedNow) h += '<div class="kpi-sub detour-sub"><span><i class="ph ph-traffic-cone"></i> ' + t("detour_kpi") + ' <b class="num">' + (K.n_detour || 0) + "</b> " + t("people") + (K.n_detour ? " · " + t("detour_avg", { m: '<b class="num">' + f1(K.avg_detour_min) + "</b>" }) : "") + "</span></div>";
+    if (hvNow) h += '<div class="kpi-sub kpi-note"><span><i class="ph ph-house-line"></i> ' + t("home_used") + ' <b class="num">' + (K.n_home_visits || 0) + "</b> / " + hvNow.slots + "</span></div>";
     h += '<div class="kpi-sub"><span>' + t("avg_hours") + ' <b class="num">' + f1(K.avg_hours_lost) + "</b> " + t("hrs") + " " + (showD ? delta(D.avg_hours_lost, true, t("hrs")) : "") + "</span><span>" + t("avg_cost") + ' <b class="num">' + f1(K.avg_cost_jd) + "</b> " + t("jd") + " " + (showD ? delta(D.avg_cost_jd, true, t("jd")) : "") + "</span></div>";
     if (changed()) h += robustHTML();
     h += "</div>";
-    if (S.daily && S.view === "after") h += dailyHTML();
 
     // equity bars: groups the backend returned, known groups first, two hardest-hit on top
     const worst = changed() ? S.cmp.worst_groups.slice(0, 2) : [];
@@ -667,23 +621,6 @@
       return '<button class="reason" data-reason="' + esc(r) + '" aria-pressed="' + (S.reason === r) + '"><i class="ph ' + (REASON_ICON[r] || "ph-warning") + '"></i><span><b>' + t("r_" + r) + "</b><small>" + esc(top) + '</small></span><span class="n num">' + counts[r] + "</span></button>";
     }).join("") + "</div>";
     return h + "</div>";
-  }
-
-  function dailyHTML() {
-    const D = S.daily, K = D.kpis;
-    let h = '<div class="sec daily"><h3 class="sec-title"><span><i class="ph ph-traffic-cone"></i> ' + t("daily_title") + '</span><span class="num" style="color:var(--left)">' + K.n_affected + " " + t("people") + "</span></h3>" +
-      '<p class="help" style="margin:-4px 0 10px">' + t("daily_sub") + "</p>" +
-      '<div class="kpis">' +
-      '<div class="kpi"><div class="kpi-label">' + t("daily_affected") + '</div><div class="kpi-val num">' + f1(K.pct_affected) + "<small>%</small></div><span class=\"delta flat\">" + K.n_affected + " / " + K.n + "</span></div>" +
-      '<div class="kpi"><div class="kpi-label">' + t("daily_severe") + '</div><div class="kpi-val num">' + K.n_severe + '</div><span class="delta flat">' + t("lv_severe") + "</span></div>" +
-      '<div class="kpi"><div class="kpi-label">' + t("daily_avg") + '</div><div class="kpi-val num">+' + f1(K.avg_extra_minutes) + "<small>" + t("min") + '</small></div><span class="delta flat">max +' + f1(K.max_extra_minutes) + "</span></div></div>" +
-      '<div class="kpi-sub"><span>' + t("daily_week", { h: '<b class="num">' + f1(K.extra_hours_week) + "</b>", jd: '<b class="num">' + f1(K.extra_cost_jd_week) + "</b>" }) + "</span></div>";
-    const row = function (label, g) {
-      return '<div class="eq"><span class="name">' + esc(label) + '</span><span class="bar" role="img" aria-label="' + f1(g.pct_affected) + '%"><i class="h" style="width:' + g.pct_affected + '%"></i></span><span class="v num">' + f1(g.pct_affected) + "%" + (g.n_affected ? "<small>+" + f1(g.avg_extra_minutes) + " " + t("min") + "</small>" : "") + "</span></div>";
-    };
-    h += '<h4 class="sec-title daily-h">' + t("daily_by_purpose") + "</h4>" + ["work", "university", "hospital"].filter(function (p) { return D.by_purpose[p] && D.by_purpose[p].n; }).map(function (p) { return row(t("p_" + p), D.by_purpose[p]); }).join("");
-    h += '<h4 class="sec-title daily-h">' + t("daily_by_group") + "</h4>" + GROUP_ORDER.filter(function (g) { return D.by_group[g] && D.by_group[g].n; }).map(function (g) { return row(groupLabel(g), D.by_group[g]); }).join("");
-    return h + '<p class="footnote" style="margin-top:10px">' + t("daily_note") + "</p></div>";
   }
 
   function miniBar(k) {
@@ -906,15 +843,6 @@
         else { const ref = DAYS.filter(function (x) { return o.schedule[x] && x !== "thu"; })[0]; o.schedule[d] = ref ? o.schedule[ref].slice() : ["08:00", "15:00"]; }
       });
     }
-    if (q("#roadsBtn")) { S.roadsOpen = !(S.roadsOpen || (S.policy.closed_roads || []).length > 0); return renderPolicy(); }
-    if ((el = q("[data-road]"))) {
-      const id = el.dataset.road;
-      return edit(function (p) {
-        const c = p.closed_roads || [], i = c.indexOf(id);
-        if (i >= 0) c.splice(i, 1); else c.push(id);
-        p.closed_roads = c; S.roadsOpen = true;
-      }, { now: true });
-    }
     if ((el = q("[data-gx]"))) {
       const parts = el.dataset.gx.split(":"), kind = parts[0], g = parts[1];
       const toggle = function (list) { const i = list.indexOf(g); if (i >= 0) list.splice(i, 1); else list.push(g); return list; };
@@ -969,7 +897,6 @@
     if ((el = q("[data-urm]"))) return edit(function (p) { p.mobile_units.splice(+el.dataset.urm, 1); }, { now: true });
     if ((el = q("[data-fee]"))) return edit(function (p) { p.fee_jd = Math.max(0, Math.round((p.fee_jd + +el.dataset.fee) * 10) / 10); });
     if ((el = q("[data-visits]"))) return edit(function (p) { p.visits_required = Math.min(3, Math.max(1, p.visits_required + +el.dataset.visits)); });
-    if ((el = q("[data-mode]"))) { S.mapMode = el.dataset.mode; S.reason = null; renderMapTools(); updateMap(); return; }
     if ((el = q("[data-view]"))) { S.view = el.dataset.view; renderMapTools(); updateMap(); renderImpact(); renderDrawer(); loadVoice(); return; }
     if ((el = q("[data-hero]"))) { const c = S.byId.get(el.dataset.hero); map.flyTo([c.lat, c.lng], Math.max(map.getZoom(), 14), { duration: reduceMotion ? 0 : 0.8 }); return select(c.id); }
     if (q("[data-close-drawer]")) { S.sel = null; renderDrawer(); updateMap(); renderMapTools(); return; }
