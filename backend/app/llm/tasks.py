@@ -97,10 +97,33 @@ def policy_json(p: Policy) -> dict:
 
 # ---------------------------------------------------------------------- parse
 
+_ROAD_WORDS = re.compile(r"^(شارع|طريق)\s+|\s+(street|st|road|rd)$")
+
+
+def roads_named_in(text: str) -> list[str]:
+    """Catalogue roads whose name (Arabic, English or OSM, without "Street"/"شارع") appears in the text.
+    A deterministic hint for the parser; the AI still decides what the official meant."""
+    t = " " + re.sub(r"[^\w\s]", " ", cache.normalize_text(text)) + " "
+    t = re.sub(r"\s+", " ", t)
+    out = []
+    for r in world.roads().values():
+        names = [r["name_en"], r["name_ar"], *r.get("osm_names", [])]
+        names += re.findall(r"\(([^)]+)\)", r["name_en"] + r["name_ar"])  # "... (Gardens)" -> Gardens, الجاردنز
+        for n in names:
+            n = re.sub(r"\s*\([^)]*\)", "", n)
+            n = re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", cache.normalize_text(n))).strip()
+            n = _ROAD_WORDS.sub("", n).strip()
+            if len(n) >= 4 and f" {n} " in t:
+                out.append(r["id"])
+                break
+    return out
+
+
 def parse_policy(text: str, current: Policy, lang: str = "ar") -> ParseResult:
     cur = policy_json(current)
     inputs = {"text": cache.normalize_text(text), "current_policy": cur}
-    user = json.dumps({"current_policy": cur, **_sites_areas(), "official_text": text}, ensure_ascii=False)
+    hint = {"roads_named_in_text": roads_named_in(text)} if world.roads() else {}
+    user = json.dumps({"current_policy": cur, **_sites_areas(), **hint, "official_text": text}, ensure_ascii=False)
 
     def check(raw: str, final: bool):
         d = _loads(raw)

@@ -39,6 +39,8 @@ Interpretation rules:
 - "close Zahran Street" / "سكّروا شارع زهران" adds that road's id to closed_roads (match the road by its Arabic or
   English name, e.g. "Gardens" = gardens, "Airport Road" = airport_road). If current_policy has no closed_roads, it is [].
   A road closure is not an office closure: keep offices as they are.
+  roads_named_in_text lists the catalogue roads whose names appear in the text (an exact name match): those roads ARE
+  in the list and can be closed.
 - If ANY part of the request is not supported, return status "unsupported" (do not half-apply it), say briefly in
   message_ar/message_en what can't be modelled, and suggest the closest supported change.
 

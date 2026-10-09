@@ -1,5 +1,5 @@
 {
- "_note": "Rehearsed free-text requests (CLAUDE.md §10). scripts/warm_cache.py runs each once so its parse is cached. 'demo' is the sentence typed on stage; applied to the consolidate preset it must equal consolidate_digital_first.",
+ "_note": "Rehearsed free-text requests (CLAUDE.md §10). scripts/warm_cache.py runs each once so its parse is cached. 'demo' is the sentence typed on stage; applied to the consolidate preset it must equal consolidate_digital_first. Road requests carry expect_roads: the closed_roads the parse must produce.",
  "demo": {
   "text": "خلّوا الكاونترات تسكر الساعة 1 الظهر، وما حدا يراجع المكتب إلا بموعد مسبق أونلاين",
   "apply_to": "consolidate",
@@ -48,6 +48,49 @@
   },
   {
    "text": "خلّوها مجانية لكبار السن",
+   "apply_to": "baseline",
+   "expect": "unsupported"
+  },
+  {
+   "text": "سكّروا شارع الملكة رانيا",
+   "apply_to": "baseline",
+   "expect": "ok",
+   "expect_roads": [
+    "queen_rania"
+   ]
+  },
+  {
+   "text": "Close Queen Rania Street",
+   "apply_to": "baseline",
+   "expect": "ok",
+   "expect_roads": [
+    "queen_rania"
+   ]
+  },
+  {
+   "text": "سكّروا شارع زهران وشارع القاهرة",
+   "apply_to": "baseline",
+   "expect": "ok",
+   "expect_roads": [
+    "cairo",
+    "zahran"
+   ]
+  },
+  {
+   "text": "Close Prince Al-Hasan Street",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expect_roads": [
+    "prince_hasan"
+   ]
+  },
+  {
+   "text": "سكّروا شارع الرينبو",
+   "apply_to": "baseline",
+   "expect": "unsupported"
+  },
+  {
+   "text": "Close Zahran Street on Fridays only",
    "apply_to": "baseline",
    "expect": "unsupported"
   }

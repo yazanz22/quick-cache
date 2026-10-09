@@ -96,3 +96,12 @@ def test_roads_route_and_unknown_road_is_a_422():
     assert r.status_code == 422 and "unknown road" in r.text
     r = c.post("/simulate", json={"policy": {**pol, "closed_roads": ["queen_rania"]}})
     assert r.status_code == 200 and r.json()["kpis"]["n_detour"] > 0
+
+
+def test_parser_hint_finds_roads_named_in_the_text():
+    f = tasks.roads_named_in
+    assert f("سكّروا شارع زهران وشارع القاهرة") == ["zahran", "cairo"]
+    assert f("Close Prince Al-Hasan Street") == ["prince_hasan"]
+    assert f("سكروا الجاردنز") == ["gardens"] and f("close the Gardens") == ["gardens"]
+    assert f("أغلقوا أوتوستراد عمان الزرقاء") == ["amman_zarqa"]
+    assert f("close the Marka office") == [] and f("سكّروا شارع الرينبو") == []

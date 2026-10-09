@@ -4,7 +4,7 @@ Caches: the demo parse sentence + rehearsed judge requests, hero voices under ba
 scenario / top fix, the report, and the /fixes explanations. Then the demo also works with
 DEMO_OFFLINE=1. Uses roughly 25-30 AI calls; already-cached items cost nothing.
 
-    python -m scripts.warm_cache
+    python -m scripts.warm_cache [--parse-only]
 """
 import json
 
@@ -16,7 +16,7 @@ from app.sim.compare import compare
 from app.sim.validate import canonical
 
 
-def main() -> None:
+def main(parse_only: bool = False) -> None:
     req = json.loads((SCENARIOS_DIR / "demo_requests.json").read_text(encoding="utf-8"))
     demo = req["demo"]
     r = tasks.parse_policy(demo["text"], world.scenario_policy(demo["apply_to"]))
@@ -24,8 +24,13 @@ def main() -> None:
     print(f"[demo parse] {r.source} {r.status} matches preset: {same} | {r.changes_en}")
     for x in req["requests"]:
         r = tasks.parse_policy(x["text"], world.scenario_policy(x["apply_to"]))
-        flag = "OK " if r.status == x["expect"] else "!! "
+        ok = r.status == x["expect"]
+        if ok and "expect_roads" in x:
+            ok = sorted(set(r.policy.closed_roads)) == sorted(x["expect_roads"])
+        flag = "OK " if ok else "!! "
         print(f"{flag}[parse] {x['text'][:50]:50s} -> {r.source} {r.status} {r.changes_en or r.message_en}")
+    if parse_only:
+        return
 
     heroes = json.loads((SCENARIOS_DIR / "heroes.json").read_text(encoding="utf-8"))
     sid = heroes["scenario"]
@@ -49,4 +54,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    main(parse_only="--parse-only" in sys.argv)
