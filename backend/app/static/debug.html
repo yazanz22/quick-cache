@@ -106,7 +106,7 @@ function basePolicy() { return SCEN[$("baseSel").value].policy; }
 function scenPolicy() { return JSON.parse($("policyJson").value); }
 
 // --- map projection
-const BOUNDS = {latMin: 31.90, latMax: 32.06, lngMin: 35.79, lngMax: 36.03};
+const BOUNDS = {latMin: 31.83, latMax: 32.08, lngMin: 35.70, lngMax: 36.12};  // all 22 GAM districts
 const px = (lat, lng) => [ (lng - BOUNDS.lngMin) / (BOUNDS.lngMax - BOUNDS.lngMin) * 800,
                            560 - (lat - BOUNDS.latMin) / (BOUNDS.latMax - BOUNDS.latMin) * 560 ];
 function drawMap() {

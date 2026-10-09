@@ -2,7 +2,7 @@
 
 *Every policy leaves someone out. Nas shows you who, why, and how to fix it before you launch.*
 
-AI Quest @ Al Hussein Technical University. A synthetic population of 800 Amman residents, AI-voiced,
+AI Quest @ Al Hussein Technical University. A synthetic population of 1,000 Amman residents, AI-voiced,
 run through ID renewal under any policy. The deterministic engine decides and searches; the AI translates,
 explains and proposes; the engine verifies everything the AI proposes. See [CLAUDE.md](CLAUDE.md) for the full spec.
 
@@ -30,7 +30,7 @@ Types: [frontend/lib/types.ts](frontend/lib/types.ts) mirrors [backend/app/model
 
 | Method | Path | Body → Response |
 |---|---|---|
-| GET | `/population` | → `Citizen[]` (800) |
+| GET | `/population` | → `Citizen[]` (1,000) |
 | GET | `/scenarios` | → `Scenario[]` (baseline, move_to_abdali, digital_first, online_only, abdali_digital_first) |
 | GET | `/sites`, `/areas` | → `Site[]`, `Area[]` |
 | GET | `/sites/nearest?lat=&lng=` | → `Site` (snap a dragged office pin) |
@@ -54,7 +54,8 @@ Call `/fixgrid` first and render immediately, then `/fixes` to fill explanations
 
 | File | What | Source |
 |---|---|---|
-| `backend/app/data/population.json` | 800 synthetic citizens | `seed.py`, seed 42, labelled assumptions + `anchors.json` |
+| `backend/app/data/population.json` | 1,000 synthetic citizens (Jordanian nationals 16+) across 22 GAM districts | `seed_census.py`, seed 42, quotas from *Amman in a Box*; targets vs results in `data/census/VALIDATION.md` |
+| `backend/app/data/home_points.json` | residential street points (optional, places homes on real streets) | OpenStreetMap via Overpass, `fetch_map_data.py homes` |
 | `backend/app/data/travel_matrix.json` | road km + car time, every citizen to every site and area centre | OSRM (OpenStreetMap), fetched once by `fetch_map_data.py` |
 | `backend/app/data/bus_stops.json` | 131 mapped bus stops (map layer only) | OpenStreetMap via Overpass. Not used by the engine: coverage is too uneven. |
 | `backend/app/data/anchors.json` | public statistics used by the seed | pending research; only entries with a real URL are used |
@@ -64,7 +65,9 @@ Map data © OpenStreetMap contributors, ODbL.
 ## Scripts (run from `backend/`)
 
 ```bash
-python -m app.data.seed                  # regenerate population.json
+python -m app.data.fetch_map_data homes  # optional: OSM residential streets for home placement
+python -m app.data.seed_census --install  # census-anchored population.json (1,000; --n to change)
+python -m app.data.seed                  # old 8-area generator (superseded)
 python -m app.data.fetch_map_data matrix # re-fetch OSRM times after the population changes
 python -m scripts.pick_heroes            # choose hero citizens -> scenarios/heroes.json
 python -m scripts.find_ai_fix            # search for a verified AI fix for the demo path

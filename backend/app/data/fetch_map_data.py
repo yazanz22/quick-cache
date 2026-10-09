@@ -3,6 +3,7 @@ engine never calls an API at simulate time (deterministic, offline-safe).
 
     python -m app.data.fetch_map_data stops     # Overpass -> bus_stops.json, cspd_offices.json
     python -m app.data.fetch_map_data matrix    # OSRM     -> travel_matrix.json
+    python -m app.data.fetch_map_data homes     # Overpass -> home_points.json (residential streets, for seed_census)
 
 Data © OpenStreetMap contributors, ODbL. Routing by the public OSRM demo server
 (router.project-osrm.org), used lightly: ~10 table requests in total.
@@ -83,6 +84,36 @@ out center tags;"""
         print(" ", o["osm"], o["lat"], o["lng"], o["name"], "|", o["name_en"])
 
 
+GAM_BBOX = (31.84, 35.74, 32.09, 36.10)  # south, west, north, east: all 22 GAM districts
+HOME_GRID = 0.0006                       # ~60 m: one candidate home point per grid cell
+
+
+def fetch_homes() -> None:
+    """Points every ~60 m along OSM residential streets in Greater Amman. seed_census places each synthetic
+    home on one of these near its neighbourhood, so homes follow the built-up city, not open land."""
+    s, w, n, e = GAM_BBOX
+    q = f"""[out:json][timeout:180][maxsize:536870912];
+way["highway"~"^(residential|living_street)$"]({s},{w},{n},{e});
+out geom;"""
+    els = overpass(q)
+    cells: set[tuple[int, int]] = set()
+    for x in els:
+        g = x.get("geometry") or []
+        for a, b in zip(g, g[1:]):
+            dy, dx = (b["lat"] - a["lat"]) * 111.0, (b["lon"] - a["lon"]) * 94.4
+            steps = max(1, int((dy * dy + dx * dx) ** 0.5 / 0.06))
+            for k in range(steps + 1):
+                lat = a["lat"] + (b["lat"] - a["lat"]) * k / steps
+                lon = a["lon"] + (b["lon"] - a["lon"]) * k / steps
+                cells.add((round(lat / HOME_GRID), round(lon / HOME_GRID)))
+    pts = sorted([round(i * HOME_GRID, 5), round(j * HOME_GRID, 5)] for i, j in cells)
+    (DATA / "home_points.json").write_text(json.dumps({
+        "_source": "OpenStreetMap via Overpass API, ODbL. highway=residential|living_street, sampled every ~60 m.",
+        "_fetched": date.today().isoformat(), "bbox": GAM_BBOX, "ways": len(els), "count": len(pts),
+        "points": pts}, separators=(",", ":")), encoding="utf-8")
+    print(f"residential streets: {len(els)} ways -> {len(pts)} home points")
+
+
 def fetch_matrix() -> None:
     """Driving duration (s) and distance (m) from every citizen to every site and area centroid."""
     pop = json.loads((DATA / "population.json").read_text(encoding="utf-8"))
@@ -126,5 +157,7 @@ if __name__ == "__main__":
     what = sys.argv[1] if len(sys.argv) > 1 else "all"
     if what in ("stops", "all"):
         fetch_stops()
+    if what in ("homes", "all"):
+        fetch_homes()
     if what in ("matrix", "all"):
         fetch_matrix()

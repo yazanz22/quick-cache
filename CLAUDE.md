@@ -8,7 +8,7 @@
 
 Nas is a **"wind tunnel" for public services**. It lets an official test a policy **before** launch.
 
-A digital model of Amman is populated by ~800 **synthetic citizens, AI-voiced**. Each citizen has an age, mobility, car ownership, smartphone access, digital literacy, work hours and income. An official tests a policy change, for example:
+A digital model of Amman is populated by ~1,000 **synthetic citizens, AI-voiced**. Each citizen has an age, mobility, car ownership, smartphone access, digital literacy, work hours and income. An official tests a policy change, for example:
 
 - "Move the Civil Status office from Downtown to Abdali"
 - "Close counters at 1 PM and require online appointments"
@@ -27,7 +27,7 @@ Nas then **finds fixes**. The engine searches a grid of candidate fixes and veri
 
 **The one-line pitch:** *Every policy leaves someone out. Nas shows you who, why, and how to fix it before you launch.*
 
-**Wording rule:** say "synthetic citizens, AI-voiced", never "800 AI citizens". The citizens are rule-based; the AI gives them a voice. Overclaiming loses the AI judge.
+**Wording rule:** say "synthetic citizens, AI-voiced", never "1,000 AI citizens". The citizens are rule-based; the AI gives them a voice. Overclaiming loses the AI judge.
 
 ### How Nas answers the judging criteria
 
@@ -42,7 +42,7 @@ Nas then **finds fixes**. The engine searches a grid of candidate fixes and veri
 
 ### The answers to have ready
 - **"Does your app reach the people left out?"** *"We reach them before the policy does. Excluded people are counted before launch instead of discovered after."*
-- **"What does the AI do that a spreadsheet couldn't?"** *"The engine makes it honest; the AI makes it usable. It turns an official's Arabic sentence into a testable policy, turns 800 rows into the voice of the person left out, and proposes fixes nobody listed. The engine verifies every one."*
+- **"What does the AI do that a spreadsheet couldn't?"** *"The engine makes it honest; the AI makes it usable. It turns an official's Arabic sentence into a testable policy, turns 1,000 rows into the voice of the person left out, and proposes fixes nobody listed. The engine verifies every one."*
 - **"Didn't you just tune the numbers to get this result?"** *"No. Assumptions were frozen before we ran any scenario, the key ones are anchored to public statistics, and the result holds when we move the uncertain ones by ±20%. Click the badge."*
 
 ## 2. Core design principle (do not break this)
@@ -310,7 +310,7 @@ For each citizen, evaluate every available **channel**: each office, each mobile
    - Hardship: only the reasons attached to the chosen option (e.g. `HOURS_CONFLICT_WORK`, `NO_SMARTPHONE` when a helper booked).
    - Served: empty.
 
-The engine must be **deterministic** and run 800 citizens in well under 1 second (target: under 0.1 s), because the fix grid and the robustness check run it ~40 times.
+The engine must be **deterministic** and run 1,000 citizens in well under 1 second (target: under 0.1 s), because the fix grid and the robustness check run it ~40 times.
 
 ### 6.2 Assumptions: set once, then frozen
 Every constant lives in `sim/assumptions.py` with a comment, a one-line rationale, and a tag:
@@ -505,7 +505,7 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 ## 13. Demo script (7 minutes)
 
 1. **0:00–0:45 Problem.** "Every new policy in Jordan is tested on real people after launch. The ones who fall through the cracks are the ones who can't complain: elderly, disabled, no car, no smartphone. Nas reaches them before the policy does."
-2. **0:45–1:15 What Nas is.** 800 synthetic citizens of east and west Amman, AI-voiced, anchored to public statistics. Show the baseline map and the synthetic badge. Flip the language once to show it's fully bilingual, then stay in Arabic.
+2. **0:45–1:15 What Nas is.** 1,000 synthetic citizens of east and west Amman, AI-voiced, anchored to public statistics. Show the baseline map and the synthetic badge. Flip the language once to show it's fully bilingual, then stay in Arabic.
 3. **1:15–3:00 Break it.** Drag the office to Abdali. Then type the `digital_first` rules in Arabic in the free-text box, using the **rehearsed sentence** from `demo_requests.json`; show the "understood as" list; Apply. The result must equal the `abdali_digital_first` preset (if parsing fails, click that preset). Red spreads. Click the hero elderly woman in Marka and read her voice.
 4. **3:00–4:15 Understand it.** Equity bars: elderly and offline citizens hit hardest. Click the robustness badge: "this ranking holds when we move our uncertain assumptions by ±20%."
 5. **4:15–5:45 Fix it.** Click "Suggest fixes": the engine's verified fixes appear instantly, then the AI explains them and adds its own idea, also verified. Apply the best one. Green returns. Click the hero again: she's served now.
@@ -530,7 +530,8 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 cd backend
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m app.data.seed                              # regenerates population.json (seed=42)
+python -m app.data.seed_census --install            # census-anchored population.json (1,000 citizens, seed=42)
+python -m app.data.fetch_map_data matrix             # then refresh OSRM road times for the new homes
 uvicorn app.main:app --reload --port 8000
 pytest -q
 
@@ -569,7 +570,7 @@ NEXT_PUBLIC_OFFLINE_MAP=0        # 1 = no map tiles, draw areas.geojson instead
 - **Never present synthetic numbers as real Jordanian statistics** in UI copy, prompts, or the report.
 - **No real personal data.** Names come from generic first-name lists only.
 - **Every AI call goes through `llm/client.py` + `llm/cache.py` + `llm/checks.py`, and every AI task has a fallback in `llm/fallbacks.py`.** Must work with `DEMO_OFFLINE=1`. Never import a provider SDK outside `llm/`.
-- **Respect free-tier rate limits.** Never generate voices for all 800 citizens in a loop. Generate on click, plus at most ~5 sampled citizens per worst group for the report.
+- **Respect free-tier rate limits.** Never generate voices for all 1,000 citizens in a loop. Generate on click, plus at most ~5 sampled citizens per worst group for the report.
 - **Bilingual UI:** every user-facing string comes from `lib/i18n.ts`; use logical Tailwind utilities so the layout mirrors in RTL. Citizen voices are always Arabic.
 - **Leaflet components:** must be dynamically imported with `ssr: false`.
 - **Before declaring a feature done:** run `pytest -q` for engine changes, and click through the affected demo scenario in the browser **in both languages**.

@@ -1,0 +1,317 @@
+{
+ "targets": {
+  "share_male": {
+   "value": 0.53,
+   "tag": "ANCHORED",
+   "source": "DoS via Jordan Times (research §1)"
+  },
+  "disability_65plus": {
+   "value": 0.493,
+   "tag": "ANCHORED",
+   "source": "UNFPA Jordan country profile 2024"
+  },
+  "disability_male": {
+   "value": 0.117,
+   "tag": "ANCHORED",
+   "source": "Higher Council for Persons with Disabilities"
+  },
+  "disability_female": {
+   "value": 0.108,
+   "tag": "ANCHORED",
+   "source": "Higher Council for Persons with Disabilities"
+  },
+  "difficulty_seeing": {
+   "value": 0.09,
+   "tag": "ANCHORED",
+   "source": "2015 census via 2023 PFHS reporting"
+  },
+  "difficulty_walking": {
+   "value": 0.07,
+   "tag": "ANCHORED",
+   "source": "2015 census via 2023 PFHS reporting"
+  },
+  "difficulty_cognition": {
+   "value": 0.04,
+   "tag": "ANCHORED",
+   "source": "2015 census via 2023 PFHS reporting"
+  },
+  "disabled_employment_ratio": {
+   "value": 0.4398907103825137,
+   "tag": "DERIVED",
+   "source": "16.1% employed (PwD) vs 36.6% (all), 2015 census"
+  },
+  "lfpr_male": {
+   "value": 0.625,
+   "tag": "ANCHORED",
+   "source": "World Bank Gender Data Portal"
+  },
+  "lfpr_female": {
+   "value": 0.16,
+   "tag": "ANCHORED",
+   "source": "World Bank Gender Data Portal"
+  },
+  "unemp_male": {
+   "value": 0.19,
+   "tag": "ANCHORED",
+   "source": "ERF Forum 2025 (late-2024 DoS LFS)"
+  },
+  "unemp_female": {
+   "value": 0.31,
+   "tag": "ANCHORED",
+   "source": "ERF Forum 2025 (late-2024 DoS LFS)"
+  },
+  "unemp_youth_male": {
+   "value": 0.4,
+   "tag": "ANCHORED",
+   "source": "ERF Forum 2025, ages 15-24"
+  },
+  "unemp_youth_female": {
+   "value": 0.66,
+   "tag": "ANCHORED",
+   "source": "ERF Forum 2025, ages 15-24"
+  },
+  "informal_25plus": {
+   "value": 0.524,
+   "tag": "ANCHORED",
+   "source": "World Bank HCI 2022"
+  },
+  "informal_youth": {
+   "value": 0.59,
+   "tag": "ANCHORED",
+   "source": "World Bank HCI 2022"
+  },
+  "poverty_rate_amman": {
+   "value": 0.083,
+   "tag": "ANCHORED",
+   "source": "OCHA Jordan fact sheet"
+  },
+  "poverty_line_pc_month_jd": {
+   "value": 100.0,
+   "tag": "ANCHORED",
+   "source": "DoS HEIS 2017/18 national line, JD 100 per person per month"
+  },
+  "drives_own_car": {
+   "value": 0.466,
+   "tag": "DERIVED",
+   "source": "~half of residents use own car (DoS) x 93.2% of car users hold a licence (MDPI 2023)"
+  },
+  "public_transport_share": {
+   "value": 0.14,
+   "tag": "ANCHORED",
+   "source": "C40 BRT case study: PT mode share 14%"
+  },
+  "internet_user": {
+   "value": 0.956,
+   "tag": "ANCHORED",
+   "source": "MoDEE ICT household survey 2024 (proxy for personal smartphone)"
+  },
+  "skill_copy_paste": {
+   "value": 0.796,
+   "tag": "ANCHORED",
+   "source": "MoDEE 2024"
+  },
+  "skill_presentation": {
+   "value": 0.324,
+   "tag": "ANCHORED",
+   "source": "MoDEE 2024"
+  },
+  "egov_used": {
+   "value": 0.381,
+   "tag": "ANCHORED",
+   "source": "MoDEE 2024"
+  },
+  "household_size_mean": {
+   "value": 4.8,
+   "tag": "ANCHORED",
+   "source": "DoS"
+  }
+ },
+ "districts_2015": {
+  "al_madinah": {
+   "name_en": "Al-Madinah",
+   "name_ar": "المدينة",
+   "population_2015": 34988,
+   "lat_est": 31.953,
+   "lng_est": 35.933,
+   "engine_area": "downtown"
+  },
+  "basman": {
+   "name_en": "Basman",
+   "name_ar": "بسمان",
+   "population_2015": 373981,
+   "lat_est": 31.973,
+   "lng_est": 35.945,
+   "engine_area": "jabal_al_hussein"
+  },
+  "marka": {
+   "name_en": "Marka",
+   "name_ar": "ماركا",
+   "population_2015": 148100,
+   "lat_est": 31.983,
+   "lng_est": 35.995,
+   "engine_area": "marka"
+  },
+  "al_nasr": {
+   "name_en": "Al-Nasr",
+   "name_ar": "النصر",
+   "population_2015": 258829,
+   "lat_est": 31.958,
+   "lng_est": 35.967,
+   "engine_area": "marka"
+  },
+  "al_yarmouk": {
+   "name_en": "Al-Yarmouk",
+   "name_ar": "اليرموك",
+   "population_2015": 180773,
+   "lat_est": 31.935,
+   "lng_est": 35.946,
+   "engine_area": "wehdat"
+  },
+  "ras_al_ein": {
+   "name_en": "Ras Al-Ein",
+   "name_ar": "رأس العين",
+   "population_2015": 138024,
+   "lat_est": 31.937,
+   "lng_est": 35.923,
+   "engine_area": "wehdat"
+  },
+  "bader": {
+   "name_en": "Bader",
+   "name_ar": "بدر",
+   "population_2015": 229308,
+   "lat_est": 31.937,
+   "lng_est": 35.903,
+   "engine_area": "downtown"
+  },
+  "zahran": {
+   "name_en": "Zahran",
+   "name_ar": "زهران",
+   "population_2015": 107529,
+   "lat_est": 31.95,
+   "lng_est": 35.885,
+   "engine_area": "abdali"
+  },
+  "al_abdali": {
+   "name_en": "Al-Abdali",
+   "name_ar": "العبدلي",
+   "population_2015": 165333,
+   "lat_est": 31.967,
+   "lng_est": 35.905,
+   "engine_area": "abdali"
+  },
+  "tariq": {
+   "name_en": "Tariq",
+   "name_ar": "طارق",
+   "population_2015": 175194,
+   "lat_est": 32.0,
+   "lng_est": 35.95,
+   "engine_area": "tabarbour"
+  },
+  "qweismeh": {
+   "name_en": "Qweismeh",
+   "name_ar": "القويسمة",
+   "population_2015": 296763,
+   "lat_est": 31.905,
+   "lng_est": 35.95,
+   "engine_area": "wehdat"
+  },
+  "kherbet_al_souk": {
+   "name_en": "Kherbet Al-Souk",
+   "name_ar": "خريبة السوق وجاوا واليادودة",
+   "population_2015": 186158,
+   "lat_est": 31.88,
+   "lng_est": 35.918,
+   "engine_area": "wehdat"
+  },
+  "al_mgablein": {
+   "name_en": "Al-Mgablein",
+   "name_ar": "المقابلين",
+   "population_2015": 99738,
+   "lat_est": 31.907,
+   "lng_est": 35.9,
+   "engine_area": "wehdat"
+  },
+  "wadi_al_seer": {
+   "name_en": "Wadi Al-Seer",
+   "name_ar": "وادي السير",
+   "population_2015": 241830,
+   "lat_est": 31.955,
+   "lng_est": 35.835,
+   "engine_area": "khalda"
+  },
+  "badr_al_jadeedah": {
+   "name_en": "Badr Al-Jadeedah",
+   "name_ar": "بدر الجديدة",
+   "population_2015": 17891,
+   "lat_est": 31.965,
+   "lng_est": 35.77,
+   "engine_area": "khalda"
+  },
+  "sweileh": {
+   "name_en": "Sweileh",
+   "name_ar": "صويلح",
+   "population_2015": 151016,
+   "lat_est": 32.02,
+   "lng_est": 35.84,
+   "engine_area": "sweileh"
+  },
+  "tla_al_ali": {
+   "name_en": "Tla' Al-Ali",
+   "name_ar": "تلاع العلي وأم السماق وخلدا",
+   "population_2015": 251000,
+   "lat_est": 31.99,
+   "lng_est": 35.855,
+   "engine_area": "khalda"
+  },
+  "jubeiha": {
+   "name_en": "Jubeiha",
+   "name_ar": "الجبيهة",
+   "population_2015": 197160,
+   "lat_est": 32.02,
+   "lng_est": 35.875,
+   "engine_area": "sweileh"
+  },
+  "shafa_badran": {
+   "name_en": "Shafa Badran",
+   "name_ar": "شفا بدران",
+   "population_2015": 72315,
+   "lat_est": 32.045,
+   "lng_est": 35.91,
+   "engine_area": "sweileh"
+  },
+  "abu_nseir": {
+   "name_en": "Abu Nseir",
+   "name_ar": "أبو نصير",
+   "population_2015": 72489,
+   "lat_est": 32.05,
+   "lng_est": 35.88,
+   "engine_area": "sweileh"
+  },
+  "uhod": {
+   "name_en": "Uhod",
+   "name_ar": "أحد",
+   "population_2015": 40000,
+   "lat_est": 31.9,
+   "lng_est": 36.03,
+   "engine_area": "wehdat"
+  },
+  "marj_al_hamam": {
+   "name_en": "Marj Al-Hamam",
+   "name_ar": "مرج الحمام",
+   "population_2015": 82788,
+   "lat_est": 31.895,
+   "lng_est": 35.835,
+   "engine_area": "abdali"
+  }
+ },
+ "nationality_2015": {
+  "jordanian": 2554833,
+  "syrian": 435578,
+  "egyptian": 390631,
+  "palestinian": 308091,
+  "iraqi": 121893,
+  "yemeni": 27109,
+  "other": 169391
+ },
+ "census_source": "https://en.wikipedia.org/wiki/Amman"
+}
