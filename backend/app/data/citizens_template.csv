@@ -1,0 +1,3 @@
+id,age,gender,area,mobility,has_car,has_smartphone,digital_literacy,works,work_start,work_end,income_band,has_helper,helper_relation_ar,helper_relation_en,name_ar,name_en,lat,lng
+c_0001,72,f,marka,limited,no,no,low,no,,,low,yes,ابني,my son,,,,
+c_0002,35,m,khalda,none,yes,yes,high,yes,09:00,17:00,high,no,,,,,,
