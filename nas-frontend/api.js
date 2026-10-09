@@ -155,6 +155,12 @@
     return r;
   }
 
+  // DailyResult -> adds .byId (citizen id -> trip). Everything else is the backend's own numbers.
+  function normDaily(r) {
+    r.byId = new Map((r.trips || []).map(function (t) { return [t.citizen_id, t]; }));
+    return r;
+  }
+
   const fixList = function (raw) { return (arr(raw, "fixes") || arr(raw, "top") || arr(raw, "candidates") || []).map(normFix); };
 
   /* ---------- endpoints ---------- */
@@ -170,6 +176,8 @@
     heroes: function () { return get("/heroes").then(normHeroes); },
     roads: function () { return get("/roads").then(normRoads); },
 
+    // -> DailyResult + .byId: everyday trips (work, university, hospital) with these roads closed
+    daily: function (closedRoads) { return post("/daily", { closed_roads: closedRoads || [] }).then(normDaily); },
     simulate: function (policy) { return post("/simulate", { policy: policy }).then(normSim); },
     compare: function (baseline, scenario) { return post("/compare", { baseline: baseline, scenario: scenario }).then(normCompare); },
     fixgrid: function (baseline, scenario) { return post("/fixgrid", { baseline: baseline, scenario: scenario }).then(fixList); },

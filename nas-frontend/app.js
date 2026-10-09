@@ -28,6 +28,7 @@
     theme: store.get("nas.theme"),
     // reference data (GET)
     pop: [], byId: new Map(), sites: {}, areas: {}, scenarios: [], assumptions: [], heroes: [], roads: [], roadsOpen: false,
+    daily: null, mapMode: "service",
     baseline: null, policy: null, preset: null,
     prePolicy: null, preKpis: null, appliedFix: null,
     view: "after", reason: null, sel: null, tab: "impact",
@@ -112,11 +113,13 @@
     S.busy = true; renderBusy();
     S.preset = (S.scenarios.find(function (s) { return same(s.policy, S.policy); }) || {}).id || null;
     try {
-      const jobs = [API.compare(S.baseline, S.policy)];
+      const closed = S.policy.closed_roads || [];
+      const jobs = [API.compare(S.baseline, S.policy), closed.length ? API.daily(closed) : Promise.resolve(null)];
       if (S.appliedFix) jobs.push(API.compare(S.prePolicy, S.policy));
       const r = await Promise.all(jobs);
       if (seq !== cmpSeq) return;
-      S.cmp = r[0]; S.cmpFix = r[1] || null;
+      S.cmp = r[0]; S.daily = r[1]; S.cmpFix = r[2] || null;
+      if (!S.daily) S.mapMode = "service";
     } catch (e) {
       if (seq !== cmpSeq) return;
       toast(e, recompute);
@@ -383,6 +386,7 @@
     });
   }
 
+  const dailyMode = function () { return S.mapMode === "daily" && !!S.daily; };
   const viewSim = function () { return S.view === "before" ? S.cmp.baseline : S.cmp.scenario; };
   const viewPolicy = function () { return S.view === "before" ? S.baseline : S.policy; };
 
@@ -393,12 +397,15 @@
       const o = sim.byId.get(c.id), m = dots.get(c.id);
       if (!o || !m) return;
       let cls = "dot " + o.status;
-      if (S.reason && !(o.status === "left_out" && (o.reasons || []).indexOf(S.reason) >= 0)) cls += " dim";
+      if (dailyMode()) {
+        const tr = S.daily.byId.get(c.id);
+        cls = "dot d-" + (!tr ? "skip" : S.view === "before" ? "none" : tr.level);
+      } else if (S.reason && !(o.status === "left_out" && (o.reasons || []).indexOf(S.reason) >= 0)) cls += " dim";
       if (S.sel === c.id) cls += " sel";
       if (m._path) m._path.setAttribute("class", cls + " leaflet-interactive");
     });
     ringLayer.clearLayers();
-    if (S.view === "after" && !S.reason) {
+    if (S.view === "after" && !S.reason && !dailyMode()) {
       const rr = L.svg({ padding: 0.4 });
       const ids = S.cmpFix ? S.cmpFix.flipped_better : S.cmp.flipped_worse;
       ids.forEach(function (id) {
@@ -451,11 +458,17 @@
   function renderMapTools() {
     if (!S.cmp) return;
     $("viewSeg").setAttribute("aria-label", t("map_before") + " / " + t("map_after"));
-    $("viewSeg").innerHTML = ["before", "after"].map(function (v) { return '<button data-view="' + v + '" aria-pressed="' + (S.view === v) + '"' + (v === "before" && !changed() ? " disabled" : "") + ">" + t("map_" + v) + "</button>"; }).join("");
+    $("viewSeg").innerHTML = ["before", "after"].map(function (v) { return '<button data-view="' + v + '" aria-pressed="' + (S.view === v) + '"' + (v === "before" && !changed() ? " disabled" : "") + ">" + t("map_" + v) + "</button>"; }).join("") +
+      (S.daily ? '<span class="seg-div" aria-hidden="true"></span>' + ["service", "daily"].map(function (m) { return '<button data-mode="' + m + '" aria-pressed="' + (S.mapMode === m) + '">' + t("mode_" + m) + "</button>"; }).join("") : "");
     const k = viewSim().counts;
     let rings = "";
     if (S.view === "after" && S.cmpFix && S.cmpFix.flipped_better.length) rings = '<span class="lg-div"></span><span class="lg rings"><span class="sw-ring" style="border-color:var(--served)"></span><b class="num">' + S.cmpFix.flipped_better.length + "</b> " + t("got_better") + "</span>";
     else if (S.view === "after" && S.cmp.flipped_worse.length) rings = '<span class="lg-div"></span><span class="lg rings"><span class="sw-ring"></span><b class="num">' + S.cmp.flipped_worse.length + "</b> " + t("got_worse") + "</span>";
+    if (dailyMode()) {
+      const lv = { none: 0, minor: 0, moderate: 0, severe: 0 };
+      S.daily.trips.forEach(function (tr) { lv[S.view === "before" ? "none" : tr.level]++; });
+      $("legend").innerHTML = ["none", "minor", "moderate", "severe"].map(function (l) { return '<span class="lg"><span class="sw-dot d-' + l + '"></span>' + t("lv_" + l) + ' <b class="num">' + lv[l] + "</b></span>"; }).join("");
+    } else
     $("legend").innerHTML = ["served", "hardship", "left_out"].map(function (s) { return '<span class="lg"><span class="sw-dot ' + s + '"></span>' + t(s) + ' <b class="num">' + (k[s] || 0) + "</b></span>"; }).join("") + rings;
     $("filterSlot").innerHTML = S.reason ? '<div class="float filter-chip"><i class="ph ph-funnel"></i>' + t("r_" + S.reason) + '<button data-clear-reason>' + t("clear_filter") + "</button></div>" : "";
     const sim = viewSim();
@@ -518,6 +531,14 @@
       if (o.detour_minutes > 0) h += '<div class="facts" style="grid-template-columns:1fr"><div class="fact" style="border:0"><small>' + t("detour") + '</small><b><span class="num">+' + f1(o.detour_minutes) + "</span> " + t("min") + " · " + esc(roadName(o.detour_road)) + "</b></div></div>";
       if (o.work_hours_missed > 0) h += '<div class="facts" style="grid-template-columns:1fr"><div class="fact" style="border:0"><small>' + t("work_missed") + '</small><b><span class="num">' + f1(o.work_hours_missed) + "</span> " + t("hrs") + "</b></div></div>";
     }
+    const tr = S.daily && S.daily.byId.get(c.id);
+    if (tr) {
+      const hub = S.lang === "ar" ? tr.hub_name_ar : tr.hub_name_en;
+      const line = tr.extra_minutes >= 0.05 && S.view === "after"
+        ? '<span class="num">' + t("daily_change", { a: Math.round(tr.minutes_open), b: Math.round(tr.minutes_closed) }) + '</span> <span class="delta bad">+' + f1(tr.extra_minutes) + " " + t("min") + "</span> · " + esc(roadName(tr.road))
+        : '<span class="num">' + Math.round(tr.minutes_open) + "</span> " + t("min") + " · " + t("daily_same");
+      h += '<div class="facts" style="grid-template-columns:1fr"><div class="fact" style="border:0"><small>' + t("daily_trip") + '</small><b><i class="ph ' + (MODE_ICON[tr.mode] || "ph-dot") + '"></i> ' + esc(t("daily_trip_val", { p: t("p_" + tr.purpose), hub: hub })) + '</b><small class="daily-line">' + line + "</small></div></div>";
+    }
     if ((o.reasons || []).length) h += '<div><h4 class="sec-title" style="margin-bottom:8px">' + t("reasons") + '</h4><div class="chips">' + o.reasons.map(function (r) { return '<span class="rchip"><i class="ph ' + (REASON_ICON[r] || "ph-warning") + '"></i>' + t("r_" + r) + "</span>"; }).join("") + "</div></div>";
     h += "</div>";
     d.innerHTML = h; d.hidden = false;
@@ -569,6 +590,7 @@
     h += '<div class="kpi-sub"><span>' + t("avg_hours") + ' <b class="num">' + f1(K.avg_hours_lost) + "</b> " + t("hrs") + " " + (showD ? delta(D.avg_hours_lost, true, t("hrs")) : "") + "</span><span>" + t("avg_cost") + ' <b class="num">' + f1(K.avg_cost_jd) + "</b> " + t("jd") + " " + (showD ? delta(D.avg_cost_jd, true, t("jd")) : "") + "</span></div>";
     if (changed()) h += robustHTML();
     h += "</div>";
+    if (S.daily && S.view === "after") h += dailyHTML();
 
     // equity bars: groups the backend returned, known groups first, two hardest-hit on top
     const worst = changed() ? S.cmp.worst_groups.slice(0, 2) : [];
@@ -606,6 +628,23 @@
       return '<button class="reason" data-reason="' + esc(r) + '" aria-pressed="' + (S.reason === r) + '"><i class="ph ' + (REASON_ICON[r] || "ph-warning") + '"></i><span><b>' + t("r_" + r) + "</b><small>" + esc(top) + '</small></span><span class="n num">' + counts[r] + "</span></button>";
     }).join("") + "</div>";
     return h + "</div>";
+  }
+
+  function dailyHTML() {
+    const D = S.daily, K = D.kpis;
+    let h = '<div class="sec daily"><h3 class="sec-title"><span><i class="ph ph-traffic-cone"></i> ' + t("daily_title") + '</span><span class="num" style="color:var(--left)">' + K.n_affected + " " + t("people") + "</span></h3>" +
+      '<p class="help" style="margin:-4px 0 10px">' + t("daily_sub") + "</p>" +
+      '<div class="kpis">' +
+      '<div class="kpi"><div class="kpi-label">' + t("daily_affected") + '</div><div class="kpi-val num">' + f1(K.pct_affected) + "<small>%</small></div><span class=\"delta flat\">" + K.n_affected + " / " + K.n + "</span></div>" +
+      '<div class="kpi"><div class="kpi-label">' + t("daily_severe") + '</div><div class="kpi-val num">' + K.n_severe + '</div><span class="delta flat">' + t("lv_severe") + "</span></div>" +
+      '<div class="kpi"><div class="kpi-label">' + t("daily_avg") + '</div><div class="kpi-val num">+' + f1(K.avg_extra_minutes) + "<small>" + t("min") + '</small></div><span class="delta flat">max +' + f1(K.max_extra_minutes) + "</span></div></div>" +
+      '<div class="kpi-sub"><span>' + t("daily_week", { h: '<b class="num">' + f1(K.extra_hours_week) + "</b>", jd: '<b class="num">' + f1(K.extra_cost_jd_week) + "</b>" }) + "</span></div>";
+    const row = function (label, g) {
+      return '<div class="eq"><span class="name">' + esc(label) + '</span><span class="bar" role="img" aria-label="' + f1(g.pct_affected) + '%"><i class="h" style="width:' + g.pct_affected + '%"></i></span><span class="v num">' + f1(g.pct_affected) + "%" + (g.n_affected ? "<small>+" + f1(g.avg_extra_minutes) + " " + t("min") + "</small>" : "") + "</span></div>";
+    };
+    h += '<h4 class="sec-title daily-h">' + t("daily_by_purpose") + "</h4>" + ["work", "university", "hospital"].filter(function (p) { return D.by_purpose[p] && D.by_purpose[p].n; }).map(function (p) { return row(t("p_" + p), D.by_purpose[p]); }).join("");
+    h += '<h4 class="sec-title daily-h">' + t("daily_by_group") + "</h4>" + GROUP_ORDER.filter(function (g) { return D.by_group[g] && D.by_group[g].n; }).map(function (g) { return row(groupLabel(g), D.by_group[g]); }).join("");
+    return h + '<p class="footnote" style="margin-top:10px">' + t("daily_note") + "</p></div>";
   }
 
   function miniBar(k) {
@@ -844,6 +883,7 @@
     if ((el = q("[data-urm]"))) return edit(function (p) { p.mobile_units.splice(+el.dataset.urm, 1); }, { now: true });
     if ((el = q("[data-fee]"))) return edit(function (p) { p.fee_jd = Math.max(0, Math.round((p.fee_jd + +el.dataset.fee) * 10) / 10); });
     if ((el = q("[data-visits]"))) return edit(function (p) { p.visits_required = Math.min(3, Math.max(1, p.visits_required + +el.dataset.visits)); });
+    if ((el = q("[data-mode]"))) { S.mapMode = el.dataset.mode; S.reason = null; renderMapTools(); updateMap(); return; }
     if ((el = q("[data-view]"))) { S.view = el.dataset.view; renderMapTools(); updateMap(); renderImpact(); renderDrawer(); loadVoice(); return; }
     if ((el = q("[data-hero]"))) { const c = S.byId.get(el.dataset.hero); map.flyTo([c.lat, c.lng], Math.max(map.getZoom(), 14), { duration: reduceMotion ? 0 : 0.8 }); return select(c.id); }
     if (q("[data-close-drawer]")) { S.sel = null; renderDrawer(); updateMap(); renderMapTools(); return; }
