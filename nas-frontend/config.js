@@ -6,8 +6,10 @@ window.NAS_CONFIG = {
   // port 3000 (or as a file), it falls back to http://localhost:8000.
   API_URL: location.protocol.indexOf("http") === 0 && location.port !== "3000" ? location.origin : "http://localhost:8000",
 
-  // Per-request timeout. AI routes (/policy/parse, /citizen/voice, /report, /fixes) can take a while.
+  // Default per-request timeout (engine routes answer in well under a second).
   TIMEOUT_MS: 20000,
+  // AI routes can take a while (the backend tries several models before its template). Per route, in ms.
+  TIMEOUT_AI_MS: { "/fixes": 30000, "/report": 30000, "/policy/parse": 25000, "/citizen/voice": 25000 },
 
   // Debounce before re-running /compare after an edit or a pin drag (CLAUDE.md §9.2).
   COMPARE_DEBOUNCE_MS: 300,
