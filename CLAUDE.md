@@ -65,11 +65,11 @@ Nas then **finds fixes**. The engine searches a grid of candidate fixes and veri
 
 ## 3. Tech stack
 
-- **Frontend:** Next.js (App Router) + TypeScript + Tailwind CSS
-  - Map: `react-leaflet` + OpenStreetMap tiles. **Offline fallback:** when `NEXT_PUBLIC_OFFLINE_MAP=1`, draw no tiles; instead show a plain background with the 8 areas as labelled shapes from `frontend/public/areas.geojson` (rough circles or polygons, hand-made). Don't bulk-download OSM tiles; their usage policy forbids it.
-  - Charts: `recharts`
-  - Fonts via `next/font/google`: `IBM Plex Sans Arabic` (Arabic) and `IBM Plex Sans` (Latin)
-  - i18n: a small hand-written dictionary + React context (`lib/i18n.ts`). **No i18n library.**
+- **Frontend:** a static HTML/JS app in `nas-frontend/` (no build step, no framework), served on port 3000.
+  - `api.js` is the only file that knows routes and JSON shapes; `app.js` computes nothing (every number comes from the backend).
+  - Map: Leaflet + OpenStreetMap tiles. **Offline fallback:** `?offline=1` (or `OFFLINE_MAP` in `config.js`) draws no tiles, only labelled area zones. Don't bulk-download OSM tiles; their usage policy forbids it.
+  - Fonts: `IBM Plex Sans Arabic` (Arabic) and `IBM Plex Sans` (Latin).
+  - i18n: a hand-written dictionary in `i18n.js` (Arabic + English). **No i18n library.**
 - **Backend:** Python 3.11+, FastAPI, Pydantic v2, Uvicorn. Plain Python is enough; NumPy optional.
 - **AI:** provider-agnostic, chosen by `LLM_PROVIDER` in `.env`
   - **`gemini` (default, free tier):** the `google-genai` SDK with a free Google AI Studio key. Use Flash-class models; Pro models are not reliably on the free tier.
@@ -98,53 +98,48 @@ nas/
 │   ├── requirements.txt
 │   ├── app/
 │   │   ├── main.py             # FastAPI app, CORS for localhost:3000, includes the two routers. Keep it tiny.
+│   │   ├── config.py           # loads the repo-root .env
 │   │   ├── models.py           # ALL Pydantic schemas (source of truth for the API contract)
 │   │   ├── routes/
-│   │   │   ├── sim_routes.py   # /population, /scenarios, /sites, /simulate, /compare, /fixgrid, /sensitivity (owned by A)
-│   │   │   └── llm_routes.py   # /policy/parse, /citizen/voice, /report, /fixes (owned by C)
+│   │   │   ├── sim_routes.py   # /population, /scenarios, /sites, /areas, /heroes, /assumptions, /simulate, /compare, /fixgrid, /sensitivity
+│   │   │   └── llm_routes.py   # /policy/parse, /citizen/voice, /report, /fixes, /llm/status
 │   │   ├── sim/
 │   │   │   ├── assumptions.py  # every tunable constant, each with a comment, a rationale and an "ASSUMPTION" or "ANCHORED" tag
-│   │   │   ├── travel.py       # haversine, mode speeds, bus wait/transfer, taxi cost
+│   │   │   ├── assumption_labels.py # Arabic/English labels for the assumptions table (text only, no values)
+│   │   │   ├── travel.py       # OSRM road distances/times, mode times and costs, bus transfers
 │   │   │   ├── engine.py       # simulate(policy, population, assumptions=None) -> SimResult
 │   │   │   ├── compare.py      # baseline vs scenario diff + equity breakdown
 │   │   │   ├── fixgrid.py      # build + score the candidate-fix grid (§6.4)
-│   │   │   └── sensitivity.py  # ±20% robustness check (§6.5)
+│   │   │   ├── sensitivity.py  # ±20% robustness check (§6.5)
+│   │   │   ├── validate.py     # policy checks beyond the schema (known sites/areas, hours)
+│   │   │   └── world.py        # loads population, areas, sites, scenarios, travel matrix once
 │   │   ├── llm/
-│   │   │   ├── client.py       # provider-agnostic complete(): adapters, JSON helper, retries, timeout
+│   │   │   ├── client.py       # provider-agnostic complete(): model chains, cooldowns, time budget
 │   │   │   ├── prompts.py      # all prompts in one file
 │   │   │   ├── cache.py        # disk cache keyed by sha256(task + canonical inputs), see §8.4
 │   │   │   ├── fallbacks.py    # non-AI template text for every task (§8.6)
 │   │   │   ├── checks.py       # grounding check: numbers in AI text must match engine output (§8.3)
 │   │   │   └── tasks.py        # parse_policy, voice_citizen, write_report, explain_and_propose_fixes
 │   │   └── data/
-│   │       ├── seed.py         # generates population.json deterministically (seed=42)
-│   │       ├── anchors.json    # public figures used by seed.py, each with value, source name, URL, year
-│   │       ├── areas.json      # neighborhoods: name_ar, name_en, lat, lng, weights
-│   │       ├── sites.json      # 8 candidate office sites; dragged pins snap to these
-│   │       ├── population.json # generated, committed so everyone has the same citizens
-│   │       └── scenarios/      # baseline.json, presets, heroes.json, demo_requests.json
-│   ├── cache/                  # AI cache files (committed before demo for offline mode)
-│   └── tests/
-│       ├── test_engine.py
-│       └── test_fixgrid.py
-└── frontend/
-    ├── app/
-    │   ├── layout.tsx          # fonts; <html lang dir> driven by the language context
-    │   └── page.tsx            # 3-column layout: PolicyPanel | Map | ImpactPanel (mirrors in RTL)
-    ├── components/
-    │   ├── CityMap.tsx         # MUST be loaded with next/dynamic({ ssr: false }) (Leaflet needs window)
-    │   ├── PolicyPanel.tsx     # presets, office pins, hours, toggles, mobile units, free-text box
-    │   ├── ParsePreview.tsx    # "understood as" change list + Apply / Cancel, or the unsupported message
-    │   ├── ImpactPanel.tsx     # KPIs, equity bars by group, "left out" list, robustness badge
-    │   ├── CitizenCard.tsx     # persona + Arabic voice bubble + reason chips
-    │   ├── FixSuggestions.tsx  # verified fixes with provenance badges and before/after numbers
-    │   ├── AssumptionsTable.tsx# opened from the robustness badge
-    │   ├── LanguageToggle.tsx  # عربي / English
-    │   └── SyntheticBadge.tsx  # permanent "Synthetic population — demo data" label
-    └── lib/
-        ├── api.ts              # typed fetch helpers
-        ├── i18n.ts             # { ar: {...}, en: {...} } dictionary, useT() hook, LanguageProvider
-        └── types.ts            # mirrors backend/app/models.py, keep in sync manually
+│   │       ├── seed_census.py  # generates the census-anchored population (seed=42); --install writes population.json
+│   │       ├── seed.py         # shared helpers for seed_census: names, shifts, helper relations, tag rules
+│   │       ├── census/         # seed_census outputs: VALIDATION.md, targets.json, reference CSV/JSON sets
+│   │       ├── fetch_map_data.py # one-time OSM/OSRM fetches: home_points.json, travel_matrix.json
+│   │       ├── anchors.json    # public figures, each with status, source name, URL, year
+│   │       ├── areas.json      # the 8 engine areas: name_ar, name_en, lat, lng, side
+│   │       ├── sites.json      # 15 office sites: the 7 real CSPD offices + 8 generic snap sites
+│   │       ├── population.json # 1,000 synthetic citizens, committed so everyone has the same people
+│   │       ├── travel_matrix.json, home_points.json  # fetched once (OSRM / OpenStreetMap)
+│   │       └── scenarios/      # baseline + presets (demo one flagged "demo": true), heroes.json, demo_requests.json
+│   ├── scripts/                # pick_heroes.py, find_ai_fix.py, warm_cache.py
+│   ├── cache/                  # AI cache files (committed for offline mode)
+│   └── tests/                  # test_engine.py, test_fixgrid.py, test_llm.py (offline, no AI calls)
+└── nas-frontend/               # static UI, no build step (see its README)
+    ├── index.html              # layout + all CSS (light/dark, RTL, responsive)
+    ├── config.js               # backend URL, timeouts, offline map switch, fallback areas/heroes
+    ├── api.js                  # the ONLY file that knows routes and JSON shapes (normalisers)
+    ├── i18n.js                 # every UI string, ar + en
+    └── app.js                  # UI logic: rendering, map, events, request ordering
 ```
 
 ## 5. Data model (contract, freeze it in the first hour)
@@ -170,7 +165,7 @@ class Citizen(BaseModel):
     has_helper: bool              # family member who can drive or help online
     helper_relation_ar: str | None  # e.g. "ابني", "بنتي", "جاري"; voices may only mention this person
     helper_relation_en: str | None  # "my son", "my daughter", "my neighbour"
-    tags: list[str]               # derived in seed.py, see rules below
+    tags: list[str]               # derived by seed.derive_tags, see rules below
 ```
 
 Tag rules (derived, never set by hand):
@@ -322,7 +317,7 @@ Constants include `SERVICE_MINUTES`, `BUS_SPEED_KMH`, `BUS_WAIT_PLUS_TRANSFER_MI
 **Freeze rule (do not break this):** *Set assumptions once to round, plausible values with a stated rationale. Freeze them before running any scenario. If a scenario's story doesn't appear, change the scenario, not the assumptions.* Never present any of these values as official statistics.
 
 ### 6.3 Population anchors
-`seed.py` reads `anchors.json`. Spend at most **30 minutes** sourcing real public figures; anything not found stays an `# ASSUMPTION`. Never invent a value and label it as sourced. Targets:
+`anchors.json` records the public figures (the census generator, `seed_census.py`, documents its own targets in `data/census/VALIDATION.md`). Spend at most **30 minutes** sourcing real public figures; anything not found stays an `# ASSUMPTION`. Never invent a value and label it as sourced. Targets:
 1. Share of residents aged 65+ in Amman governorate (Department of Statistics population estimates or Census).
 2. Household car ownership rate (DoS household surveys or the Jordan Statistical Yearbook).
 3. Smartphone or internet use, ideally by age group (DoS / Ministry of Digital Economy ICT household survey).
@@ -416,9 +411,9 @@ One `MODEL_SMART` call. Input: the scenario policy, the left-out breakdown by gr
 ## 9. Frontend UX
 
 ### 9.1 Language
-- Two full UI languages, **Arabic (default) and English**, switched by `LanguageToggle` in the header and remembered in `localStorage` (wrapped in try/catch).
-- Switching sets `<html lang dir>`; the layout mirrors in RTL (Policy Panel on the right in Arabic). Use Tailwind logical utilities (`ms-`, `me-`, `ps-`, `pe-`, `start-`, `end-`) and `rtl:` variants, never `ml-`/`mr-` for layout.
-- **No UI string is hard-coded in a component.** Every label comes from `lib/i18n.ts` via `useT()`.
+- Two full UI languages, **Arabic (default) and English**, switched by the language button in the header and remembered in `localStorage` (wrapped in try/catch).
+- Switching sets `<html lang dir>`; the layout mirrors in RTL (Policy Panel on the right in Arabic). Use logical CSS properties (`inset-inline-start`, `margin-inline-*`, ...), never left/right, for layout.
+- **No UI string is hard-coded in a component.** Every label comes from `nas-frontend/i18n.js` via `t()`.
 - Every engine/AI response carries both `_ar` and `_en` text where it is shown to the user; the frontend picks by language.
 - Numbers: Western digits in both languages (judges read them faster); dates and times as `HH:MM`.
 
@@ -476,12 +471,12 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 | Person | Owns | Files |
 |---|---|---|
 | **A: Engine & data** | seed + anchors, travel model, engine, compare, fix grid, robustness check, tests, scenarios | `backend/app/sim/*`, `backend/app/data/*`, `backend/app/routes/sim_routes.py`, `tests/` |
-| **B: Frontend** | bilingual UI, map, panels, citizen card, fix suggestions, assumptions table, API wiring, polish | `frontend/*` |
+| **B: Frontend** | bilingual UI, map, panels, citizen card, fix suggestions, assumptions table, API wiring, polish | `nas-frontend/*` |
 | **C: AI & pitch** | AI client, prompts, cache, fallbacks, grounding check, parse/voice/report/fixes, AI routes, slides, demo script, Q&A | `backend/app/llm/*`, `backend/app/routes/llm_routes.py`, `README.md` |
 
 `main.py` is created once in the first hour and barely touched after, to avoid merge conflicts.
 
-**Contract-first:** in the first hour, A writes `models.py`, B mirrors it in `types.ts`, C writes `.env.example`. B builds against a static mock JSON until `/simulate` is live.
+**Contract-first:** in the first hour, A writes `models.py`, B maps it in `nas-frontend/api.js`, C writes `.env.example`. B builds against a static mock JSON until `/simulate` is live.
 
 **Side tasks (any one person, ~30 min each, early):**
 - Source the public figures for `anchors.json` (§6.3).
@@ -492,12 +487,12 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 
 | Hours | Goal | Done when |
 |---|---|---|
-| H1–2 | Scaffold both apps, freeze schemas, areas/sites, `.env`, i18n skeleton (`ar`/`en`, RTL switch), repo pushed. Start anchor sourcing. | `uvicorn` and `npm run dev` run; toggle flips the empty layout |
+| H1–2 | Scaffold backend + frontend, freeze schemas, areas/sites, `.env`, i18n skeleton (`ar`/`en`, RTL switch), repo pushed. Start anchor sourcing. | `uvicorn` and `npm run dev` run; toggle flips the empty layout |
 | H2–4 | **A:** seed + engine + `/simulate` + `/compare`, assumptions frozen. **B:** map with dots + Policy Panel on mock data, bilingual. **C:** client + cache + fallbacks + voice + parse, tested in a script. Native-speaker voice review at H3. | Each part works in isolation |
 | H4–6 | **Integration checkpoint.** Scenarios 1–3 tuned *by changing scenarios only*. Citizen Card with voices (AI or fallback). | Change policy → dots recolor → KPIs update → click hero → voice, end to end |
 | H6–7 | **A:** `fixgrid.py` + `/fixgrid`. **B:** Fix Suggestions with instant engine fixes + Apply. **C:** ParsePreview flow end to end. | Break → red → voice → engine fix → green, **with no AI dependency** |
 | H7–9 | **A:** `sensitivity.py` + `/assumptions`. **B:** equity bars, robustness badge, assumptions table. **C:** `/fixes` explain + off-grid proposal, report, grounding check; find the guaranteed AI fix. | Full story incl. AI fix and robustness badge |
-| H9–10 | Polish, pick hero citizens, run `demo_requests.json`, **then** warm the cache. Build the frontend for production while online (`npm run build`, which self-hosts the fonts). Test with wifi off: `DEMO_OFFLINE=1`, `NEXT_PUBLIC_OFFLINE_MAP=1`, `npm start`, in both languages. | Whole demo runs offline and online |
+| H9–10 | Polish, pick hero citizens, run `demo_requests.json`, **then** warm the cache. Save the frontend's CDN files (Leaflet, icons, fonts) locally while online. Test with wifi off: `DEMO_OFFLINE=1` and `?offline=1`, in both languages. | Whole demo runs offline and online |
 | H10–11 | **FEATURE FREEZE.** Record a backup screen video. Rehearse the 7-min demo 3+ times, including one judge request. | Demo under 6:30 with margin |
 
 **Cut order if behind schedule:** report → AI off-grid fix (keep engine fixes + explanations) → equity chart polish → free-text parse (manual controls still work). **Never cut:** map + simulate + citizen voice + engine fix loop + language toggle.
@@ -535,43 +530,31 @@ python -m app.data.fetch_map_data matrix             # then refresh OSRM road ti
 uvicorn app.main:app --reload --port 8000
 pytest -q
 
-# frontend
-cd frontend
-npm install
-npm run dev                                          # http://localhost:3000
+# frontend (static, no build step; backend must be running)
+python -m http.server 3000 --directory nas-frontend  # from the repo root -> http://localhost:3000
+# ?api=http://<host>:8000 points at another backend, ?offline=1 draws no map tiles
 
-# demo machine (build while online; fonts get self-hosted)
-npm run build && npm start
+# demo prep (online, after final scenario work)
+python -m scripts.pick_heroes && python -m scripts.find_ai_fix && python -m scripts.warm_cache   # from backend/
 ```
 
-`.env.example`:
-```
-LLM_PROVIDER=gemini              # gemini | groq | anthropic
-LLM_FALLBACK_PROVIDER=groq       # optional, used on rate-limit errors
-GEMINI_API_KEY=                  # free from Google AI Studio
-GROQ_API_KEY=                    # free from console.groq.com
-ANTHROPIC_API_KEY=               # optional, paid
-MODEL_FAST=                      # a current free Flash-class model ID for the chosen provider
-MODEL_SMART=                     # same; check the provider's model list on Day 1
-LLM_TIMEOUT_S=15
-DEMO_OFFLINE=0                   # 1 = cache + fallbacks only (no internet)
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_OFFLINE_MAP=0        # 1 = no map tiles, draw areas.geojson instead
-```
+`.env.example` (repo root) lists every setting with a comment: provider keys, model chains per slot
+(`MODEL_FAST`, `MODEL_SMART`, `GROQ_MODEL_*`, `OPENAI_MODEL_*`), `LLM_FALLBACK_PROVIDER`, `LLM_TIMEOUT_S`,
+`LLM_TOTAL_BUDGET_S` and `DEMO_OFFLINE`. The frontend's backend URL lives in `nas-frontend/config.js`.
 
 ## 16. Rules for Claude Code in this repo
 
 - **Ship a working demo over completeness.** Prefer the simplest thing that makes the demo work. No auth, no DB, no Docker, no extra services, no i18n library.
 - **Respect the core principle (§2).** The engine decides and searches; the AI explains and proposes; the engine verifies. Never route an outcome or number through the AI.
 - **Respect the freeze rule (§6.2).** Never change `assumptions.py` to make a scenario look better. Change the scenario. If asked to, refuse and point to this rule.
-- **`models.py` is the API contract.** If you change it, update `frontend/lib/types.ts` in the same change and say so.
-- **Keep the engine pure and deterministic.** No randomness at simulate time; randomness only in `seed.py` with a fixed seed. Engine functions accept an optional assumptions override (needed by `sensitivity.py`).
+- **`models.py` is the API contract.** If you change it, check `nas-frontend/api.js` (its normalisers) in the same change and say so.
+- **Keep the engine pure and deterministic.** No randomness at simulate time; randomness only in `seed_census.py` with a fixed seed. Engine functions accept an optional assumptions override (needed by `sensitivity.py`).
 - **Every constant goes in `assumptions.py`** with a comment, rationale and `# ANCHORED` or `# ASSUMPTION` tag. Never mark a value ANCHORED without a real source in `anchors.json`.
 - **Never present synthetic numbers as real Jordanian statistics** in UI copy, prompts, or the report.
 - **No real personal data.** Names come from generic first-name lists only.
 - **Every AI call goes through `llm/client.py` + `llm/cache.py` + `llm/checks.py`, and every AI task has a fallback in `llm/fallbacks.py`.** Must work with `DEMO_OFFLINE=1`. Never import a provider SDK outside `llm/`.
 - **Respect free-tier rate limits.** Never generate voices for all 1,000 citizens in a loop. Generate on click, plus at most ~5 sampled citizens per worst group for the report.
-- **Bilingual UI:** every user-facing string comes from `lib/i18n.ts`; use logical Tailwind utilities so the layout mirrors in RTL. Citizen voices are always Arabic.
-- **Leaflet components:** must be dynamically imported with `ssr: false`.
+- **Bilingual UI:** every user-facing string comes from `nas-frontend/i18n.js`; use logical CSS properties so the layout mirrors in RTL. Citizen voices are always Arabic.
+- **Frontend computes nothing:** no simulation, scoring or ranking in `nas-frontend/`; adapt shapes only in `api.js`.
 - **Before declaring a feature done:** run `pytest -q` for engine changes, and click through the affected demo scenario in the browser **in both languages**.
 - **Small, focused commits.** Three people are pushing to the same repo.

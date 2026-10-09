@@ -21,7 +21,7 @@ window.NAS_CONFIG = {
   AREAS: {
     downtown:  { name_ar: "وسط البلد", name_en: "Downtown", lat: 31.951, lng: 35.934 },
     abdali:    { name_ar: "العبدلي", name_en: "Abdali", lat: 31.962, lng: 35.910 },
-    jabal:     { name_ar: "جبل الحسين", name_en: "Jabal Al-Hussein", lat: 31.968, lng: 35.920 },
+    jabal_al_hussein: { name_ar: "جبل الحسين", name_en: "Jabal Al-Hussein", lat: 31.968, lng: 35.920 },
     marka:     { name_ar: "ماركا", name_en: "Marka", lat: 31.975, lng: 35.985 },
     wehdat:    { name_ar: "الوحدات", name_en: "Wehdat", lat: 31.935, lng: 35.940 },
     tabarbour: { name_ar: "طبربور", name_en: "Tabarbour", lat: 32.000, lng: 35.940 },

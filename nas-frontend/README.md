@@ -42,7 +42,7 @@ All bodies are JSON. Field names follow `backend/app/models.py` (CLAUDE.md §5).
 | "Suggest fixes" | `POST /fixgrid` | `{baseline, scenario}` | `FixCandidate[]` (or `{fixes: [...]}`). Shown immediately |
 | Right after `/fixgrid` | `POST /simulate` × each fix | `{policy}` | `SimResult`. Only `kpis` is used, for the before/after bars. Failure just hides the bars |
 | Right after `/fixgrid` | `POST /fixes` | `{baseline, scenario}` | `{fixes: FixCandidate[], source?}`. Explanations are matched to grid fixes **by `id`**; one with `source: "ai_proposed"` becomes the AI card |
-| After compare, and again once fixes exist | `POST /sensitivity` | `{baseline, scenario, fix}` | `SensitivityResult`. `fix` is `null` until fixes exist; a 4xx then shows "appears after suggesting fixes". Optional `detail: [{key, factor, top2, fixHelps}]` renders a per-run table |
+| After compare, and again once fixes exist | `POST /sensitivity` | `{baseline, scenario, fix}` | `SensitivityResult`. `fix` is `null` until fixes exist: the backend then checks the ranking only (`fix_checked: false`), so the badge shows "held X/6" before fixes too. `api.js` sends the fix's `policy` and maps the backend's `details[]` to `detail: [{key, factor, top2, fixHelps}]` for the per-run table |
 | "Read it" (free text) | `POST /policy/parse` | `{text, current_policy, lang}` | `ParseResult` |
 | Click a citizen | `POST /citizen/voice` | `{citizen_id, outcome}` (the engine's own `CitizenOutcome`, sent back untouched) | `{text_ar, source: "ai" \| "fallback"}`. On failure the UI shows a local template tagged "template" |
 | "Write report" | `POST /report` | `{compare_result, sensitivity}` | `{summary_ar, summary_en, source}`. Newlines become paragraphs |
