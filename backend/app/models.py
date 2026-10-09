@@ -162,6 +162,9 @@ class CitizenOutcome(BaseModel):
 
 class SimResult(BaseModel):
     outcomes: list[CitizenOutcome]
+    # kpis keys: pct_served, pct_hardship, pct_left_out, avg_hours_lost, avg_cost_jd, n, n_served, n_hardship,
+    # n_left_out, n_home_visits, left_out_by_reason {reason: n people}, hardship_by_reason {reason: n people}
+    # (a person with several reasons is counted under each; the n_* counts are distinct people).
     kpis: dict
     by_group: dict
 
@@ -186,8 +189,15 @@ class FixCandidate(BaseModel):
     left_out_drop: float
     hardship_drop: float
     worsens_any_group: bool
+    n_changes: int = 1            # distinct changes vs the scenario (validate.count_changes); AI fixes are capped at 3
+    kpis: dict = {}               # the fix policy's SimResult.kpis (for "left out 9 -> 1" style readouts)
     explanation_ar: str | None = None
     explanation_en: str | None = None
+
+
+class FixGridResponse(BaseModel):
+    fixes: list[FixCandidate]     # top 3, engine only
+    scenario_kpis: dict           # the scenario's SimResult.kpis, so the UI needs no extra /simulate calls
 
 
 class ParseResult(BaseModel):
@@ -236,7 +246,10 @@ class ParseRequest(BaseModel):
 
 class VoiceRequest(BaseModel):
     citizen_id: str
-    outcome: CitizenOutcome
+    # Preferred: send the policy and the backend recomputes this citizen's outcome itself (the AI only ever
+    # sees engine numbers). `outcome` is accepted for older clients and is ignored when `policy` is given.
+    policy: Policy | None = None
+    outcome: CitizenOutcome | None = None
 
 
 class VoiceResponse(BaseModel):
@@ -246,7 +259,13 @@ class VoiceResponse(BaseModel):
 
 
 class ReportRequest(BaseModel):
-    compare_result: CompareResult
+    # Preferred: send the policies and the backend recomputes the comparison, the robustness check and, when
+    # `fix` is given, the effect of the applied fix, all server-side. `compare_result`/`sensitivity` are
+    # accepted for older clients and are ignored when `baseline` and `scenario` are given.
+    baseline: Policy | None = None
+    scenario: Policy | None = None
+    fix: Policy | None = None
+    compare_result: CompareResult | None = None
     sensitivity: SensitivityResult | None = None
 
 

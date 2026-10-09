@@ -5,9 +5,15 @@ simulate(policy, population=None, assumptions=None) -> SimResult
 Each channel (office, mobile unit, online) is evaluated per citizen and memoised by
 (channel definition, policy-wide settings, assumptions), so the fix grid and the
 robustness check, which re-run near-identical policies ~40 times, stay fast.
-The memo never changes a result; it only skips repeated work.
+The memo never changes a result; it only skips repeated work. It is a small LRU
+(_MEMO_MAX entries) of compact per-citizen tuples, so memory stays bounded on a
+512 MB host however many policies are tried; outcome dicts are built only for the
+winning option of each citizen, in run().
 """
 from __future__ import annotations
+
+import threading
+from collections import Counter, OrderedDict
 
 from ..models import CitizenOutcome, Policy, SimResult
 from . import world
@@ -20,12 +26,30 @@ REASON_ORDER = ["NO_SMARTPHONE", "LOW_DIGITAL_LITERACY", "TOO_FAR", "NO_TRANSPOR
                 "NOT_WHEELCHAIR_ACCESSIBLE", "HOURS_CONFLICT_WORK", "OFFICE_CLOSED_ON_AVAILABLE_DAYS"]
 STATUS_RANK = {"served": 0, "hardship": 1, "left_out": 2}
 
-_MEMO: dict = {}
-_MEMO_MAX = 4000
+# LRU memo: key -> (pop, opts, fails). One entry = one channel evaluated for the whole population.
+# The warm-up (demo path + fix grid + robustness runs) needs ~110 entries; one policy edit adds ~20.
+_MEMO: OrderedDict = OrderedDict()
+_MEMO_MAX = 150
+_MEMO_LOCK = threading.Lock()  # the warm-up thread and request threads share the memo
+
+# A feasible option is a compact tuple (built once per citizen and channel, kept in the memo):
+#   (key, served, mode, bus_transfers, visit_day, travel_minutes, cost_jd, hours_lost, work_hours_missed, reasons)
+# `key` orders options (lower is better); the channel itself is known from where the option came from.
+K, SERVED, MODE, TRANSFERS, DAY, TRAVEL, COST, HOURS, WORK, REASONS = range(10)
+_EMPTY: frozenset = frozenset()
+_INTERN: dict = {}  # shared reason tuples / failure sets, so 1,000 citizens don't each hold their own copy
 
 
-def _sorted_reasons(rs) -> list[str]:
-    return sorted(set(rs), key=REASON_ORDER.index)
+def _intern(x):
+    return _INTERN.setdefault(x, x)
+
+
+def _sorted_reasons(rs) -> tuple[str, ...]:
+    return _intern(tuple(sorted(set(rs), key=REASON_ORDER.index)))
+
+
+def _fails(rs) -> frozenset:
+    return _intern(frozenset(rs)) if rs else _EMPTY
 
 
 # ------------------------------------------------------------------ channels
@@ -98,31 +122,32 @@ def _online_ability(c: dict) -> tuple[bool, list[str]]:
     return not reasons, reasons
 
 
-def _option(ch, *, burden, flags, hours, cost, work, mode, transfers, day, travel, reasons, a):
+def _key(ch, burden, flags, day, mode, a) -> tuple:
+    """Option order: served before hardship, then lower burden, fewer hardship flags, online before in person,
+    channel id, day, mode."""
+    served = burden < a.HARDSHIP_THRESHOLD and flags == 0
+    return (0 if served else 1, round(burden, 6), flags, 0 if ch["kind"] == "online" else 1, ch["id"],
+            DAY_ORDER.get(day, -1), mode)
+
+
+def _option(ch, *, burden, flags, hours, cost, work, mode, transfers, day, travel, reasons, a, key=None) -> tuple:
     served = burden < a.HARDSHIP_THRESHOLD and flags == 0
     rs = list(reasons)
     if not served and burden >= a.HARDSHIP_THRESHOLD and travel >= a.LONG_TRIP_MINUTES:
         rs.append("TOO_FAR")
-    key = (0 if served else 1, round(burden, 6), flags, 0 if ch["kind"] == "online" else 1, ch["id"],
-           DAY_ORDER.get(day, -1), mode)
-    return {
-        "key": key, "status": "served" if served else "hardship", "channel": ch["id"],
-        "channel_name_ar": ch["name_ar"], "channel_name_en": ch["name_en"], "mode": mode,
-        "bus_transfers": transfers, "visit_day": day, "travel_minutes": round(travel, 1),
-        "cost_jd": round(cost, 2), "hours_lost": round(hours, 2), "work_hours_missed": round(work, 2),
-        "reasons": _sorted_reasons(rs),
-    }
+    return (key or _key(ch, burden, flags, day, mode, a), served, mode, transfers, day, round(travel, 1),
+            round(cost, 2), round(hours, 2), round(work, 2), _sorted_reasons(rs))
 
 
 def _eval_online(c: dict, ch: dict, policy: Policy, a: Assumptions):
     ok, reasons = _online_ability(c)
     if not ok and not c["has_helper"]:
-        return None, set(reasons)
+        return None, _fails(reasons)
     flags = 0 if ok else 1  # a helper doing it online for you is a hardship
     hours = a.ONLINE_MINUTES / 60
     cost = _fee(c, policy)
     return _option(ch, burden=hours + a.COST_WEIGHT * cost, flags=flags, hours=hours, cost=cost, work=0.0,
-                   mode="online", transfers=0, day=None, travel=0.0, reasons=[] if ok else reasons, a=a), set()
+                   mode="online", transfers=0, day=None, travel=0.0, reasons=[] if ok else reasons, a=a), _EMPTY
 
 
 def _modes(c: dict, ch: dict, a: Assumptions, matrix: dict, sides: dict, voucher: float = 0.0):
@@ -163,10 +188,11 @@ def _modes(c: dict, ch: dict, a: Assumptions, matrix: dict, sides: dict, voucher
 
 def _eval_in_person(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: dict, sides: dict):
     if c["mobility"] == "wheelchair" and not ch["accessible"]:
-        return None, {"NOT_WHEELCHAIR_ACCESSIBLE"}
+        return None, _fails({"NOT_WHEELCHAIR_ACCESSIBLE"})
     modes, fails = _modes(c, ch, a, matrix, sides, _voucher(c, policy))
     if not modes:
-        return None, fails or {"NO_TRANSPORT"}
+        # `fails` is never empty here: _modes always tries the taxi, which adds either a mode or a failure reason.
+        return None, _fails(fails)
 
     # Appointments (offices only, rule 3): book online yourself, via a helper (hardship),
     # or make one wasted trip first. Citizens in an exempt group walk in.
@@ -197,7 +223,7 @@ def _eval_in_person(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: d
     cap = a.MAX_WORK_HOURS_MISSED[c["income_band"]]
     fee = _fee(c, policy)
 
-    best, capped = None, False
+    best_key, best_args, capped = None, None, False
     for S, n_visits, book_min, book_flag, book_reasons in variants:
         outside, during = [], []
         for day, op, cl in ch["schedule"]:
@@ -226,53 +252,61 @@ def _eval_in_person(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: d
                         outside.append((day, mode, t, transfers, hours, cost, 0.0, flags, []))
         for day, mode, t, transfers, hours, cost, work, flags, rs in outside or during:  # rule 5
             burden = hours + a.COST_WEIGHT * cost + a.WORK_WEIGHT * work
-            opt = _option(ch, burden=burden, flags=flags, hours=hours, cost=cost, work=work, mode=mode,
-                          transfers=transfers if mode == "bus" else 0, day=day, travel=t,
-                          reasons=book_reasons + rs, a=a)
-            if best is None or opt["key"] < best["key"]:
-                best = opt
-    if best is None:
-        return None, fails | ({"HOURS_CONFLICT_WORK"} if capped else {"OFFICE_CLOSED_ON_AVAILABLE_DAYS"})
-    return best, set()
+            k = _key(ch, burden, flags, day, mode, a)
+            if best_key is None or k < best_key:  # only the winner is turned into an option tuple
+                best_key = k
+                best_args = dict(burden=burden, flags=flags, hours=hours, cost=cost, work=work, mode=mode,
+                                 transfers=transfers if mode == "bus" else 0, day=day, travel=t,
+                                 reasons=book_reasons + rs)
+    if best_key is None:
+        return None, _fails(fails | ({"HOURS_CONFLICT_WORK"} if capped else {"OFFICE_CLOSED_ON_AVAILABLE_DAYS"}))
+    return _option(ch, a=a, key=best_key, **best_args), _EMPTY
 
 
-def _channel_results(ch: dict, policy: Policy, pop: list[dict], a: Assumptions) -> list:
+def _channel_results(ch: dict, policy: Policy, pop: list[dict], a: Assumptions) -> tuple[list, list]:
+    """(opts, fails), index-aligned with pop: the citizen's best option on this channel (or None) and, when
+    infeasible, the reasons why. Memoised in a bounded LRU."""
     key = (id(pop), _channel_key(ch, policy), a.key())
-    hit = _MEMO.get(key)
-    if hit is not None:
-        return hit[1]
+    with _MEMO_LOCK:
+        hit = _MEMO.get(key)
+        if hit is not None:
+            _MEMO.move_to_end(key)
+            return hit[1], hit[2]
     matrix, sides = world.travel_matrix(), world.sides()
     if ch["kind"] == "online":
         res = [_eval_online(c, ch, policy, a) for c in pop]
     else:
         res = [_eval_in_person(c, ch, policy, a, matrix, sides) for c in pop]
-    if len(_MEMO) > _MEMO_MAX:
-        _MEMO.clear()
-    _MEMO[key] = (pop, res)  # keep a reference to pop so id(pop) stays unique
-    return res
+    opts, fails = [r[0] for r in res], [r[1] for r in res]
+    with _MEMO_LOCK:
+        _MEMO[key] = (pop, opts, fails)  # keep a reference to pop so id(pop) stays unique while cached
+        _MEMO.move_to_end(key)
+        while len(_MEMO) > _MEMO_MAX:
+            _MEMO.popitem(last=False)
+    return opts, fails
 
 
 HOME = {"kind": "home", "id": "home_visit", "name_ar": "زيارة منزلية", "name_en": "Home visit"}
 
 
-def _allocate_home_visits(policy: Policy, pop: list[dict], bests: list, a: Assumptions) -> None:
+def _allocate_home_visits(policy: Policy, pop: list[dict], bests: list, best_ch: list, a: Assumptions) -> None:
     """Home-visit slots go to eligible citizens who are worst off without one: left out first, then the heaviest
     hardship (ties by id). A slot is used only if the home visit is better for that citizen. Deterministic."""
     hv = policy.home_visits
     if not hv or hv.slots <= 0 or policy.online_only:
         return
     groups = set(hv.groups)
-    queue = sorted((0 if b is None else 1, -(b["key"][1] if b else 0.0), c["id"], i)
+    queue = sorted((0 if b is None else 1, -(b[K][1] if b else 0.0), c["id"], i)
                    for i, (c, b) in enumerate(zip(pop, bests))
-                   if groups & set(c["tags"]) and (b is None or b["status"] != "served"))
+                   if groups & set(c["tags"]) and (b is None or not b[SERVED]))
     for *_, i in queue[:hv.slots]:
         c = pop[i]
         hours = a.HOME_VISIT_MINUTES / 60 * policy.visits_required
         cost = _fee(c, policy)
         opt = _option(HOME, burden=hours + a.COST_WEIGHT * cost, flags=0, hours=hours, cost=cost, work=0.0,
                       mode="home", transfers=0, day=None, travel=0.0, reasons=[], a=a)
-        if bests[i] is None or opt["key"] < bests[i]["key"]:
-            bests[i] = opt
+        if bests[i] is None or opt[K] < bests[i][K]:
+            bests[i], best_ch[i] = opt, HOME
 
 
 # ------------------------------------------------------------------- public
@@ -281,30 +315,40 @@ def run(policy: Policy, population: list[dict] | None = None, assumptions: Assum
     """Fast path: list of outcome dicts, index-aligned with the population."""
     pop = population if population is not None else world.population()
     a = assumptions or DEFAULT
-    per_channel = [_channel_results(ch, policy, pop, a) for ch in _channels(policy)]
-    bests, fails_by = [], []
-    for i, c in enumerate(pop):
-        best, reasons = None, set()
-        for res in per_channel:
-            opt, fails = res[i]
-            reasons |= fails
-            if opt is not None and (best is None or opt["key"] < best["key"]):
-                best = opt
+    per_channel = [(ch, *_channel_results(ch, policy, pop, a)) for ch in _channels(policy)]
+    bests, best_ch, fails_by = [], [], []
+    for i in range(len(pop)):
+        best, bch, reasons = None, None, set()
+        for ch, opts, fails in per_channel:
+            if fails[i]:
+                reasons |= fails[i]
+            opt = opts[i]
+            if opt is not None and (best is None or opt[K] < best[K]):
+                best, bch = opt, ch
         bests.append(best)
+        best_ch.append(bch)
         fails_by.append(reasons)
-    _allocate_home_visits(policy, pop, bests, a)
+    _allocate_home_visits(policy, pop, bests, best_ch, a)
     out = []
-    for c, best, reasons in zip(pop, bests, fails_by):
+    for c, best, ch, reasons in zip(pop, bests, best_ch, fails_by):
         if best is None:
             out.append({"citizen_id": c["id"], "status": "left_out", "channel": None, "channel_name_ar": None,
                         "channel_name_en": None, "mode": None, "bus_transfers": 0, "visit_day": None,
                         "travel_minutes": 0.0, "cost_jd": 0.0, "hours_lost": 0.0, "work_hours_missed": 0.0,
-                        "reasons": _sorted_reasons(reasons or {"OFFICE_CLOSED_ON_AVAILABLE_DAYS"})})
+                        "reasons": list(_sorted_reasons(reasons or {"OFFICE_CLOSED_ON_AVAILABLE_DAYS"}))})
         else:
-            o = {k: v for k, v in best.items() if k != "key"}
-            o["citizen_id"] = c["id"]
-            out.append(o)
+            out.append({"status": "served" if best[SERVED] else "hardship", "channel": ch["id"],
+                        "channel_name_ar": ch["name_ar"], "channel_name_en": ch["name_en"], "mode": best[MODE],
+                        "bus_transfers": best[TRANSFERS], "visit_day": best[DAY], "travel_minutes": best[TRAVEL],
+                        "cost_jd": best[COST], "hours_lost": best[HOURS], "work_hours_missed": best[WORK],
+                        "reasons": list(best[REASONS]),  # a fresh list: callers may mutate it
+                        "citizen_id": c["id"]})
     return out
+
+
+def _count_reasons(outcomes) -> dict[str, int]:
+    n = Counter(r for o in outcomes for r in set(o["reasons"]))
+    return dict(sorted(n.items(), key=lambda kv: (-kv[1], kv[0])))
 
 
 def summarize(outcomes: list[dict], pop: list[dict] | None = None) -> tuple[dict, dict]:
@@ -332,6 +376,9 @@ def summarize(outcomes: list[dict], pop: list[dict] | None = None) -> tuple[dict
         "avg_cost_jd": round(cost / reached, 2) if reached else 0.0,
         "n": n, "n_served": counts["served"], "n_hardship": counts["hardship"], "n_left_out": counts["left_out"],
         "n_home_visits": sum(o.get("channel") == "home_visit" for o in outcomes),
+        # People per reason (someone with two reasons counts under both), most common first, then by name.
+        "left_out_by_reason": _count_reasons(o for o in outcomes if o["status"] == "left_out"),
+        "hardship_by_reason": _count_reasons(o for o in outcomes if o["status"] == "hardship"),
     }
     by_group = {g: {"served": pct(v["served"], v["n"]), "hardship": pct(v["hardship"], v["n"]),
                     "left_out": pct(v["left_out"], v["n"]), "n": v["n"]} for g, v in groups.items()}

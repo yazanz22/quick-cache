@@ -3,21 +3,25 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 
 from fastapi import APIRouter, HTTPException
 
 from ..config import SCENARIOS_DIR
-from ..models import (Area, Citizen, CompareRequest, CompareResult, FixCandidate, Hero, Policy, Scenario,
+from ..models import (Area, Citizen, CompareRequest, CompareResult, FixGridResponse, Hero, Policy, Scenario,
                       SensitivityRequest, SensitivityResult, SimResult, SimulateRequest, Site)
 from ..sim import assumptions as A
 from ..sim.assumption_labels import label_rows
 from ..sim import fixgrid, sensitivity, warmup, world
 from ..sim.compare import compare
-from ..sim.engine import simulate
+from ..sim.engine import run, simulate, summarize
 from ..sim.validate import policy_errors
 
 router = APIRouter(tags=["engine"])
 _SENS_CACHE: dict[str, SensitivityResult] = {}
+_SENS_MAX = 500           # robustness results kept; the cache is cleared when it grows past this
+_SENS_LOCK = threading.Lock()  # written by the start-up warm-up thread and by request threads
+WARM_DONE = threading.Event()  # set when the start-up warm-up has finished (or failed)
 
 
 def validate_policy(p: Policy) -> None:
@@ -76,25 +80,42 @@ def post_compare(req: CompareRequest):
     return compare(req.baseline, req.scenario)
 
 
-@router.post("/fixgrid", response_model=list[FixCandidate])
+@router.post("/fixgrid", response_model=FixGridResponse)
 def post_fixgrid(req: CompareRequest):
+    """Top 3 engine fixes (each with its own kpis and n_changes) plus the scenario's kpis."""
     validate_policy(req.scenario)
-    return fixgrid.top_fixes(req.scenario)
+    fixes = fixgrid.top_fixes(req.scenario)
+    scenario_kpis, _ = summarize(run(req.scenario))  # memo hits: build() just ran the scenario
+    return FixGridResponse(fixes=fixes, scenario_kpis=scenario_kpis)
 
 
 def _sens_key(req: SensitivityRequest) -> str:
     return hashlib.sha256(json.dumps(req.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
 
 
+def _sens_put(key: str, res: SensitivityResult) -> None:
+    with _SENS_LOCK:
+        if len(_SENS_CACHE) >= _SENS_MAX and key not in _SENS_CACHE:
+            _SENS_CACHE.clear()
+        _SENS_CACHE[key] = res
+
+
 def warm_up() -> float:
-    """Run the demo path once at start-up (engine memo + robustness results). Returns seconds taken."""
-    w = warmup.warm()
-    s = w["sensitivity"]
-    _SENS_CACHE[_sens_key(SensitivityRequest(baseline=w["base"], scenario=w["demo"]))] = s["ranking_only"]
-    if "top_fix" in s:
-        fix = SensitivityRequest(baseline=w["base"], scenario=w["demo"], fix=w["top"][0]["policy"])
-        _SENS_CACHE[_sens_key(fix)] = s["top_fix"]
-    return w["seconds"]
+    """Run the demo path once (engine memo + robustness results for: no fix, the top grid fix and, when the
+    AI cache has it, the verified AI fix). Returns seconds taken. main.py runs it in a background thread."""
+    try:
+        w = warmup.warm()
+        s = w["sensitivity"]
+        _sens_put(_sens_key(SensitivityRequest(baseline=w["base"], scenario=w["demo"])), s["ranking_only"])
+        if "top_fix" in s:
+            req = SensitivityRequest(baseline=w["base"], scenario=w["demo"], fix=w["top"][0]["policy"])
+            _sens_put(_sens_key(req), s["top_fix"])
+        if "ai_fix" in s:
+            req = SensitivityRequest(baseline=w["base"], scenario=w["demo"], fix=w["ai_fix"])
+            _sens_put(_sens_key(req), s["ai_fix"])
+        return w["seconds"]
+    finally:
+        WARM_DONE.set()
 
 
 @router.post("/sensitivity", response_model=SensitivityResult)
@@ -103,6 +124,8 @@ def post_sensitivity(req: SensitivityRequest):
         if p is not None:
             validate_policy(p)
     key = _sens_key(req)
-    if key not in _SENS_CACHE:
-        _SENS_CACHE[key] = sensitivity.check(req.baseline, req.scenario, req.fix)
-    return _SENS_CACHE[key]
+    hit = _SENS_CACHE.get(key)
+    if hit is None:
+        hit = sensitivity.check(req.baseline, req.scenario, req.fix)  # computed outside the lock
+        _sens_put(key, hit)
+    return hit

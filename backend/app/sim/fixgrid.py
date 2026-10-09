@@ -33,10 +33,12 @@ def _van(area: str, day: str):
     }
 
 def _late_thu(p: Policy) -> Policy:
+    """Keep every office that opens on Thursday open until LATE_CLOSE (same start time). An office closed on
+    Thursday stays closed: this toggle extends hours, it never adds an opening day."""
     q = p.model_copy(deep=True)
     for o in q.offices:
-        start = o.schedule["thu"][0] if "thu" in o.schedule else "08:00"
-        o.schedule["thu"] = (start, LATE_CLOSE)
+        if "thu" in o.schedule and o.schedule["thu"][1] < LATE_CLOSE:
+            o.schedule["thu"] = (o.schedule["thu"][0], LATE_CLOSE)
     return q
 
 def _no_appointments(p: Policy) -> Policy:
@@ -113,9 +115,11 @@ def build(scenario: Policy, pop=None, assumptions: Assumptions | None = None) ->
     return sorted(allc, key=rank_key)
 
 def to_candidate(c: dict, source: str = "engine_grid") -> FixCandidate:
+    """A scored candidate (from build() or score()) as the API's FixCandidate, with the fix policy's kpis."""
     return FixCandidate(id=c["id"], title_ar=c["title_ar"], title_en=c["title_en"], policy=c["policy"], source=source,
                         left_out_drop=c["left_out_drop"], hardship_drop=c["hardship_drop"],
-                        worsens_any_group=c["worsens_any_group"])
+                        worsens_any_group=c["worsens_any_group"], n_changes=c.get("n_changes", 1),
+                        kpis=c.get("kpis") or {})
 
 def top_fixes(scenario: Policy, n: int = 3, pop=None, assumptions: Assumptions | None = None) -> list[FixCandidate]:
     return [to_candidate(c) for c in build(scenario, pop, assumptions)[:n]]

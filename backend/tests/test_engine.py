@@ -159,3 +159,37 @@ def test_backend_serves_the_frontend_and_api_routes_still_win():
     assert c.get("/api.js").status_code == 200
     assert c.get("/scenarios").headers["content-type"].startswith("application/json")
     assert c.get("/docs").status_code == 200
+
+
+def test_memo_is_a_bounded_lru():
+    c = person()
+    for i in range(engine._MEMO_MAX + 60):  # every fee is a new memo key for every channel
+        engine.run(policy(fee_jd=1.0 + i / 100), [c])
+        assert len(engine._MEMO) <= engine._MEMO_MAX
+    p = world.scenario_policy(world.demo_scenario_id())
+    a = engine.run(p)
+    keys_before = list(engine._MEMO)[-3:]
+    assert engine.run(p) == a  # a hit returns the same results ...
+    assert list(engine._MEMO)[-3:] == keys_before  # ... and keeps those entries most recent
+
+
+def test_outcome_reasons_are_fresh_lists():
+    c = person(has_smartphone=False, digital_literacy="low")
+    p = policy(online_only=True)
+    first = one(c, p)
+    first["reasons"].append("TOO_FAR")  # a caller mutating an outcome must not change the memo
+    assert one(c, p)["reasons"] == ["NO_SMARTPHONE", "LOW_DIGITAL_LITERACY"]
+
+
+def test_reason_counts_in_the_kpis():
+    out = engine.run(world.scenario_policy("online_only"))
+    k, _ = engine.summarize(out)
+    lo, hs = k["left_out_by_reason"], k["hardship_by_reason"]
+    for counts, status in [(lo, "left_out"), (hs, "hardship")]:
+        assert counts == {r: sum(o["status"] == status and r in o["reasons"] for o in out) for r in counts}
+        assert all(v > 0 for v in counts.values())
+        items = list(counts.items())
+        assert items == sorted(items, key=lambda kv: (-kv[1], kv[0]))  # most common first, then by name
+    assert sum(lo.values()) >= k["n_left_out"] > 0  # a person with two reasons counts under both
+    cr = compare(world.scenario_policy("baseline"), world.scenario_policy("online_only"))
+    assert "left_out_by_reason" not in cr.kpi_delta and "pct_left_out" in cr.kpi_delta
