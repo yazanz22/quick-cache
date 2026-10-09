@@ -1,0 +1,39 @@
+{
+ "task": "voice",
+ "output": "تمكنتُ من تجديد هويتي عبر الوحدة المتنقلة في وسط البلد يوم السبت، وذهبتُ بواسطة سيارة أجرة حيث استغرقت الرحلة 15 دقيقة في اتجاه واحد. كلفني الأمر 4.5 دنانير واستغرق نحو ساعة ونصف من وقتي.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.7-flash",
+  "seconds": 8.51,
+  "ts": "2026-10-09T18:11:32"
+ },
+ "inputs": {
+  "register": "msa",
+  "profile": {
+   "age": 67,
+   "gender": "m",
+   "area_ar": "الوحدات",
+   "mobility": "wheelchair",
+   "has_car": false,
+   "has_smartphone": false,
+   "digital_literacy": "low",
+   "works": false,
+   "work_start": null,
+   "work_end": null,
+   "income_band": "middle",
+   "helper_relation_ar": "ابني"
+  },
+  "outcome": {
+   "status": "served",
+   "reasons": [],
+   "channel_name_ar": "الوحدة المتنقلة في وسط البلد يوم السبت",
+   "mode": "taxi",
+   "bus_transfers": 0,
+   "visit_day_ar": "السبت",
+   "travel_minutes_one_way": 15,
+   "total_cost_jd": 4.5,
+   "total_hours_lost_incl_waiting": 1.5,
+   "work_hours_missed": 0.0
+  }
+ }
+}
