@@ -45,59 +45,6 @@ def travel_matrix() -> dict:
     return json.loads(p.read_text(encoding="utf-8"))["matrix"] if p.exists() else {}
 
 
-@lru_cache(maxsize=1)
-def roads() -> dict[str, dict]:
-    """Closable major roads (data/roads.json), in catalogue order."""
-    p = DATA_DIR / "roads.json"
-    return {r["id"]: r for r in json.loads(p.read_text(encoding="utf-8"))["roads"]} if p.exists() else {}
-
-
-@lru_cache(maxsize=1)
-def road_deltas() -> dict:
-    p = DATA_DIR / "road_deltas.json"
-    return json.loads(p.read_text(encoding="utf-8"))["deltas"] if p.exists() else {}
-
-
-@lru_cache(maxsize=1)
-def road_calibration() -> dict[str, float]:
-    """road id -> factor on its detour seconds, from real typical traffic (scripts/calibrate_roads.py, TomTom).
-    Missing file or road = 1.0: the free-flow detour, a minimum."""
-    p = DATA_DIR / "road_calibration.json"
-    return {k: v["factor"] for k, v in json.loads(p.read_text(encoding="utf-8"))["roads"].items()} if p.exists() else {}
-
-
-def detour(citizen_id: str, dest_key: str, closed: tuple[str, ...]) -> tuple[float, float, str | None]:
-    """(extra seconds, extra metres, road id) for a trip when the `closed` roads are closed.
-    Each road's detour was routed on its own (fetch_roads.py), then scaled by its traffic calibration if any.
-    With several roads closed the trip takes the largest single-road detour: a lower bound, since closing
-    more roads can never make a trip faster."""
-    best = (0.0, 0.0, None)
-    deltas, cal = road_deltas(), road_calibration()
-    for r in closed:
-        d = deltas.get(r, {}).get(citizen_id, {}).get(dest_key)
-        if d and d[0] * cal.get(r, 1.0) > best[0]:
-            best = (d[0] * cal.get(r, 1.0), d[1], r)
-    return best
-
-
-@lru_cache(maxsize=1)
-def hubs() -> dict[str, dict]:
-    p = DATA_DIR / "hubs.json"
-    return {h["id"]: h for h in json.loads(p.read_text(encoding="utf-8"))["hubs"]} if p.exists() else {}
-
-
-@lru_cache(maxsize=1)
-def daily_trips() -> dict[str, dict]:
-    p = DATA_DIR / "daily_trips.json"
-    return json.loads(p.read_text(encoding="utf-8"))["trips"] if p.exists() else {}
-
-
-@lru_cache(maxsize=1)
-def hub_matrix() -> dict:
-    p = DATA_DIR / "hub_matrix.json"
-    return json.loads(p.read_text(encoding="utf-8"))["matrix"] if p.exists() else {}
-
-
 def sides() -> dict[str, str]:
     return {k: v["side"] for k, v in areas().items()}
 

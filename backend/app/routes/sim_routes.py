@@ -7,12 +7,11 @@ import json
 from fastapi import APIRouter, HTTPException
 
 from ..config import SCENARIOS_DIR
-from ..models import (Area, Citizen, CompareRequest, CompareResult, DailyRequest, DailyResult, FixCandidate, Hero,
-                      Policy, Road, Scenario,
+from ..models import (Area, Citizen, CompareRequest, CompareResult, FixCandidate, Hero, Policy, Scenario,
                       SensitivityRequest, SensitivityResult, SimResult, SimulateRequest, Site)
 from ..sim import assumptions as A
 from ..sim.assumption_labels import label_rows
-from ..sim import daily, fixgrid, sensitivity, warmup, world
+from ..sim import fixgrid, sensitivity, warmup, world
 from ..sim.compare import compare
 from ..sim.engine import simulate
 from ..sim.validate import policy_errors
@@ -57,21 +56,6 @@ def get_heroes():
 @router.get("/areas", response_model=list[Area])
 def get_areas():
     return list(world.areas().values())
-
-
-@router.get("/roads", response_model=list[Road])
-def get_roads():
-    """Closable major roads with their map geometry (data/roads.json, from OpenStreetMap)."""
-    return list(world.roads().values())
-
-
-@router.post("/daily", response_model=DailyResult)
-def post_daily(req: DailyRequest):
-    """Everyday trips (work, university, hospital) of every citizen with these roads closed vs all open."""
-    bad = [r for r in req.closed_roads if r not in world.roads()]
-    if bad:
-        raise HTTPException(422, f"unknown road(s) {bad}; valid: {sorted(world.roads())}")
-    return daily.impact(req.closed_roads)
 
 
 @router.get("/assumptions")

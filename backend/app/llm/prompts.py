@@ -11,8 +11,6 @@ CAN_MODEL = """WHAT NAS CAN MODEL (the Policy schema, nothing else):
 - appointment_required: office visits need an online booking first (offices only; mobile units never need one).
 - fee_jd: the service fee in Jordanian dinars (one fee for everyone).
 - visits_required: number of in-person visits needed (1-5).
-- closed_roads: list of road ids that are closed (e.g. road works). Only the major roads in the "roads" list can be
-  closed; trips that used them take a detour. "Reopen X" removes X from the list.
 Protections for groups. The groups are exactly: elderly (65+), disabled (any mobility limitation), no_car, offline
 (no smartphone or low digital skills), low_income, worker, student (18-24, not working).
 - appointment_exempt_groups: groups who may walk in to an office without the online appointment.
@@ -24,9 +22,8 @@ Protections for groups. The groups are exactly: elderly (65+), disabled (any mob
 - hybrid_pickup: true = residents can apply online (themselves or via a family member), then make one short visit
   to collect the card instead of the full visit.
 Everything else is NOT supported yet, for example: a group that is not in the list above (e.g. pregnant women,
-refugees), an age threshold other than 65, an office outside the 15 sites, a different or second service, closing
-a road that is not in the roads list, closing a road only on some days or hours, changes to bus routes, extra staff
-or queue length."""
+refugees), an age threshold other than 65, an office outside the 15 sites, a different or second service, road
+closures or changes to bus routes, extra staff or queue length."""
 
 PARSE_SYSTEM = f"""You turn a government official's description of a policy change (Arabic, Jordanian dialect, or English)
 into a structured policy for "Nas", a policy simulator for ID-card renewal in Amman.
@@ -52,11 +49,6 @@ Interpretation rules:
   appointment_exempt_groups ["elderly", "disabled"]. "home visits for wheelchair users" sets home_visits with groups
   ["disabled"] (slots 20 unless a number is given). "pay the taxi for low-income people up to 3 JD" adds a transport
   voucher. "apply online and pick it up" sets hybrid_pickup true. "open a new office in X" adds an office at X's site.
-- "close Zahran Street" / "سكّروا شارع زهران" adds that road's id to closed_roads (match the road by its Arabic or
-  English name, e.g. "Gardens" = gardens, "Airport Road" = airport_road). If current_policy has no closed_roads, it is [].
-  A road closure is not an office closure: keep offices as they are.
-  roads_named_in_text lists the catalogue roads whose names appear in the text (an exact name match): those roads ARE
-  in the list and can be closed.
 - If ANY part of the request is not supported, return status "unsupported" (do not half-apply it), say briefly in
   message_ar/message_en what can't be modelled, and suggest the closest supported change.
 
@@ -84,8 +76,6 @@ Rules:
 - The only family member or person you may mention is the helper given in helper_relation_ar, and only if relevant.
   When you mention them, write helper_relation_ar exactly as given (e.g. "ابني", never "ابن").
 - Money is Jordanian dinars: say دينار / ديناران / دنانير (never ليرة or ليرات).
-- If closed_road_ar is given, that road is closed and the trip took detour_minutes_one_way extra minutes each way;
-  you may mention it. Never mention road closures otherwise.
 - mode "home" means a clerk came to their home: they did not travel. Say so.
 - Mention buses (حافلة) only if mode is "bus"; say "حافلتين" only if bus_transfers is 1, "ثلاث حافلات" only if it is 2.
 - status "served": they managed fine. "hardship": they managed but it cost them (say why, from reasons).
@@ -119,7 +109,6 @@ Your two jobs:
    e.g. a mobile unit on a different day or with longer hours, a Saturday or evening opening at the office, a second
    office at another site, or a combination. Keep it realistic: at most 3 changes compared with the scenario policy.
    Return the FULL policy (scenario policy + your changes). Use only valid site ids, area ids, days and HH:MM times.
-   Keep closed_roads exactly as in the scenario policy: road works are not the service's decision.
    Fixes are ranked first by left_out_drop, then by hardship_drop, so first reach the people LEFT OUT
    (left_out_by_area shows where they live), then reduce hardship.
    The engine will test it; it is shown only if it really beats the best engine fix. Do NOT put any numbers in

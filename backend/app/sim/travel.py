@@ -27,13 +27,12 @@ def bus_transfers(from_area: str, to_area: str, sides: dict[str, str]) -> int:
 
 
 def road(citizen: dict, dest_key: str, dest_lat: float, dest_lng: float,
-         matrix: dict, a: Assumptions, detour: tuple[float, float] = (0.0, 0.0)) -> tuple[float, float]:
-    """(road km, driving minutes in daytime traffic) from a citizen's home to a destination.
-    `detour` = (extra free-flow seconds, extra metres) from closed roads, added on top of the OSRM trip."""
+         matrix: dict, a: Assumptions) -> tuple[float, float]:
+    """(road km, driving minutes in daytime traffic) from a citizen's home to a destination."""
     row = matrix.get(citizen["id"])
     if row and dest_key in row:
         seconds, meters = row[dest_key]
-        return (meters + detour[1]) / 1000.0, (seconds + detour[0]) / 60.0 * a.TRAFFIC_FACTOR
+        return meters / 1000.0, seconds / 60.0 * a.TRAFFIC_FACTOR
     km = haversine_km(citizen["lat"], citizen["lng"], dest_lat, dest_lng) * a.ROAD_FACTOR
     return km, km / a.CAR_SPEED_KMH * 60
 

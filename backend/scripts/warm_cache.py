@@ -24,10 +24,7 @@ def main(parse_only: bool = False) -> None:
     print(f"[demo parse] {r.source} {r.status} matches preset: {same} | {r.changes_en}")
     for x in req["requests"]:
         r = tasks.parse_policy(x["text"], world.scenario_policy(x["apply_to"]))
-        ok = r.status == x["expect"]
-        if ok and "expect_roads" in x:
-            ok = sorted(set(r.policy.closed_roads)) == sorted(x["expect_roads"])
-        flag = "OK " if ok else "!! "
+        flag = "OK " if r.status == x["expect"] else "!! "
         print(f"{flag}[parse] {x['text'][:50]:50s} -> {r.source} {r.status} {r.changes_en or r.message_en}")
     if parse_only:
         return
@@ -43,16 +40,6 @@ def main(parse_only: bool = False) -> None:
         for h in heroes["heroes"]:
             v = tasks.voice_citizen(by_id[h["citizen_id"]], outs[idx[h["citizen_id"]]])
             print(f"[voice] {label:22s} {h['citizen_id']} {v.source:8s} {v.text_ar}")
-
-    # Road closure (the "Close Queen Rania Street" example): the first worse-off citizen whose trip takes the detour.
-    road_pol = base.model_copy(update={"closed_roads": ["queen_rania"]})
-    road_cr = compare(base, road_pol)
-    worse = set(road_cr.flipped_worse)
-    for o in road_cr.scenario.outcomes:
-        if o.citizen_id in worse and o.detour_minutes > 0:
-            v = tasks.voice_citizen(by_id[o.citizen_id], o.model_dump())
-            print(f"[voice] {'queen_rania closed':22s} {o.citizen_id} {v.source:8s} {v.text_ar}")
-            break
 
     cr = compare(base, scen)
     sens = sensitivity.check(base, scen, fix)

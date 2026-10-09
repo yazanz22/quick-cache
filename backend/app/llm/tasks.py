@@ -82,12 +82,11 @@ def _sites_areas() -> dict:
                        "real_cspd_office": s.get("real", False)}
                       for s in world.sites().values()],
             "areas": [{"id": a["id"], "name_en": a["name_en"], "name_ar": a["name_ar"], "side": a["side"]}
-                      for a in world.areas().values()],
-            "roads": [{"id": r["id"], "name_en": r["name_en"], "name_ar": r["name_ar"]} for r in world.roads().values()]}
+                      for a in world.areas().values()]}
 
 
 # Policy fields added after the AI cache was warmed, with their defaults.
-_LATER_FIELDS = {"closed_roads": [], "appointment_exempt_groups": [], "fee_discounts": {}, "home_visits": None,
+_LATER_FIELDS = {"appointment_exempt_groups": [], "fee_discounts": {}, "home_visits": None,
                  "transport_vouchers": [], "hybrid_pickup": False}
 
 
@@ -103,33 +102,10 @@ def policy_json(p: Policy) -> dict:
 
 # ---------------------------------------------------------------------- parse
 
-_ROAD_WORDS = re.compile(r"^(شارع|طريق)\s+|\s+(street|st|road|rd)$")
-
-
-def roads_named_in(text: str) -> list[str]:
-    """Catalogue roads whose name (Arabic, English or OSM, without "Street"/"شارع") appears in the text.
-    A deterministic hint for the parser; the AI still decides what the official meant."""
-    t = " " + re.sub(r"[^\w\s]", " ", cache.normalize_text(text)) + " "
-    t = re.sub(r"\s+", " ", t)
-    out = []
-    for r in world.roads().values():
-        names = [r["name_en"], r["name_ar"], *r.get("osm_names", [])]
-        names += re.findall(r"\(([^)]+)\)", r["name_en"] + r["name_ar"])  # "... (Gardens)" -> Gardens, الجاردنز
-        for n in names:
-            n = re.sub(r"\s*\([^)]*\)", "", n)
-            n = re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", cache.normalize_text(n))).strip()
-            n = _ROAD_WORDS.sub("", n).strip()
-            if len(n) >= 4 and f" {n} " in t:
-                out.append(r["id"])
-                break
-    return out
-
-
 def parse_policy(text: str, current: Policy, lang: str = "ar") -> ParseResult:
     cur = policy_json(current)
     inputs = {"text": cache.normalize_text(text), "current_policy": cur}
-    hint = {"roads_named_in_text": roads_named_in(text)} if world.roads() else {}
-    user = json.dumps({"current_policy": cur, **_sites_areas(), **hint, "official_text": text}, ensure_ascii=False)
+    user = json.dumps({"current_policy": cur, **_sites_areas(), "official_text": text}, ensure_ascii=False)
 
     def check(raw: str, final: bool):
         d = _loads(raw)
@@ -181,10 +157,6 @@ def voice_facts(citizen: dict, o: dict) -> dict:
             "work_hours_missed": round(o.get("work_hours_missed", 0), 1),
         },
     }
-    road = world.roads().get(o.get("detour_road") or "")
-    if road and round(o.get("detour_minutes", 0)) >= 1:  # only when a closed road really lengthened the trip
-        facts["outcome"]["closed_road_ar"] = road["name_ar"]
-        facts["outcome"]["detour_minutes_one_way"] = round(o["detour_minutes"])
     return facts
 
 
@@ -321,9 +293,6 @@ def explain_and_propose_fixes(baseline: Policy, scenario: Policy, hint: str | No
                 errs = policy_errors(pol)
                 if errs:
                     raise Rejected("; ".join(errs))
-                if sorted(set(pol.closed_roads)) != sorted(set(scenario.closed_roads)):
-                    raise Rejected("keep closed_roads exactly as in the scenario: road works are not the service's "
-                                   f"decision; closed_roads must be {sorted(set(scenario.closed_roads))}")
                 n = count_changes(scenario, pol)
                 if n > MAX_AI_CHANGES:
                     raise Rejected(f"proposal makes {n} changes; at most {MAX_AI_CHANGES} are allowed "

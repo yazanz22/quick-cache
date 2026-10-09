@@ -3,7 +3,6 @@ engine never calls an API at simulate time (deterministic, offline-safe).
 
     python -m app.data.fetch_map_data matrix    # OSRM     -> travel_matrix.json
     python -m app.data.fetch_map_data homes     # Overpass -> home_points.json (residential streets, for seed_census)
-    python -m app.data.fetch_map_data hubs      # OSRM     -> hub_matrix.json (everyday-trip hubs, see seed_daily.py)
 
 Data © OpenStreetMap contributors, ODbL. Routing by the public OSRM demo server
 (router.project-osrm.org), used lightly: ~10 table requests in total.
@@ -90,19 +89,6 @@ def fetch_matrix() -> None:
     print("saved travel_matrix.json")
 
 
-def fetch_hub_matrix() -> None:
-    """Driving duration (s) and distance (m) from every citizen to every everyday-trip hub (hubs.json)."""
-    pop = json.loads((DATA / "population.json").read_text(encoding="utf-8"))
-    hubs = json.loads((DATA / "hubs.json").read_text(encoding="utf-8"))["hubs"]
-    out = _osrm_table(pop, [(f"hub:{h['id']}", h["lat"], h["lng"]) for h in hubs])
-    (DATA / "hub_matrix.json").write_text(json.dumps({
-        "_source": "OSRM public demo server (router.project-osrm.org), OpenStreetMap data, ODbL. Free-flow car times.",
-        "_fetched": date.today().isoformat(),
-        "_format": "citizen_id -> hub:<id> -> [duration_seconds, distance_meters]",
-        "matrix": out}, separators=(",", ":")), encoding="utf-8")
-    print("saved hub_matrix.json")
-
-
 def _osrm_table(pop: list[dict], dests: list[tuple]) -> dict:
     chunk = 100 - len(dests)
     out: dict[str, dict[str, list[float]]] = {}
@@ -138,5 +124,3 @@ if __name__ == "__main__":
         fetch_homes()
     if what in ("matrix", "all"):
         fetch_matrix()
-    if what in ("hubs", "all"):
-        fetch_hub_matrix()

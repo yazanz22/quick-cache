@@ -124,7 +124,6 @@ class Policy(BaseModel):
     appointment_required: bool = False
     fee_jd: float
     visits_required: int = Field(default=1, ge=1, le=5)
-    closed_roads: list[str] = []   # ids from roads.json (GET /roads); trips that used them take the detour
     # Protections for groups (a citizen belongs to a group by their tags):
     appointment_exempt_groups: list[Group] = []   # may walk in to an office without an online appointment
     fee_discounts: dict[Group, float] = {}        # percent off fee_jd (0-100); a citizen gets their largest discount
@@ -132,15 +131,6 @@ class Policy(BaseModel):
     transport_vouchers: list[TransportVoucher] = []
     hybrid_pickup: bool = False   # apply online (yourself or via a helper), then one short visit to collect the card
 
-
-class Road(BaseModel):
-    """A closable major road (data/roads.json, built from OpenStreetMap by app/data/fetch_roads.py)."""
-    id: str
-    name_ar: str
-    name_en: str
-    km: float
-    osm_ways: int
-    lines: list[list[list[float]]] = []   # simplified geometry, [[lat, lng], ...] per OSM way, for the map
 
 class Scenario(BaseModel):
     id: str
@@ -168,8 +158,6 @@ class CitizenOutcome(BaseModel):
     hours_lost: float = 0.0
     work_hours_missed: float = 0.0
     reasons: list[ReasonCode] = []
-    detour_minutes: float = 0.0          # extra one-way minutes caused by closed roads (0 if none)
-    detour_road: str | None = None       # the closed road behind the detour (road id)
 
 
 class SimResult(BaseModel):
@@ -185,41 +173,6 @@ class CompareResult(BaseModel):
     flipped_better: list[str]
     kpi_delta: dict
     worst_groups: list[str]
-
-
-# ------------------------------------------------------ everyday trips (roads)
-
-class DailyTrip(BaseModel):
-    """One citizen's regular trip (work, university or hospital) with and without the closed roads."""
-    citizen_id: str
-    purpose: Literal["work", "university", "hospital"]
-    hub: str
-    hub_name_ar: str
-    hub_name_en: str
-    mode: str                      # car, helper_car, bus, taxi
-    bus_transfers: int = 0
-    days_per_week: int
-    minutes_open: float            # one way, all roads open
-    minutes_closed: float          # one way, with the closures
-    extra_minutes: float           # one way
-    extra_hours_week: float
-    extra_cost_jd_week: float
-    road: str | None = None        # the closed road behind the detour
-    level: Literal["none", "minor", "moderate", "severe"]   # extra one-way minutes: <1, 1-5, 5-15, 15+
-
-
-class DailyResult(BaseModel):
-    closed_roads: list[str]
-    kpis: dict                     # n, n_affected, pct_affected, n_severe, avg/max_extra_minutes, extra_hours_week, extra_cost_jd_week
-    by_group: dict                 # tag -> same keys as kpis
-    by_purpose: dict               # work / university / hospital -> same keys
-    by_road: dict                  # road id -> trips it lengthened
-    calibrated: bool = False       # True when a closed road's detours are scaled by real traffic (road_calibration.json)
-    trips: list[DailyTrip]
-
-
-class DailyRequest(BaseModel):
-    closed_roads: list[str] = []
 
 
 # --------------------------------------------------- fixes, parse, robustness
