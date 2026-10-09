@@ -14,10 +14,13 @@ _TIME = re.compile(r"\b(\d{1,2}):(\d{2})\b")
 ALWAYS_OK = {0.0, 1.0}
 TOL = 0.051
 
-# Family/neighbour words a voice may NOT use unless it is the citizen's own helper.
-KIN_WORDS = ["ابني", "بنتي", "حفيدي", "حفيدتي", "أخوي", "اخوي", "أختي", "اختي", "زوجي", "زوجتي", "جاري", "جارتي",
-             "أبوي", "ابوي", "أمي", "امي", "ابن عمي", "بنت عمي", "صاحبي",
-             "ابنتي", "أخي", "اخي", "أبي", "ابي", "صديقي", "صديقتي"]
+# Family/neighbour words a voice may NOT use unless it is the citizen's own helper. Matched after hamza
+# variants are unified (أ/إ/آ -> ا), so "اخي" and "أخي" are the same word here.
+KIN_WORDS = ["ابني", "بنتي", "ابنتي", "حفيدي", "حفيدتي", "أخوي", "أخي", "أختي", "زوجي", "زوجتي", "جاري", "جارتي",
+             "أبوي", "أبي", "أمي", "ابن عمي", "بنت عمي", "صاحبي", "صديقي", "صديقتي",
+             "عمي", "عمتي", "خالي", "خالتي", "والدي", "والدتي", "أولادي", "أبنائي", "جدي", "جدتي"]
+# Attached prefixes: an optional و/ف, then an optional ب/ل/ك ("وأخي", "ولأمي", "بأختي", "كأبي", "فلأبي").
+_KIN_PREFIX = "(?:[وف]?[بلك]?)"
 
 
 def to_western(text: str) -> str:
@@ -56,20 +59,36 @@ def allowed_numbers(obj: Any) -> set[float]:
     return out
 
 
-def ungrounded(text: str, inputs: Any) -> list[float]:
-    """Numbers in `text` that don't match anything in `inputs` (empty list = grounded)."""
-    ok = allowed_numbers(inputs)
+def ungrounded(text: str, inputs: Any, also: Any = None) -> list[float]:
+    """Numbers in `text` that don't match anything in `inputs` (empty list = grounded).
+    `also` holds extra allowed numbers that are not part of the inputs (e.g. the 20 of "±20%"), so callers
+    can allow them without touching what goes into a cache key."""
+    ok = allowed_numbers(inputs) | (allowed_numbers(also) if also is not None else set())
     return [n for n in numbers_in(text) if not any(abs(n - a) <= TOL for a in ok)]
 
 
+def _unify_hamza(s: str) -> str:
+    return (s or "").translate(str.maketrans({"أ": "ا", "إ": "ا", "آ": "ا"}))
+
+
+def _kin_pattern(word: str) -> str:
+    return rf"(?<![ء-ي]){_KIN_PREFIX}{re.escape(_unify_hamza(word))}(?![ء-ي])"
+
+
 def foreign_people(text: str, helper_relation_ar: str | None) -> list[str]:
-    """Kin words in a voice other than the citizen's own helper."""
-    t = to_western(text)
-    found = []
+    """Kin words in a voice other than the citizen's own helper, also with attached prefixes (وأخي، لأمي)."""
+    t = _unify_hamza(to_western(text))
+    helper = _unify_hamza(helper_relation_ar) if helper_relation_ar else None
+    if helper:
+        # Remove the helper's own word first, so e.g. "ابن عمي" does not also count as "عمي".
+        t = re.sub(_kin_pattern(helper), " ", t)
+    found, seen = [], set()
     for w in KIN_WORDS:
-        if helper_relation_ar and (w == helper_relation_ar or w.replace("أ", "ا") == helper_relation_ar.replace("أ", "ا")):
+        u = _unify_hamza(w)
+        if u == helper or u in seen:
             continue
-        if re.search(rf"(?<![ء-ي]){w}(?![ء-ي])", t):
+        seen.add(u)
+        if re.search(_kin_pattern(w), t):
             found.append(w)
     return found
 
@@ -92,7 +111,8 @@ def voice_style_problems(text: str, helper_relation_ar: str | None) -> list[str]
     for wrong, right in KNOWN_MISSPELLINGS.items():
         if wrong in (text or ""):
             problems.append(f"misspelling {wrong!r}: write {right!r}")
-    if helper_relation_ar and helper_relation_ar.endswith("ي") and len(helper_relation_ar) > 2:
+    # Stems of 2 letters or fewer are skipped: "أمي" -> "أم" is also the particle "أم" ("or").
+    if helper_relation_ar and helper_relation_ar.endswith("ي") and len(helper_relation_ar) > 3:
         stem = helper_relation_ar[:-1]
         if re.search(rf"(?<![ء-ي]){stem}(?![ء-ي])", text or ""):
             problems.append(f"write the helper as {helper_relation_ar!r}, not {stem!r}")

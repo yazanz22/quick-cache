@@ -1,6 +1,6 @@
 """Provider-agnostic LLM client (CLAUDE.md §3). The only module that imports provider SDKs.
 
-complete(task, system, user, json_schema=None, smart=False) -> str
+complete(task, system, user, json_schema=None, smart=False) -> Completion (a str with .meta)
 
 The whole chain shares LLM_TOTAL_BUDGET_S (default 17 s), so an answer, or the task's template,
 always arrives before the frontend's 20 s request timeout.
@@ -15,6 +15,7 @@ exhausted model never costs a wasted request.
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -22,12 +23,12 @@ from .. import config
 
 log = logging.getLogger("nas.llm")
 
-# Records which provider/model answered the most recent call, for cache metadata.
-last_meta: dict = {}
 # (provider, model) -> unix time until which the model is skipped, and why.
 _cooldown: dict[tuple[str, str], tuple[float, str]] = {}
 # (provider, model) -> successful calls since the server started (shown by GET /llm/status).
 _calls: dict[tuple[str, str], int] = {}
+# FastAPI runs sync endpoints in a thread pool, so updates to the two dicts above take this lock.
+_lock = threading.Lock()
 
 SHORT_COOLDOWN_S = 65.0   # per-minute limits reset within a minute
 OVERLOAD_COOLDOWN_S = 30.0
@@ -35,6 +36,17 @@ OVERLOAD_COOLDOWN_S = 30.0
 
 class LLMUnavailable(Exception):
     pass
+
+
+class Completion(str):
+    """The model's text, carrying which provider/model answered it in .meta (for cache metadata).
+    A str subclass, so callers (and test stubs that return a plain str) can treat it as text."""
+    meta: dict
+
+    def __new__(cls, text: str, meta: dict | None = None):
+        obj = super().__new__(cls, text)
+        obj.meta = dict(meta or {})
+        return obj
 
 
 def _chain(provider: str, smart: bool) -> list[str]:
@@ -127,9 +139,11 @@ def _providers() -> list[str]:
 
 
 def complete(task: str, system: str, user: str, json_schema: dict | None = None, smart: bool = False,
-             budget_s: float | None = None) -> str:
-    """Return the model's text. json_schema (or any non-None value) asks for JSON output.
-    budget_s overrides LLM_TOTAL_BUDGET_S (used when a task retries within one request)."""
+             budget_s: float | None = None) -> Completion:
+    """Return the model's text (a Completion: a str whose .meta says which provider/model answered).
+    json_schema (or any non-None value) asks for JSON output.
+    budget_s overrides LLM_TOTAL_BUDGET_S (used when a task retries within one request, or when the
+    request already spent part of its budget on engine work)."""
     if config.DEMO_OFFLINE:
         raise LLMUnavailable("DEMO_OFFLINE=1")
     want_json = json_schema is not None
@@ -146,20 +160,26 @@ def complete(task: str, system: str, user: str, json_schema: dict | None = None,
                 errors.append("time budget used up")
                 raise LLMUnavailable("; ".join(errors))
             t0 = time.perf_counter()
+            timeout = min(config.LLM_TIMEOUT_S, left)
             try:
-                text = ADAPTERS[provider](model, system, user, want_json, min(config.LLM_TIMEOUT_S, left))
+                text = ADAPTERS[provider](model, system, user, want_json, timeout)
             except Exception as e:  # noqa: BLE001 - any failure moves on to the next model
                 cd = _classify(e)
+                # A timeout on a call that only got the small leftover of the budget says nothing about the
+                # model: don't bench it for the next request.
+                if cd and cd[1] == "timeout" and timeout < config.LLM_TIMEOUT_S:
+                    cd = None
                 if cd:
-                    _cooldown[(provider, model)] = cd
+                    with _lock:
+                        _cooldown[(provider, model)] = cd
                 errors.append(f"{provider}/{model}: {type(e).__name__}: {str(e)[:160]}")
                 log.warning("llm %s failed on %s/%s (%s)", task, provider, model, cd[1] if cd else type(e).__name__)
                 continue
-            _calls[(provider, model)] = _calls.get((provider, model), 0) + 1
-            last_meta.clear()
-            last_meta.update(provider=provider, model=model, seconds=round(time.perf_counter() - t0, 2))
-            log.info("llm %s via %s/%s in %.1fs", task, provider, model, last_meta["seconds"])
-            return text
+            with _lock:
+                _calls[(provider, model)] = _calls.get((provider, model), 0) + 1
+            meta = {"provider": provider, "model": model, "seconds": round(time.perf_counter() - t0, 2)}
+            log.info("llm %s via %s/%s in %.1fs", task, provider, model, meta["seconds"])
+            return Completion(text or "", meta)
     raise LLMUnavailable("; ".join(errors) or "no provider configured")
 
 

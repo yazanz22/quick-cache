@@ -5,7 +5,8 @@ engine never calls an API at simulate time (deterministic, offline-safe).
     python -m app.data.fetch_map_data homes     # Overpass -> home_points.json (residential streets, for seed_census)
 
 Data © OpenStreetMap contributors, ODbL. Routing by the public OSRM demo server
-(router.project-osrm.org), used lightly: ~10 table requests in total.
+(router.project-osrm.org), used lightly: one table request per 77 citizens (100 coordinates minus the
+23 destinations), so 13 requests for 1,000 citizens.
 """
 from __future__ import annotations
 
@@ -111,8 +112,14 @@ def _osrm_table(pop: list[dict], dests: list[tuple]) -> dict:
         else:
             raise RuntimeError("OSRM unavailable")
         for k, c in enumerate(part):
-            out[c["id"]] = {d[0]: [round(r["durations"][k][j], 1), round(r["distances"][k][j], 1)]
-                            for j, d in enumerate(dests)}
+            row = {}
+            for j, d in enumerate(dests):
+                dur, dist = r["durations"][k][j], r["distances"][k][j]
+                if dur is None or dist is None:  # OSRM found no route: the engine falls back to straight-line km
+                    print(f"warning: no OSRM route {c['id']} -> {d[0]}; skipped (straight-line fallback)")
+                    continue
+                row[d[0]] = [round(dur, 1), round(dist, 1)]
+            out[c["id"]] = row
         print(f"matrix rows {i + len(part)}/{len(pop)}")
         time.sleep(1.5)  # be polite to the demo server
     return out

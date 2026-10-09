@@ -2,7 +2,7 @@
 it never decides an outcome and never states a number the engine didn't compute."""
 
 CAN_MODEL = """WHAT NAS CAN MODEL (the Policy schema, nothing else):
-- offices: list of offices. Each office sits at one of the 8 candidate sites (site_id), has per-day opening hours
+- offices: list of offices. Each office sits at one of the 15 candidate sites (site_id), has per-day opening hours
   (schedule: {day: [open, close]} with days sat,sun,mon,tue,wed,thu,fri and times "HH:MM" 24h), and
   wheelchair_accessible (true/false). A day missing from the schedule means closed that day. offices may be empty.
 - online_enabled: the service can be done online (true/false).
@@ -30,7 +30,8 @@ into a structured policy for "Nas", a policy simulator for ID-card renewal in Am
 
 {CAN_MODEL}
 
-You receive the CURRENT policy as JSON, the list of sites and areas, and the official's text.
+You receive the CURRENT policy as JSON, the list of sites and areas, the official's text, and the language of the
+official's screen (official_ui_language: "ar" or "en"). Always fill both languages; write messages for that reader first.
 Apply the requested change(s) to the current policy and return the FULL new policy. Keep everything the text
 doesn't mention exactly as it is (same office ids and names, same other days).
 
@@ -49,6 +50,13 @@ Interpretation rules:
   appointment_exempt_groups ["elderly", "disabled"]. "home visits for wheelchair users" sets home_visits with groups
   ["disabled"] (slots 20 unless a number is given). "pay the taxi for low-income people up to 3 JD" adds a transport
   voucher. "apply online and pick it up" sets hybrid_pickup true. "open a new office in X" adds an office at X's site.
+- A group NARROWER than one of the groups above maps UP to the group that contains it, because the engine can only
+  target whole groups: e.g. wheelchair users or people who walk with difficulty -> disabled; families without a car
+  -> no_car. Then the change list must name the group actually applied, not the narrower one the official said, e.g.
+  "زيارات منزلية لذوي الإعاقة (يشمل مستخدمي الكراسي المتحركة)، 30 زيارة" /
+  "Home visits for people with disabilities (includes wheelchair users), 30 visits".
+  This does NOT apply to ages: any age threshold other than 65 ("people over 70", "over 60") is unsupported, and so
+  is a group outside the list (pregnant women, refugees, blind people).
 - If ANY part of the request is not supported, return status "unsupported" (do not half-apply it), say briefly in
   message_ar/message_en what can't be modelled, and suggest the closest supported change.
 
@@ -91,6 +99,8 @@ Write summary_ar (clear Modern Standard Arabic) and summary_en (English), 3 to 5
 2) which groups are hit hardest and the main reasons,
 3) the robustness result, stated honestly (if the ranking did not hold in every run, say so),
 4) one sentence on what to look at next (e.g. the suggested fixes), with no new numbers.
+If "applied_fix" is present, the official has applied a fix: add one sentence on its effect (kpis after the fix,
+left_out_drop and hardship_drop in percentage points versus the proposed policy, people_better_off), using only those numbers.
 Rules: use only numbers present in the input (you may round to whole numbers), Western digits, no invented facts,
 don't call it real data. Say "synthetic population" / "سكان افتراضيون" once.
 Return ONLY JSON: {"summary_ar": "...", "summary_en": "..."}"""
@@ -108,11 +118,16 @@ Your two jobs:
 2) Propose ONE extra policy that is NOT one of the grid's candidates and that you think could beat the best engine fix,
    e.g. a mobile unit on a different day or with longer hours, a Saturday or evening opening at the office, a second
    office at another site, or a combination. Keep it realistic: at most 3 changes compared with the scenario policy.
+   Use ONLY these levers: offices (open, close or move them; their days and hours; wheelchair access), mobile units,
+   appointment_required, online_enabled / online_only, fee_jd and visits_required. Do NOT use the group protections
+   (appointment_exempt_groups, fee_discounts, home_visits, transport_vouchers, hybrid_pickup): leave them exactly as
+   they are in the scenario policy, or the proposal is rejected.
    Return the FULL policy (scenario policy + your changes). Use only valid site ids, area ids, days and HH:MM times.
    Fixes are ranked first by left_out_drop, then by hardship_drop, so first reach the people LEFT OUT
    (left_out_by_area shows where they live), then reduce hardship.
    The engine will test it; it is shown only if it really beats the best engine fix. Do NOT put any numbers in
-   rationale_ar / rationale_en (the engine supplies the numbers); explain the idea in words.
+   rationale_ar / rationale_en (the engine supplies the numbers); explain the idea in words. In title_ar / title_en
+   the only numbers allowed are opening hours that are in your policy (write counts in words, e.g. "three vans").
 
 Return ONLY JSON:
 {{"explanations": [{{"id": "<fix id>", "explanation_ar": "...", "explanation_en": "..."}}, ...],

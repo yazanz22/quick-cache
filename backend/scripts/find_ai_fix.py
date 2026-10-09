@@ -9,6 +9,7 @@ to the cache under the normal /fixes key, so the demo always shows it (also offl
 import json
 import sys
 
+from app import config
 from app.llm import tasks
 from app.sim import world
 
@@ -24,6 +25,9 @@ HINTS = [
 
 
 def main(scenario_id: str | None = None) -> None:
+    if config.DEMO_OFFLINE:
+        print("DEMO_OFFLINE=1: this script needs the AI (it bypasses the cache). Nothing done.")
+        return
     scenario_id = scenario_id or world.demo_scenario_id()
     base, scen = world.scenario_policy("baseline"), world.scenario_policy(scenario_id)
     for i, hint in enumerate(HINTS):

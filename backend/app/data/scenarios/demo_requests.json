@@ -1,5 +1,5 @@
 {
- "_note": "Rehearsed free-text requests (CLAUDE.md §10). scripts/warm_cache.py runs each once so its parse is cached. 'demo' is the sentence typed on stage; applied to the consolidate preset it must equal consolidate_digital_first.",
+ "_note": "Rehearsed free-text requests (CLAUDE.md §10). scripts/warm_cache.py runs each once so its parse is cached (--parse-only for just these). 'demo' is the sentence typed on stage; applied to the consolidate preset it must equal consolidate_digital_first. Each request: text, apply_to (the preset it is typed on), expect (ok | unsupported) and, for some, expected: a note on what the result shows. Most requests appear twice: on baseline (cached first) and on consolidate_digital_first, the policy on screen during the demo.",
  "demo": {
   "text": "خلّوا الكاونترات تسكر الساعة 1 الظهر، وما حدا يراجع المكتب إلا بموعد مسبق أونلاين",
   "apply_to": "consolidate",
@@ -14,7 +14,8 @@
   {
    "text": "Close all offices on Thursdays",
    "apply_to": "baseline",
-   "expect": "ok"
+   "expect": "ok",
+   "expected": "Changes no outcomes on baseline: Nas models no office capacity or queues, so everyone who used Thursday simply goes Sunday-Wednesday. The same is true on the demo path; to show a Thursday effect, use the late-Thursday fix instead."
   },
   {
    "text": "Close the Marka office",
@@ -69,7 +70,8 @@
   {
    "text": "Let people apply online and just pick up the card",
    "apply_to": "baseline",
-   "expect": "ok"
+   "expect": "ok",
+   "expected": "Changes no outcomes on baseline: full online renewal is already available, so nobody is better off applying online and collecting in person (the same on the demo path). It matters when online renewal is switched off (baseline without online: served 48.9% -> 55.6%)."
   },
   {
    "text": "افتحوا مكتب جديد في ماركا",
@@ -79,6 +81,83 @@
   {
    "text": "Add more staff at the Marka office",
    "apply_to": "baseline",
+   "expect": "unsupported"
+  },
+  {
+   "text": "سكّروا شارع زهران",
+   "apply_to": "baseline",
+   "expect": "unsupported"
+  },
+  {
+   "text": "Home visits for people with disabilities, 30 visits",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "زيارات منزلية لذوي الإعاقة، 30 زيارة",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "اسكروا المكاتب يوم الخميس",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "Close all offices on Thursdays",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "Changes no outcomes on the demo path either (no office capacity is modelled): a good honest answer, not a story."
+  },
+  {
+   "text": "Reopen the Marka office",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "Make it online-only but keep a Saturday van in Wehdat",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "Double the fee",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "Require two visits",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "Make it free for people over 65",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "خلّوها مجانية لكبار السن",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "Let people apply online and just pick up the card",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "Changes no outcomes on the demo path either: online renewal is still on, so collecting in person is never better for anyone."
+  },
+  {
+   "text": "افتحوا مكتب جديد في ماركا",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "Add more staff at the Marka office",
+   "apply_to": "consolidate_digital_first",
+   "expect": "unsupported"
+  },
+  {
+   "text": "سكّروا شارع زهران",
+   "apply_to": "consolidate_digital_first",
    "expect": "unsupported"
   }
  ]
