@@ -126,16 +126,13 @@ nas/
 │   │       ├── seed.py         # shared helpers for seed_census: names, shifts, helper relations, tag rules
 │   │       ├── census/         # seed_census outputs: VALIDATION.md, targets.json, reference CSV/JSON sets
 │   │       ├── fetch_map_data.py # one-time OSM/OSRM fetches: home_points.json, travel_matrix.json
-│   │       ├── fetch_roads.py  # one-time: OSM road network -> roads.json (catalogue) + road_deltas.json (detours)
 │   │       ├── anchors.json    # public figures, each with status, source name, URL, year
 │   │       ├── areas.json      # the 8 engine areas: name_ar, name_en, lat, lng, side
 │   │       ├── sites.json      # 15 office sites: the 7 real CSPD offices + 8 generic snap sites
 │   │       ├── population.json # 1,000 synthetic citizens, committed so everyone has the same people
 │   │       ├── travel_matrix.json, home_points.json  # fetched once (OSRM / OpenStreetMap)
-│   │       ├── roads.json, road_deltas.json, road_calibration.json  # closable roads, detours, TomTom factors
-│   │       ├── hubs.json, daily_trips.json, hub_matrix.json, seed_daily.py  # everyday trips (synthetic, seed 42)
 │   │       └── scenarios/      # baseline + presets (demo one flagged "demo": true), heroes.json, demo_requests.json
-│   ├── scripts/                # pick_heroes.py, find_ai_fix.py, warm_cache.py, road_impact.py, calibrate_roads.py
+│   ├── scripts/                # pick_heroes.py, find_ai_fix.py, warm_cache.py
 │   ├── cache/                  # AI cache files (committed for offline mode)
 │   └── tests/                  # test_engine.py, test_fixgrid.py, test_llm.py (offline, no AI calls)
 └── nas-frontend/               # static UI, no build step (see its README)
@@ -209,7 +206,6 @@ class Policy(BaseModel):
     appointment_required: bool = False  # applies to OFFICES only, see §6.1 rule 3
     fee_jd: float
     visits_required: int = 1
-    closed_roads: list[str] = []  # ids from roads.json (18 major roads); trips that used them take the detour (§6.1 rule 4)
     # Protections for groups (Group = elderly, disabled, no_car, offline, low_income, worker, student; from tags):
     appointment_exempt_groups: list[Group] = []   # walk in to offices without the appointment
     fee_discounts: dict[Group, float] = {}        # % off fee_jd; a citizen gets their largest discount
@@ -218,7 +214,7 @@ class Policy(BaseModel):
     hybrid_pickup: bool = False                   # apply online (self or helper), then a PICKUP_MINUTES visit to collect
 ```
 
-**What Nas can model** is exactly what this schema expresses: where offices are (8 sites), their hours per day, wheelchair access, online on/off/only, appointments at offices, mobile units (area, day, hours), the fee, the number of visits, which of the 18 catalogue roads are closed (all day, every day), and the group protections (walk-in exemption, fee discounts, capped home visits, transport vouchers, hybrid apply-online-then-collect). Offices can be opened or closed at any of the 15 sites. Anything else is "not supported yet" (§8.5). The protections are manual/free-text levers only: they are not in the fix grid (§6.4), so the demo path's fixes are unchanged.
+**What Nas can model** is exactly what this schema expresses: where offices are (8 sites), their hours per day, wheelchair access, online on/off/only, appointments at offices, mobile units (area, day, hours), the fee, the number of visits, and the group protections (walk-in exemption, fee discounts, capped home visits, transport vouchers, hybrid apply-online-then-collect). Offices can be opened or closed at any of the 15 sites. Anything else is "not supported yet" (§8.5). The protections are manual/free-text levers only: they are not in the fix grid (§6.4), so the demo path's fixes are unchanged.
 
 ### Simulation output
 ```python
@@ -300,7 +296,6 @@ For each citizen, evaluate every available **channel**: each office, each mobile
    - `taxi` if its cost is within the income band's `TAXI_MAX_JD`. Above that, taxi is **infeasible** with reason `TOO_EXPENSIVE`.
    - Wheelchair users need `wheelchair_accessible` (mobile units always are) and cannot use the bus.
    - A mode whose one-way time exceeds `MAX_TRAVEL_MINUTES` is infeasible with reason `TOO_FAR`. If no mode exists at all (no car, no free helper, no bus, taxi unaffordable): `NO_TRANSPORT`.
-   - **Closed roads:** if the policy closes roads, a trip's road time and distance get that road's detour from `road_deltas.json` (routed once on the OSM network with the road removed, `fetch_roads.py`), so car, taxi and bus all slow down and taxis cost more. Several closures: the largest single-road detour per trip (a lower bound). Detour times are scaled per road by `road_calibration.json` (TomTom's measured speeds; no traffic data exists for Amman there, so congestion is not modelled). The same detours drive the everyday-trips module (`sim/daily.py`, `POST /daily`): each citizen's regular trip to work, university or hospital. Homes that open onto the road keep local access. The outcome records `detour_minutes` and `detour_road`.
    - Among feasible modes, pick the lowest burden (rule 6).
 5. **Time slot:** the channel must be open on some day for the full visit duration.
    - Non-workers: any open day works; pick the lowest-burden day.
@@ -365,8 +360,6 @@ Downtown/Al-Balad (31.951, 35.934) · Abdali (31.962, 35.910) · Jabal Al-Hussei
 | GET | `/population` | All citizens (for drawing dots) |
 | GET | `/scenarios` | Preset scenarios (baseline + demo presets) |
 | GET | `/sites` | Candidate office sites |
-| GET | `/roads` | Closable major roads with map geometry |
-| POST | `/daily` | `{closed_roads}` → everyday-trip impact (work, university, hospital) per person, group and purpose |
 | GET | `/assumptions` | All constants with value, rationale, tag and source (for `AssumptionsTable`) |
 | POST | `/simulate` | `{policy}` → `SimResult` |
 | POST | `/compare` | `{baseline, scenario}` → `CompareResult` |
@@ -406,8 +399,7 @@ Extract every number from AI text (Arabic-Indic and Western digits). Each must m
 ### 8.5 Policy parse
 - The prompt includes the current policy JSON, the list of areas, sites and offices, the schema, and the explicit **"what Nas can model" list** (§5).
 - Output is a `ParseResult`: either a full Policy plus a bilingual "understood as" change list, or `unsupported` with a short message saying what can't be modeled and what the closest supported change would be.
-- Examples of unsupported requests: a group that isn't one of the 7 tags (e.g. pregnant women), an age threshold other than 65, extra staff or queues, an office outside the 15 sites, a second service, changes to bus routes, closing a road outside the catalogue or only on some days.
-- Road closures: the parser gets `roads_named_in_text` (a deterministic name match against the catalogue) as a hint; the AI still decides. AI fix proposals must keep the scenario's `closed_roads` (road works are not the service's decision).
+- Examples of unsupported requests: a group that isn't one of the 7 tags (e.g. pregnant women), an age threshold other than 65, extra staff or queues, an office outside the 15 sites, a second service, road closures or changes to bus routes.
 - The UI shows the change list in `ParsePreview` and only applies the policy after **Apply**. A wrong parse is visible and harmless.
 - Any policy a parse could produce can also be built with the manual controls, so if parsing fails on stage, build it by hand.
 
