@@ -44,6 +44,16 @@ def main(parse_only: bool = False) -> None:
             v = tasks.voice_citizen(by_id[h["citizen_id"]], outs[idx[h["citizen_id"]]])
             print(f"[voice] {label:22s} {h['citizen_id']} {v.source:8s} {v.text_ar}")
 
+    # Road closure (the "Close Queen Rania Street" example): the first worse-off citizen whose trip takes the detour.
+    road_pol = base.model_copy(update={"closed_roads": ["queen_rania"]})
+    road_cr = compare(base, road_pol)
+    worse = set(road_cr.flipped_worse)
+    for o in road_cr.scenario.outcomes:
+        if o.citizen_id in worse and o.detour_minutes > 0:
+            v = tasks.voice_citizen(by_id[o.citizen_id], o.model_dump())
+            print(f"[voice] {'queen_rania closed':22s} {o.citizen_id} {v.source:8s} {v.text_ar}")
+            break
+
     cr = compare(base, scen)
     sens = sensitivity.check(base, scen, fix)
     rep = tasks.write_report(cr, sens)

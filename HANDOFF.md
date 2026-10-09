@@ -15,7 +15,7 @@ and explains/proposes fixes. **The engine verifies everything the AI proposes.**
 | Repo | https://github.com/yazanz22/quick-cache (branch `main`; push directly to main) |
 | Local app (UI + API, one server) | from `backend/`: `.venv/Scripts/python -m uvicorn app.main:app --port 8000` → **http://localhost:8000** (API docs at `/docs`) |
 | Production | **https://nas-rbo5.onrender.com** (Render free web service from `render.yaml`, auto-deploys on push to `main`) |
-| Tests | from `backend/`: `.venv/Scripts/python -m pytest -q` → 31 passing, all offline (no AI calls) |
+| Tests | from `backend/`: `.venv/Scripts/python -m pytest -q` → 41 passing, all offline (no AI calls) |
 | Python | local venv is Python 3.14 (`backend/.venv`); Render uses 3.12.7 |
 
 Render notes: the free plan sleeps after ~15 min idle; the first visit takes ~30-60 s to wake (the UI shows
@@ -44,17 +44,18 @@ backend/
   app/main.py            # FastAPI: routers, CORS (only for :3000), serves nas-frontend/ at /, start-up warm-up
   app/config.py          # loads repo-root .env (LLM_*, MODEL_*, DEMO_OFFLINE ...)
   app/models.py          # all Pydantic schemas (contract)
-  app/routes/sim_routes.py  # /population /scenarios /sites /areas /heroes /assumptions /simulate /compare /fixgrid /sensitivity
+  app/routes/sim_routes.py  # /population /scenarios /sites /areas /roads /heroes /assumptions /simulate /compare /fixgrid /sensitivity
   app/routes/llm_routes.py  # /policy/parse /citizen/voice /report /fixes /llm/status
   app/sim/   assumptions.py (frozen), assumption_labels.py (ar/en text only), travel.py, engine.py, compare.py,
              fixgrid.py, sensitivity.py, validate.py, warmup.py, world.py
   app/llm/   client.py, prompts.py, cache.py, fallbacks.py, checks.py, tasks.py
   app/data/  population.json (1,000), travel_matrix.json (OSRM), home_points.json (OSM streets), sites.json (15),
              areas.json (8), anchors.json, seed_census.py (+ census/ outputs), seed.py (shared helpers),
-             fetch_map_data.py, scenarios/*.json (+ heroes.json, demo_requests.json)
-  scripts/   pick_heroes.py, find_ai_fix.py, warm_cache.py
-  cache/     committed AI cache: parse 11, voice 10, report 3, fixes 1
-  tests/     test_engine.py, test_fixgrid.py, test_llm.py
+             fetch_map_data.py, fetch_roads.py, roads.json (19 roads), road_deltas.json (detours),
+             _raw/ (gitignored OSM road network), scenarios/*.json (+ heroes.json, demo_requests.json)
+  scripts/   pick_heroes.py, find_ai_fix.py, warm_cache.py, road_impact.py
+  cache/     committed AI cache: parse 17, voice 10, report 3, fixes 2
+  tests/     test_engine.py, test_fixgrid.py, test_llm.py, test_roads.py
 nas-frontend/  index.html, config.js, api.js, i18n.js, app.js, README.md   # static, no build step
 ```
 
@@ -133,8 +134,9 @@ double the fee, two visits, and two unsupported ones (free for over-65s, ar/en).
   backend-down error screen + Retry, `?offline=1`, dragging an office pin.
 
 ## 10. Open items / known caveats
-1. **2 hero voices still use the template**: Bilal (c_0837) and Amina (c_0020) *after the engine's top grid fix* (the demo applies the
-   AI fix, so they rarely show). After the Gemini reset: from `backend/`, `.venv/Scripts/python -m scripts.warm_cache`, then commit `backend/cache/`.
+1. **3 voices still use the template**: Bilal (c_0837) and Amina (c_0020) *after the engine's top grid fix* (the demo applies the
+   AI fix, so they rarely show), and the road-closure voice (Maher c_0213, Queen Rania St closed; the template already names the
+   road and the extra minutes). After the Gemini reset: from `backend/`, `.venv/Scripts/python -m scripts.warm_cache`, then commit `backend/cache/`.
 2. **Fully offline demo**: the UI still loads Leaflet, Phosphor icons and Google Fonts from CDNs. Vendor them into `nas-frontend/` before a no-wifi demo.
 3. **Native-speaker review** of the cached voices: the user said leave it.
 4. Staff / operating-cost readout: **ruled out of scope** by the user (on stage: "operating cost is the next module").
@@ -142,34 +144,30 @@ double the fee, two visits, and two unsupported ones (free for over-65s, ar/en).
    always answers within 17 s (AI or فصحى template), so it should never show; left as is (frontend rules).
 6. The public URL can spend the free AI quota; share it only with judges/team.
 
-## 11. NEXT FEATURE (not started): road closures for 15-20 major roads
-The user wants to test "close Cairo Street in Zahran"-style policies (today the parser answers "not supported").
-**The user will start this in a new window; don't start it unprompted.** Paste-ready prompt:
-```text
-Read CLAUDE.md and HANDOFF.md first. Add road closures to Nas as a new policy lever. Do NOT touch assumptions.py (freeze rule).
-
-Goal: an official can close one or more major Amman roads (15-20 of them, e.g. Airport Road, Zahran St,
-Queen Rania St, Mecca St, Medina Munawwara St, Wasfi Al-Tal (Gardens) St, Prince Hashem St, Al-Quds St,
-Army St, Al-Hurriya St, King Abdullah II St, Jordan St, Al-Istiqlal St, Al-Shaheed St, Cairo St ...)
-and see how it changes who gets served, using the existing engine.
-
-How (keep the engine deterministic and offline):
-1. Build a catalogue backend/app/data/roads.json: id, name_ar, name_en, and a polygon/buffer around each road
-   (from OpenStreetMap via Overpass; record the source). Verify each road exists in OSM; drop or rename any that don't.
-2. For each road, fetch ONCE a travel matrix that avoids it (same shape as data/travel_matrix.json:
-   citizen_id -> site/area -> [seconds, meters]) using a routing service that supports avoid/exclude polygons
-   (Valhalla public server or OpenRouteService with a free key). Save travel_matrix_closed_<road>.json. Respect rate limits.
-   For several closed roads at once, use the per-road worst case or fetch combined matrices for the ones the demo needs.
-3. Add `closed_roads: list[str] = []` to Policy in models.py; engine/travel.py pick the matrix for the closures.
-   Update the parse prompt so "close Cairo Street" maps to a catalogue id, and nas-frontend (api.js + a small
-   road picker in the policy panel, strings in i18n.js) per the frontend rules in CLAUDE.md.
-4. Before building UI, report per road how many citizens change status (served/hardship/left out) and the
-   average extra minutes, so we know which closures tell a visible story.
-5. Tests, then re-check the demo path still works; warm the AI cache only for new demo requests.
-Small commits, never add a co-author line.
-```
-Caveats to keep in mind: every extra travel matrix is loaded into memory (Render's free plan has 512 MB);
-closing one street often adds only minutes, so measure before promising a story; scenario changes need a cache re-warm.
+## 11. Road closures (DONE, 2026-10-09)
+A new policy lever: `Policy.closed_roads` (ids from `GET /roads`). 19 major roads: Airport Rd, Zahran, Cairo, Queen Rania, Mecca,
+Medina, Wasfi Al-Tal (Gardens), Prince Hashem, Al-Quds, Army, Al-Hurriya, King Abdullah II, Jordan St, Al-Istiqlal, Al-Shaheed,
+Amman-Zarqa Hwy, Al-Salt St, Yajouz, Prince Al-Hasan. All verified in OSM by their Arabic `name`.
+- **How:** `app/data/fetch_roads.py network` downloads the drivable OSM network once (gitignored `_raw/`); `build` routes every
+  citizen → 23 destinations twice on it (pure-Python Dijkstra, one-ways respected): all open, and with the road's ways removed.
+  The difference (extra s, m) goes in `road_deltas.json`; the engine adds it to the OSRM time/distance it already uses, so open-road
+  numbers are unchanged and no third-party router is involved. ~40 s to rebuild; re-run after any population change.
+- **Rules:** several closures = the largest single-road detour per trip (a lower bound: more closures can never be faster). Homes that
+  only open onto the road keep local access (207 such trip pairs, no detour stored). Zarqa city has same-named streets, so roads
+  only include ways west of lng 36.05 (except the Amman-Zarqa highway). Detour metres are clamped at ≥ 0. No assumptions changed.
+- **Outputs:** each outcome has `detour_minutes` + `detour_road`; kpis add `n_detour`, `avg_detour_min`. UI: road chips in the policy
+  panel ("إغلاق طرق"), closed roads drawn red on the map, a detour line under the KPIs, a detour row + mention in the citizen card.
+  Voices get `closed_road_ar` / `detour_minutes_one_way` only when a closure lengthened the trip (old cache keys unchanged:
+  `tasks.policy_json` drops an empty `closed_roads`). AI fixes must keep the scenario's closures. The parser gets a deterministic
+  `roads_named_in_text` hint.
+- **Measured story** (`python -m scripts.road_impact`): Amman's grid is redundant, so single closures move few people. Median detour
+  1-2 min (free-flow), worst ~19 min with traffic. Baseline + **Queen Rania St**: 6 citizens served → hardship (no-car, offline),
+  9 trips +13 min on average. Demo path + **Prince Al-Hasan St**: 2 more left out (offline, no car). Most single closures change
+  nobody's status; the UI still shows the detour line. On stage: "closing a road mostly costs minutes; it pushes out the people who
+  were already on the edge."
+- **Rehearsed** (`demo_requests.json`, cached via Groq): "سكّروا شارع الملكة رانيا", "Close Queen Rania Street", "سكّروا شارع زهران
+  وشارع القاهرة", "Close Prince Al-Hasan Street" (on the demo path), and unsupported "سكّروا شارع الرينبو" (not in the catalogue) and
+  "Close Zahran Street on Fridays only" (no part-time closures). Example chip 5 in the UI is the Queen Rania sentence.
 
 ## 12. Useful commands (from `backend/`)
 ```bash
