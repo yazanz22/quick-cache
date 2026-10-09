@@ -88,7 +88,7 @@
   // The backend's 422 text is technical English; show a translated hint instead (raw text goes to the console).
   function rejectReason(detail) {
     const d = String(detail || "").toLowerCase();
-    if (d.indexOf("hours") >= 0) return t("err_hours");
+    if (d.indexOf("hours") >= 0 || d.indexOf("shorter than one visit") >= 0) return t("err_hours");
     if (d.indexOf("site") >= 0 || d.indexOf("area") >= 0) return t("err_site");
     return t("err_other");
   }
@@ -1001,7 +1001,9 @@
   function glossaryModal() {
     let h = modalHead(t("glossary_title"), t("glossary_sub")) + '<div class="modal-body"><dl class="gloss">';
     GROUP_ORDER.forEach(function (g) {
-      const n = S.pop.filter(function (c) { return (c.tags || []).indexOf(g) >= 0; }).length;
+      // Group sizes come from the backend (by_group[g].n); the population is only a fallback for an old backend.
+      const bg = S.cmp && S.cmp.baseline && S.cmp.baseline.by_group && S.cmp.baseline.by_group[g];
+      const n = bg && isFinite(bg.n) ? bg.n : S.pop.filter(function (c) { return (c.tags || []).indexOf(g) >= 0; }).length;
       h += "<dt>" + esc(groupLabel(g)) + ' <small class="num-ish">' + tp("people", n) + "</small></dt><dd>" + t("gl_" + g) + "</dd>";
     });
     openModal(h + "</dl></div>", "glossary");
@@ -1050,7 +1052,7 @@
       S.lang = S.lang === "ar" ? "en" : "ar"; store.set("nas.lang", S.lang);
       if (!S.cmp) { renderStatic(); return $("boot").hidden ? null : bootScreen($("bootRetry") ? "error" : "loading"); }
       renderAll(); renderLabels(); placeZoom();
-      if (S.modal === "assumptions") assumptionsModal(true); else if (S.modal === "glossary") glossaryModal(); else if (S.modal === "llm") llmModal();
+      if (S.modal === "assumptions") assumptionsModal(true); else if (S.modal === "glossary") glossaryModal(); else if (S.modal === "llm") llmModal(); else if (S.modal === "report") reportModal();
       return;
     }
     if (q("#themeBtn")) {

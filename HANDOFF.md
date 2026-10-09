@@ -203,12 +203,12 @@ rehearsal is "Add more staff at the Marka office" (and any road closure, e.g. "Ø
   backend-down error screen + Retry, `?offline=1`, dragging an office pin, every protection, opening/closing an office.
 
 ## 10. Open items / known caveats
-1. **20 cache entries still need one online warm run** (`DEMO_OFFLINE=1 .venv/Scripts/python -m scripts.warm_cache` lists them as
-   MISSES): Bilal (c_0837) and Amina (c_0020) voices after the top grid fix **and after the AI fix** (the one the demo applies),
-   the 14 rehearsed judge requests re-cached against the demo path (`consolidate_digital_first`, see `demo_requests.json`), and the
-   reports with no fix / with the top fix applied. **After the Gemini reset (~10:00 Amman), from `backend/`:**
-   `.venv/Scripts/python -m scripts.warm_cache` (~21 AI calls; the parses can go through Groq, the 4 voices need Gemini), then
-   `DEMO_OFFLINE=1 ... -m scripts.warm_cache` must end with "No misses", then `pytest -q` (the xfails become XPASS), then commit `backend/cache/`.
+1. **One cache entry still needs an online warm run**: Amina (c_0020)'s voice after the **AI fix** (every Gemini voice model
+   hit its daily limit on the night of 10-10; voices never go to Groq). Everything else is cached: all 61 rehearsed requests
+   (every UI example chip from every preset, 15 extra judge requests on the demo path), all other hero voices, the reports
+   with and without a fix. **After the Gemini reset (~10:00 Amman), from `backend/`:** `.venv/Scripts/python -m scripts.warm_cache`
+   (1 call), then `DEMO_OFFLINE=1 ... -m scripts.warm_cache` must end with "No misses", then `pytest -q` (the xfail becomes XPASS;
+   then delete it from `PENDING_VOICES` in `tests/test_cache_hits.py`), then commit `backend/cache/` and redeploy Render.
    Voices for citizens served by home visits are generated on click (AI or template); none are pre-cached.
 2. **Fully offline demo: DONE.** Leaflet 1.9.4, Phosphor icons (regular + fill) and IBM Plex (arabic/latin subsets) are vendored in
    `nas-frontend/vendor/` (~1 MB). Verified: with `?offline=1` the page makes no request outside the server, in Arabic and English.

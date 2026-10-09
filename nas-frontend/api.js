@@ -122,7 +122,7 @@
     (sim.outcomes || []).forEach(function (o) { byId.set(o.citizen_id, o); });
     const by_group = {};
     const g = sim.by_group || {};
-    Object.keys(g).forEach(function (t) { by_group[t] = { served: +g[t].served || 0, hardship: +g[t].hardship || 0, left_out: +g[t].left_out || 0 }; });
+    Object.keys(g).forEach(function (t) { by_group[t] = { served: +g[t].served || 0, hardship: +g[t].hardship || 0, left_out: +g[t].left_out || 0, n: +g[t].n || 0 }; });
     by_group.all = { served: k.pct_served, hardship: k.pct_hardship, left_out: k.pct_left_out };
     return { raw: sim, kpis: k, counts: k.counts, byId: byId, by_group: by_group };
   }

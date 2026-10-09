@@ -41,7 +41,11 @@ def test_stage_sentence_hits_and_equals_the_demo_preset():
     d = REQUESTS["demo"]
     r = tasks.parse_policy(d["text"], world.scenario_policy(d["apply_to"]))
     assert r.source == "ai" and r.status == "ok"
-    assert canonical(r.policy) == canonical(world.scenario_policy(d["expected"]))
+    expected = world.scenario_policy(d["expected"])
+    assert canonical(r.policy) == canonical(expected)
+    # The /fixes and voice cache keys keep list order (policy_json), so the parse must match the preset byte for byte,
+    # or the cached AI fix would miss on stage right after the parse is applied.
+    assert r.policy.model_dump(mode="json") == expected.model_dump(mode="json")
 
 
 def _request_params():
