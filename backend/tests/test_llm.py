@@ -38,7 +38,8 @@ def test_offline_tasks_fall_back_never_blank():
 def test_rate_limits_put_models_on_cooldown():
     import time
     from app.llm import client
-    daily = client._classify(Exception("429 RESOURCE_EXHAUSTED quotaId GenerateRequestsPerDayPerProjectPerModel-FreeTier"))
+    daily = client._classify(Exception("429 RESOURCE_EXHAUSTED quota exceeded, check your plan and billing details. "
+                                       "quotaId GenerateRequestsPerDayPerProjectPerModel-FreeTier"))
     minute = client._classify(Exception("Error code: 429 - Rate limit reached on tokens per minute (TPM)"))
     busy = client._classify(Exception("503 UNAVAILABLE high demand"))
     assert daily[1] == "daily limit" and daily[0] > time.time() + 60

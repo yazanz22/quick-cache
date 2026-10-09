@@ -446,7 +446,7 @@ Policy Panel · Map · Impact Panel. The Citizen Card opens as a drawer over the
 
 ## 10. Demo scenarios (preset JSON in `data/scenarios/`)
 
-1. **`baseline`:** today's network: the **7 real CSPD offices in Amman** (Tabarbour head office, Jabal Amman, Marka, Sweileh, Jabal Al-Hussein, Tla' Al-Ali, Wadi Al-Seer; addresses from CSPD's own office list, located with OpenStreetMap, real: true in `sites.json`), 08:30–15:30 Sun–Thu as CSPD publishes, walk-in, online enabled. Wheelchair access is assumed; the fee is a placeholder.
+1. **`baseline`:** today's network: the **7 real CSPD offices in Amman** (Tabarbour head office, Jabal Amman, Marka, Sweileh, Jabal Al-Hussein, Tla' Al-Ali, Wadi Al-Seer; addresses from CSPD's own office list, located with OpenStreetMap, real: true in `sites.json`), 08:30–15:30 Sun–Thu as CSPD publishes, walk-in, online enabled. Wheelchair access is assumed; the fee is JD 2 (the ID-renewal fee, confirmed by the team).
 2. **`consolidate`:** close 5 offices, keep only Tabarbour and Jabal Amman. Elderly, offline and no-car residents far from those two feel it.
 3. **`digital_first`:** all 7 offices close at 13:00 and office visits need an online appointment. A realistic "digital transformation" policy with a hidden cost to elderly, offline and worker citizens.
 4. **`online_only`:** the extreme version, kept as a backup.

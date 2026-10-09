@@ -1,0 +1,41 @@
+{
+ "task": "voice",
+ "output": "ذهبتُ يوم الأحد بالحافلة إلى مكتب الأحوال المدنية في ماركا واستغرقت الرحلة 43 دقيقة في الاتجاه الواحد. تمكنتُ من تجديد بطاقتي بعد دفع حوالي 3 دنانير، لكن الموعد تعارض مع عملي واضطررتُ لخسارة ساعتين ونصف من ساعات العمل.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "seconds": 15.39,
+  "ts": "2026-10-09T17:49:47"
+ },
+ "inputs": {
+  "register": "msa",
+  "profile": {
+   "age": 38,
+   "gender": "m",
+   "area_ar": "ماركا",
+   "mobility": "none",
+   "has_car": false,
+   "has_smartphone": false,
+   "digital_literacy": "low",
+   "works": true,
+   "work_start": "07:00",
+   "work_end": "16:00",
+   "income_band": "low",
+   "helper_relation_ar": null
+  },
+  "outcome": {
+   "status": "hardship",
+   "reasons": [
+    "HOURS_CONFLICT_WORK"
+   ],
+   "channel_name_ar": "مكتب الأحوال المدنية - ماركا",
+   "mode": "bus",
+   "bus_transfers": 0,
+   "visit_day_ar": "الأحد",
+   "travel_minutes_one_way": 43,
+   "total_cost_jd": 2.9,
+   "total_hours_lost_incl_waiting": 2.5,
+   "work_hours_missed": 2.5
+  }
+ }
+}

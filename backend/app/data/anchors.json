@@ -2,81 +2,141 @@
   "_note": "Public figures for the synthetic population. seed.py uses a value ONLY when status is ANCHORED (checked against the source URL by us). CITED_UNVERIFIED = reported by our desk research (Qwen) with a source we could not open or confirm; never presented as sourced. Checked 2026-10-09.",
   "anchors": {
     "internet_use_individuals_jordan": {
-      "value": 0.956, "status": "ANCHORED", "year": 2024, "scope": "Jordan national, individuals",
+      "value": 0.956,
+      "status": "ANCHORED",
+      "year": 2024,
+      "scope": "Jordan national, individuals",
       "source_name": "MoDEE 2024 Household ICT Usage and Access Survey (results announcement)",
       "url": "https://jordan.gov.jo/EN/NewsDetails/Ministry_of_Digital_Economy_and_Entrepreneurship_Announces_Results_of_the_2024_Household_ICT_Usage_and_Access_Survey",
       "quote": "The proportion of individuals who used the internet increased from 92.5% in 2023 to 95.6% in 2024.",
       "notes": "National, all ages; no age breakdown on the page. Our seed's smartphone-by-age bands are an ASSUMPTION; their population average should stay below this figure because elderly use is lower."
     },
     "smartphone_households_amman": {
-      "value": 0.99, "status": "ANCHORED", "year": 2024, "scope": "Amman, households",
+      "value": 0.99,
+      "status": "ANCHORED",
+      "year": 2024,
+      "scope": "Amman, households",
       "source_name": "MoDEE 2024 Household ICT Usage and Access Survey (results announcement)",
       "url": "https://jordan.gov.jo/EN/NewsDetails/Ministry_of_Digital_Economy_and_Entrepreneurship_Announces_Results_of_the_2024_Household_ICT_Usage_and_Access_Survey",
       "quote": "smartphone availability in Amman reached 99%",
       "notes": "Household-level: a household having a smartphone does not mean every elderly member can use one. That is exactly the 'offline with a helper' case in the engine."
     },
     "egov_use_individuals_jordan": {
-      "value": 0.381, "status": "ANCHORED", "year": 2024, "scope": "Jordan national, individuals",
+      "value": 0.381,
+      "status": "ANCHORED",
+      "year": 2024,
+      "scope": "Jordan national, individuals",
       "source_name": "MoDEE 2024 Household ICT Usage and Access Survey (results announcement)",
       "url": "https://jordan.gov.jo/EN/NewsDetails/Ministry_of_Digital_Economy_and_Entrepreneurship_Announces_Results_of_the_2024_Household_ICT_Usage_and_Access_Survey",
       "quote": "38.1% of individuals had accessed at least one e-government service",
       "notes": "Context for the pitch: connectivity is near-universal, e-service use is not."
     },
     "id_renewal_fee_jd": {
-      "value": null, "status": "NOT_FOUND", "year": null,
-      "source_name": "CSPD e-services page checked",
-      "url": "https://www.cspd.gov.jo/EN/ListDetails/E__Services_/44/3",
-      "notes": "The research cited JD 1 from this page, but the page is about 'Issuance of a Previously-Registered Document Electronically', not smart ID renewal. Scenario fee_jd (2.0) stays a labelled placeholder."
+      "value": 2.0,
+      "status": "TEAM_CONFIRMED",
+      "year": 2026,
+      "scope": "Jordanian national ID renewal",
+      "source_name": "Confirmed by the team; add the CSPD link here if one is found",
+      "url": null,
+      "notes": "JD 2 is the ID renewal fee, used as fee_jd in every scenario. The JD 1 the desk research cited (cspd.gov.jo e-services page) is for a different service: issuing a previously registered document electronically."
     },
     "share_female": {
-      "value": 0.47, "status": "CITED_UNVERIFIED", "year": null, "scope": "Jordan national",
+      "value": 0.47,
+      "status": "CITED_UNVERIFIED",
+      "year": null,
+      "scope": "Jordan national",
       "source_name": "DoS figures as reported by The Jordan Times (Facebook post)",
       "url": "https://www.facebook.com/thejordantimes/posts/director-general-of-the-department-of-statistics-dos-haidar-fraihat-said-jordans/1482363837271805/",
       "notes": "Includes non-Jordanians (male-skewed migrant workforce). Seed uses its own 0.49 ASSUMPTION until a DoS table is checked."
     },
     "disability_65_plus": {
-      "value": 0.493, "status": "CITED_UNVERIFIED", "year": 2024, "scope": "Jordan national, 65+",
+      "value": 0.493,
+      "status": "CITED_UNVERIFIED",
+      "year": 2024,
+      "scope": "Jordan national, 65+",
       "source_name": "UNFPA Arab States, Jordan country profile",
       "url": "https://arabstates.unfpa.org/sites/default/files/pub-pdf/country_profile_-_jordan_10-1-2024.pdf",
       "notes": "Any functional difficulty, all domains (seeing, hearing, walking...). Our seed models only mobility (limited/wheelchair), so this is an upper bound, not a direct input. PDF too large to verify automatically."
     },
     "disability_overall_5_plus": {
-      "value": 0.112, "status": "CITED_UNVERIFIED", "year": 2015, "scope": "Jordan national, aged 5+",
+      "value": 0.112,
+      "status": "CITED_UNVERIFIED",
+      "year": 2015,
+      "scope": "Jordan national, aged 5+",
       "source_name": "2015 Census (Washington Group) as cited by Humanity & Inclusion briefing paper 2023",
       "url": "https://www.hi.org/sn_uploads/document/Briefing-Paper_Jordan-Disability-Social-Protection_September-2023_Final-Version.pdf",
       "notes": "All domains. Walking difficulty alone was reported at ~7% (secondary source)."
     },
     "female_labour_force_participation": {
-      "value": 0.16, "status": "CITED_UNVERIFIED", "year": null, "scope": "Jordan national",
-      "source_name": "World Bank Gender Data Portal", "url": "https://genderdata.worldbank.org/en/economies/jordan",
+      "value": 0.16,
+      "status": "CITED_UNVERIFIED",
+      "year": null,
+      "scope": "Jordan national",
+      "source_name": "World Bank Gender Data Portal",
+      "url": "https://genderdata.worldbank.org/en/economies/jordan",
       "notes": "World Bank API was down (502) when we tried to confirm. Seed 'works' rates are employment, not participation."
     },
     "male_labour_force_participation": {
-      "value": 0.625, "status": "CITED_UNVERIFIED", "year": null, "scope": "Jordan national",
-      "source_name": "World Bank Gender Data Portal", "url": "https://genderdata.worldbank.org/en/economies/jordan", "notes": ""
+      "value": 0.625,
+      "status": "CITED_UNVERIFIED",
+      "year": null,
+      "scope": "Jordan national",
+      "source_name": "World Bank Gender Data Portal",
+      "url": "https://genderdata.worldbank.org/en/economies/jordan",
+      "notes": ""
     },
     "bus_fare_jd_range": {
-      "value": [0.34, 0.55], "status": "CITED_UNVERIFIED", "year": null, "scope": "Amman intra-urban",
+      "value": [
+        0.34,
+        0.55
+      ],
+      "status": "CITED_UNVERIFIED",
+      "year": null,
+      "scope": "Amman intra-urban",
       "source_name": "Transportation Research Interdisciplinary Perspectives article; BRT fare from expat guides",
       "url": "https://www.sciencedirect.com/science/article/pii/S2590198222001762",
       "notes": "Publisher blocked automated access (403). Our frozen BUS_FARE_JD 0.45 lies inside this range."
     },
     "bus_wait_peak_minutes": {
-      "value": 25.4, "status": "CITED_UNVERIFIED", "year": 2017, "scope": "Amman, peak hours",
+      "value": 25.4,
+      "status": "CITED_UNVERIFIED",
+      "year": 2017,
+      "scope": "Amman, peak hours",
       "source_name": "The Open Transportation Journal, vol 13, p 227",
       "url": "https://opentransportationjournal.com/VOLUME/13/PAGE/227/FULLTEXT/",
       "notes": "Peak-hour wait. Our frozen BUS_FIRST_WAIT_MIN is 10 (visits happen off-peak); BUS_WAIT_PLUS_TRANSFER_MIN is in the ±20% robustness check. Known gap, stated honestly."
     },
     "district_population_2015": {
-      "value": {"Al-Madinah": 34988, "Al-Abdali": 165333, "Marka": 148100, "Al-Yarmouk": 180773, "Tariq": 175194, "Sweileh": 151016, "Tla' Al-Ali": 251000},
-      "status": "CITED_UNVERIFIED", "year": 2015, "scope": "Greater Amman Municipality districts",
-      "source_name": "2015 Census via GAM, as tabulated on Wikipedia 'Amman'", "url": "https://en.wikipedia.org/wiki/Amman",
+      "value": {
+        "Al-Madinah": 34988,
+        "Al-Abdali": 165333,
+        "Marka": 148100,
+        "Al-Yarmouk": 180773,
+        "Tariq": 175194,
+        "Sweileh": 151016,
+        "Tla' Al-Ali": 251000
+      },
+      "status": "CITED_UNVERIFIED",
+      "year": 2015,
+      "scope": "Greater Amman Municipality districts",
+      "source_name": "2015 Census via GAM, as tabulated on Wikipedia 'Amman'",
+      "url": "https://en.wikipedia.org/wiki/Amman",
       "notes": "Could replace the synthetic area weights in areas.json once checked against a GAM/DoS table. Our 8 areas only approximate these districts."
     },
     "cspd_offices_amman": {
-      "value": ["Tabarbour (head office, Al Mashaghel circle)", "Jabal Amman (1st circle)", "Wadi Al Seer", "Sweileh", "Jabal Al Hussein", "Marka", "Tla' Al-Ali"],
-      "status": "CITED_UNVERIFIED", "year": null,
-      "source_name": "CSPD directorates and offices list", "url": "https://cspd.gov.jo/EN/ListDetails/Department_Directorates_and_Offices/17/1",
+      "value": [
+        "Tabarbour (head office, Al Mashaghel circle)",
+        "Jabal Amman (1st circle)",
+        "Wadi Al Seer",
+        "Sweileh",
+        "Jabal Al Hussein",
+        "Marka",
+        "Tla' Al-Ali"
+      ],
+      "status": "CITED_UNVERIFIED",
+      "year": null,
+      "source_name": "CSPD directorates and offices list",
+      "url": "https://cspd.gov.jo/EN/ListDetails/Department_Directorates_and_Offices/17/1",
       "notes": "Real office network for context. Our scenarios are hypothetical policies on 8 candidate sites, not a model of today's network."
     }
   }

@@ -74,5 +74,5 @@
   "fee_jd": 2.0,
   "visits_required": 1
  },
- "_note": "Offices: the 7 real CSPD offices in Amman (sites.json). Hours: 08:30-15:30 Sun-Thu as published by CSPD (the page lists these as general hours; a Fri/Sat 10:00-14:00 line is not modelled because it may be contact-centre hours). Wheelchair access: assumed. fee_jd 2.0: placeholder, the ID-renewal fee was not found."
+ "_note": "Offices: the 7 real CSPD offices in Amman (sites.json). Hours: 08:30-15:30 Sun-Thu as published by CSPD (the page lists these as general hours; a Fri/Sat 10:00-14:00 line is not modelled because it may be contact-centre hours). Wheelchair access: assumed. fee_jd 2.0: the ID-renewal fee, confirmed by the team."
 }

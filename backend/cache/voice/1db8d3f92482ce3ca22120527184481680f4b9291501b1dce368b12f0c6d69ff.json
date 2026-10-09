@@ -1,0 +1,41 @@
+{
+ "task": "voice",
+ "output": "ذهبتُ بالسيارة يوم الأحد إلى مكتب الأحوال المدنية في جبل عمان واستغرقت الرحلة 22 دقيقة. واجهتُ صعوبة في تجديد هويتي بسبب قلة معرفتي بالخدمات الرقمية، وقضيتُ 3.5 ساعات لإتمام الأمر ودفعتُ 4.1 دنانير.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "seconds": 8.24,
+  "ts": "2026-10-09T17:49:56"
+ },
+ "inputs": {
+  "register": "msa",
+  "profile": {
+   "age": 63,
+   "gender": "f",
+   "area_ar": "الوحدات",
+   "mobility": "none",
+   "has_car": true,
+   "has_smartphone": true,
+   "digital_literacy": "low",
+   "works": false,
+   "work_start": null,
+   "work_end": null,
+   "income_band": "high",
+   "helper_relation_ar": null
+  },
+  "outcome": {
+   "status": "hardship",
+   "reasons": [
+    "LOW_DIGITAL_LITERACY"
+   ],
+   "channel_name_ar": "مكتب الأحوال المدنية - جبل عمان",
+   "mode": "car",
+   "bus_transfers": 0,
+   "visit_day_ar": "الأحد",
+   "travel_minutes_one_way": 22,
+   "total_cost_jd": 4.1,
+   "total_hours_lost_incl_waiting": 3.5,
+   "work_hours_missed": 0.0
+  }
+ }
+}
