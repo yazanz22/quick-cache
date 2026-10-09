@@ -210,9 +210,15 @@ class Policy(BaseModel):
     fee_jd: float
     visits_required: int = 1
     closed_roads: list[str] = []  # ids from roads.json (18 major roads); trips that used them take the detour (§6.1 rule 4)
+    # Protections for groups (Group = elderly, disabled, no_car, offline, low_income, worker, student; from tags):
+    appointment_exempt_groups: list[Group] = []   # walk in to offices without the appointment
+    fee_discounts: dict[Group, float] = {}        # % off fee_jd; a citizen gets their largest discount
+    home_visits: HomeVisits | None = None         # {groups, slots}: slots go to the worst-off eligible first
+    transport_vouchers: list[TransportVoucher] = []  # {groups, amount_jd}: bus/taxi fares paid up to amount per round trip
+    hybrid_pickup: bool = False                   # apply online (self or helper), then a PICKUP_MINUTES visit to collect
 ```
 
-**What Nas can model** is exactly what this schema expresses: where offices are (8 sites), their hours per day, wheelchair access, online on/off/only, appointments at offices, mobile units (area, day, hours), the fee, the number of visits, and which of the 18 catalogue roads are closed (all day, every day). Anything else is "not supported yet" (§8.5).
+**What Nas can model** is exactly what this schema expresses: where offices are (8 sites), their hours per day, wheelchair access, online on/off/only, appointments at offices, mobile units (area, day, hours), the fee, the number of visits, which of the 18 catalogue roads are closed (all day, every day), and the group protections (walk-in exemption, fee discounts, capped home visits, transport vouchers, hybrid apply-online-then-collect). Offices can be opened or closed at any of the 15 sites. Anything else is "not supported yet" (§8.5). The protections are manual/free-text levers only: they are not in the fix grid (§6.4), so the demo path's fixes are unchanged.
 
 ### Simulation output
 ```python
@@ -400,7 +406,7 @@ Extract every number from AI text (Arabic-Indic and Western digits). Each must m
 ### 8.5 Policy parse
 - The prompt includes the current policy JSON, the list of areas, sites and offices, the schema, and the explicit **"what Nas can model" list** (§5).
 - Output is a `ParseResult`: either a full Policy plus a bilingual "understood as" change list, or `unsupported` with a short message saying what can't be modeled and what the closest supported change would be.
-- Examples of unsupported requests: a fee waiver for one group (fees are per policy, not per group), an office outside the 8 sites, a second service, changes to bus routes, closing a road outside the catalogue or only on some days.
+- Examples of unsupported requests: a group that isn't one of the 7 tags (e.g. pregnant women), an age threshold other than 65, extra staff or queues, an office outside the 15 sites, a second service, changes to bus routes, closing a road outside the catalogue or only on some days.
 - Road closures: the parser gets `roads_named_in_text` (a deterministic name match against the catalogue) as a hint; the AI still decides. AI fix proposals must keep the scenario's `closed_roads` (road works are not the service's decision).
 - The UI shows the change list in `ParsePreview` and only applies the policy after **Apply**. A wrong parse is visible and harmless.
 - Any policy a parse could produce can also be built with the manual controls, so if parsing fails on stage, build it by hand.
@@ -473,7 +479,7 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 - "Make it online-only but keep a Saturday van in Wehdat"
 - "Double the fee"
 - "Require two visits"
-- One unsupported one, e.g. "Make it free for people over 65", to rehearse the honest "not supported yet" answer.
+- One unsupported one, e.g. "Add more staff at the Marka office", to rehearse the honest "not supported yet" answer. ("Make it free for people over 65" is supported since the group protections.)
 
 ## 11. Team split (3 people)
 

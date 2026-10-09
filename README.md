@@ -50,7 +50,11 @@ Contract: [backend/app/models.py](backend/app/models.py). The frontend reads it 
 | POST | `/report` | `{compare_result, sensitivity}` → `{summary_ar, summary_en, source}` (AI) |
 | POST | `/fixes` | `{baseline, scenario}` → `{fixes, source, ai_proposal}` (AI explanations + verified AI fix) |
 
-Invalid policies (unknown site/area/road, bad hours) return **422** with a readable message.
+Invalid policies (unknown site/area/road, bad hours, discounts outside 0-100) return **422** with a readable message.
+
+**Group protections** (Policy fields, per citizen by tags): `appointment_exempt_groups`, `fee_discounts`, `home_visits`
+`{groups, slots}`, `transport_vouchers` `[{groups, amount_jd}]`, `hybrid_pickup`. Home-visit outcomes have
+`channel: "home_visit"`, `mode: "home"`; `kpis.n_home_visits` counts them.
 
 **Road closures:** `Policy.closed_roads` lists road ids from `/roads`. Trips that used a closed road take its detour
 on top of the OSRM time and distance; every outcome carries `detour_minutes` / `detour_road`, and `kpis` carry

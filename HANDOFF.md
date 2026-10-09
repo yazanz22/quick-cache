@@ -15,7 +15,7 @@ and explains/proposes fixes. **The engine verifies everything the AI proposes.**
 | Repo | https://github.com/yazanz22/quick-cache (branch `main`; push directly to main) |
 | Local app (UI + API, one server) | from `backend/`: `.venv/Scripts/python -m uvicorn app.main:app --port 8000` → **http://localhost:8000** (API docs at `/docs`) |
 | Production | **https://nas-rbo5.onrender.com** (Render free web service from `render.yaml`, auto-deploys on push to `main`) |
-| Tests | from `backend/`: `.venv/Scripts/python -m pytest -q` → 45 passing, all offline (no AI calls) |
+| Tests | from `backend/`: `.venv/Scripts/python -m pytest -q` → 53 passing, all offline (no AI calls) |
 | Python | local venv is Python 3.14 (`backend/.venv`); Render uses 3.12.7 |
 
 Render notes: the free plan sleeps after ~15 min idle; the first visit takes ~30-60 s to wake (the UI shows
@@ -181,6 +181,24 @@ Al-Hurriya, King Abdullah II, Jordan St, Al-Istiqlal, Al-Shaheed, Amman-Zarqa Hw
   "Close Zahran Street on Fridays only". The parser gets a deterministic `roads_named_in_text` hint.
 - **Rebuild order after a population change:** `seed_daily` → `fetch_map_data hubs` → `fetch_roads build` →
   `scripts.calibrate_roads` (cached calls are free) → `scripts.road_impact` to re-check.
+
+## 11b. Group protections + opening offices (DONE, 2026-10-09)
+Five new Policy levers (models.py, engine.py), all per citizen by their tags, deterministic, manual/free-text only (NOT in
+the fix grid, so the demo path, heroes and cached AI fix are unchanged):
+1. `appointment_exempt_groups`: those groups walk in without the online appointment. Demo + elderly/disabled: served 79.6 → 81.6.
+2. `fee_discounts {group: %}`: largest discount applies. On its own it moves no statuses on the demo path (hardship there is
+   helpers/appointments, not cost), but lowers avg cost; "free for over-65s" is now SUPPORTED (old cached "unsupported" removed).
+3. `home_visits {groups, slots}`: a clerk renews at home; slots go to eligible citizens worst off first (left out, then heaviest
+   hardship). New assumption HOME_VISIT_MINUTES = 120 (2-h visit window), committed in 0387862 before use. Demo + 20 slots:
+   left out 0.9 → 0.5. KPI `n_home_visits`; voice template "جاء موظف الأحوال المدنية إلى بيتي".
+4. `transport_vouchers [{groups, amount_jd}]`: bus/taxi fares paid up to X per round trip; taxis become affordable.
+5. `hybrid_pickup`: an extra option (never forced): apply online (self or helper = hardship), then a PICKUP_MINUTES = 15 visit.
+   Matters when full online renewal is off (baseline without online: served 48.9 → 55.6).
+Plus the UI can open an office in any area ("افتح مكتباً", picks the real CSPD site there if any) and close any office.
+UI: "حماية الفئات" section in the policy panel (group chips + steppers), home visits used under the KPIs. Parser knows all
+levers; rehearsed (cached): walk-in for elderly+disabled, 30 home visits for wheelchair users, 3 JD taxi voucher for low
+income, apply-online-and-pick-up, open an office in Marka; unsupported rehearsal is now "Add more staff at the Marka office".
+Tests: tests/test_levers.py (53 tests total).
 
 ## 12. Useful commands (from `backend/`)
 ```bash
