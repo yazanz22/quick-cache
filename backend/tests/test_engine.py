@@ -148,3 +148,14 @@ def test_every_assumption_has_arabic_and_english_labels():
     from app.sim.assumption_labels import label_rows
     rows = label_rows(A.as_table())
     assert all(r["label_ar"] and r["label_en"] and r["rationale_ar"] for r in rows)
+
+
+def test_backend_serves_the_frontend_and_api_routes_still_win():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    c = TestClient(app)
+    page = c.get("/")
+    assert page.status_code == 200 and "<html" in page.text.lower() and "api.js" in page.text
+    assert c.get("/api.js").status_code == 200
+    assert c.get("/scenarios").headers["content-type"].startswith("application/json")
+    assert c.get("/docs").status_code == 200

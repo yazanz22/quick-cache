@@ -1,8 +1,10 @@
 /* Nas frontend config. The only file you should need to edit to point the UI at a backend.
    You can also override the API URL without editing: open index.html?api=http://192.168.1.20:8000 */
 window.NAS_CONFIG = {
-  // FastAPI backend (CLAUDE.md §7). Must allow this page's origin in CORS.
-  API_URL: "http://localhost:8000",
+  // FastAPI backend (CLAUDE.md §7). The backend serves this page itself at http://localhost:8000/,
+  // so by default the API is the page's own origin. Opened from a separate static server on
+  // port 3000 (or as a file), it falls back to http://localhost:8000.
+  API_URL: location.protocol.indexOf("http") === 0 && location.port !== "3000" ? location.origin : "http://localhost:8000",
 
   // Per-request timeout. AI routes (/policy/parse, /citizen/voice, /report, /fixes) can take a while.
   TIMEOUT_MS: 20000,

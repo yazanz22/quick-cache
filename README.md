@@ -8,31 +8,24 @@ explains and proposes; the engine verifies everything the AI proposes. See [CLAU
 
 > Synthetic population, demo data, not real people.
 
-## Run the backend
+## Run it
+
+One server runs both the API and the UI:
 
 ```bash
 cd backend
 python -m venv .venv
-.venv\Scripts\activate            # macOS/Linux: source .venv/bin/activate
+.venv\Scriptsctivate            # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
+- Open **http://localhost:8000** for the app (the static UI in [nas-frontend/](nas-frontend/) is served by FastAPI).
+- http://localhost:8000/docs for the interactive API docs.
 - Copy `.env.example` to `.env` (repo root) and add your own free Gemini and Groq keys (an OpenAI key is optional: set `OPENAI_MODEL_*` too).
-- Open http://localhost:8000/docs for the interactive API docs.
 - `pytest -q` runs the offline test suite (no AI calls).
-- `DEMO_OFFLINE=1` in `.env`: cache + templates only, never a network call.
-
-## Run the frontend
-
-The UI is a static app in [nas-frontend/](nas-frontend/) (no build step; see its README). With the backend running:
-
-```bash
-python -m http.server 3000 --directory nas-frontend
-```
-
-Open http://localhost:3000 (`?api=http://<host>:8000` for another backend, `?offline=1` for no map tiles).
-It still loads Leaflet, icons and fonts from CDNs, so vendor those before an offline demo.
+- `DEMO_OFFLINE=1` in `.env`: cache + templates only, never a network call. `?offline=1` in the URL draws no map tiles.
+- The UI still loads Leaflet, icons and fonts from CDNs, so vendor those before a fully offline demo.
 
 ## API (for the frontend)
 

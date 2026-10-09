@@ -14,14 +14,12 @@ nas-frontend/
 
 ## Run it
 
-1. Start the backend (FastAPI on port 8000 by default).
-2. Serve this folder on port 3000, which the backend's CORS already allows (CLAUDE.md §4: "CORS for localhost:3000"):
+The backend serves this folder itself: start it (`uvicorn app.main:app --port 8000` from `backend/`) and open
+**http://localhost:8000**. `config.js` then uses the page's own origin as the API.
 
-```bash
-python -m http.server 3000 --directory nas-frontend
-```
-
-3. Open http://localhost:3000. To point at another backend without editing anything: `http://localhost:3000/?api=http://192.168.1.20:8000`.
+To work on the UI separately, `python -m http.server 3000 --directory nas-frontend` also works (the backend's
+CORS allows port 3000, and `config.js` falls back to http://localhost:8000). To point at another backend without
+editing anything: `?api=http://192.168.1.20:8000`.
 
 If the backend is down, the page shows a "can't reach the engine" screen with the URL it tried and a Retry button.
 

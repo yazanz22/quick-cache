@@ -65,7 +65,7 @@ Nas then **finds fixes**. The engine searches a grid of candidate fixes and veri
 
 ## 3. Tech stack
 
-- **Frontend:** a static HTML/JS app in `nas-frontend/` (no build step, no framework), served on port 3000.
+- **Frontend:** a static HTML/JS app in `nas-frontend/` (no build step, no framework), served by the backend itself at `/` (one server, one URL).
   - `api.js` is the only file that knows routes and JSON shapes; `app.js` computes nothing (every number comes from the backend).
   - Map: Leaflet + OpenStreetMap tiles. **Offline fallback:** `?offline=1` (or `OFFLINE_MAP` in `config.js`) draws no tiles, only labelled area zones. Don't bulk-download OSM tiles; their usage policy forbids it.
   - Fonts: `IBM Plex Sans Arabic` (Arabic) and `IBM Plex Sans` (Latin).
@@ -97,7 +97,7 @@ nas/
 ├── backend/
 │   ├── requirements.txt
 │   ├── app/
-│   │   ├── main.py             # FastAPI app, CORS for localhost:3000, includes the two routers. Keep it tiny.
+│   │   ├── main.py             # FastAPI app: the two routers + serves nas-frontend/ at /. Keep it tiny.
 │   │   ├── config.py           # loads the repo-root .env
 │   │   ├── models.py           # ALL Pydantic schemas (source of truth for the API contract)
 │   │   ├── routes/
@@ -530,9 +530,8 @@ python -m app.data.fetch_map_data matrix             # then refresh OSRM road ti
 uvicorn app.main:app --reload --port 8000
 pytest -q
 
-# frontend (static, no build step; backend must be running)
-python -m http.server 3000 --directory nas-frontend  # from the repo root -> http://localhost:3000
-# ?api=http://<host>:8000 points at another backend, ?offline=1 draws no map tiles
+# the app: the backend above also serves the UI -> http://localhost:8000
+# ?api=http://<host>:8000 points the UI at another backend, ?offline=1 draws no map tiles
 
 # demo prep (online, after final scenario work)
 python -m scripts.pick_heroes && python -m scripts.find_ai_fix && python -m scripts.warm_cache   # from backend/
