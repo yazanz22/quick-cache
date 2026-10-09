@@ -119,12 +119,13 @@ def parse_policy(text: str, current: Policy, lang: str = "ar") -> ParseResult:
 def voice_facts(citizen: dict, o: dict) -> dict:
     a = world.areas()[citizen["area"]]
     return {
+        "register": "msa",  # voices are فصحى; part of the cache key so old dialect voices are never reused
         "profile": {
             "age": citizen["age"], "gender": citizen["gender"], "area_ar": a["name_ar"],
             "mobility": citizen["mobility"], "has_car": citizen["has_car"], "has_smartphone": citizen["has_smartphone"],
             "digital_literacy": citizen["digital_literacy"], "works": citizen["works"],
             "work_start": citizen["work_start"], "work_end": citizen["work_end"],
-            "income_band": citizen["income_band"], "helper_relation_ar": citizen["helper_relation_ar"],
+            "income_band": citizen["income_band"], "helper_relation_ar": fallbacks.msa_helper(citizen["helper_relation_ar"]),
         },
         "outcome": {
             "status": o["status"], "reasons": o.get("reasons", []), "channel_name_ar": o.get("channel_name_ar"),
@@ -149,9 +150,13 @@ def voice_citizen(citizen: dict, outcome: dict) -> VoiceResponse:
         bad = checks.ungrounded(t, facts)
         if bad:
             raise Rejected(f"numbers not in the facts: {bad}")
-        extra = checks.foreign_people(t, citizen["helper_relation_ar"])
+        helper = fallbacks.msa_helper(citizen["helper_relation_ar"])
+        extra = checks.foreign_people(t, helper)
         if extra:
             raise Rejected(f"mentions people other than the helper: {extra}")
+        style = checks.voice_style_problems(t, helper)
+        if style:
+            raise Rejected("; ".join(style))
         return t
 
     out = _ai("voice", facts, prompts.VOICE_SYSTEM, user, check, smart=False, want_json=False)

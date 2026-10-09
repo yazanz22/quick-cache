@@ -18,17 +18,25 @@ REASON_LABELS = {
     "TOO_EXPENSIVE": ("التكلفة مرتفعة", "Too expensive"),
     "OFFICE_CLOSED_ON_AVAILABLE_DAYS": ("مغلق في الأوقات المتاحة", "Closed when they can go"),
 }
-# First-person clauses for voices (Jordanian colloquial).
+# First-person clauses for voices, in Modern Standard Arabic (فصحى).
 REASON_VOICE = {
-    "TOO_FAR": ("المكتب بعيد عليّ", "the office is too far for me"),
-    "NO_TRANSPORT": ("ما في إشي يوصّلني", "I have no way to get there"),
-    "HOURS_CONFLICT_WORK": ("الدوام بيتعارض مع شغلي", "the hours clash with my work"),
-    "NO_SMARTPHONE": ("ما عندي تلفون ذكي", "I don't have a smartphone"),
-    "LOW_DIGITAL_LITERACY": ("ما بعرف أتعامل مع المواقع والتطبيقات", "I can't manage websites and apps"),
-    "NOT_WHEELCHAIR_ACCESSIBLE": ("المكتب مش مجهّز للكرسي المتحرك", "the office isn't wheelchair accessible"),
-    "TOO_EXPENSIVE": ("التكسي غالي عليّ", "a taxi costs more than I can afford"),
-    "OFFICE_CLOSED_ON_AVAILABLE_DAYS": ("المكتب مسكّر بالأوقات اللي بقدر أروح فيها", "it's closed whenever I can go"),
+    "TOO_FAR": ("المكتب بعيد عني", "the office is too far for me"),
+    "NO_TRANSPORT": ("لا توجد وسيلة توصلني", "I have no way to get there"),
+    "HOURS_CONFLICT_WORK": ("ساعات الدوام تتعارض مع عملي", "the hours clash with my work"),
+    "NO_SMARTPHONE": ("لا أملك هاتفاً ذكياً", "I don't have a smartphone"),
+    "LOW_DIGITAL_LITERACY": ("لا أجيد استخدام المواقع والتطبيقات", "I can't manage websites and apps"),
+    "NOT_WHEELCHAIR_ACCESSIBLE": ("المكتب غير مجهّز للكرسي المتحرك", "the office isn't wheelchair accessible"),
+    "TOO_EXPENSIVE": ("أجرة سيارة الأجرة أكبر من قدرتي", "a taxi costs more than I can afford"),
+    "OFFICE_CLOSED_ON_AVAILABLE_DAYS": ("المكتب مغلق في الأوقات التي أستطيع الذهاب فيها", "it's closed whenever I can go"),
 }
+# The population stores helper relations in Jordanian dialect; voices use the فصحى form.
+HELPER_MSA = {"بنتي": "ابنتي", "أخوي": "أخي", "اخوي": "أخي", "أبوي": "أبي", "ابوي": "أبي", "صاحبي": "صديقي"}
+
+
+def msa_helper(rel_ar: str | None) -> str | None:
+    return HELPER_MSA.get(rel_ar, rel_ar) if rel_ar else None
+
+
 GROUP_LABELS = {
     "elderly": ("كبار السن", "elderly"), "disabled": ("ذوو الإعاقة", "disabled"),
     "no_car": ("من لا يملكون سيارة", "no car"), "offline": ("غير المتصلين رقمياً", "offline"),
@@ -37,7 +45,7 @@ GROUP_LABELS = {
 }
 MODE_LABELS = {
     "car": ("سيارة", "car"), "helper_car": ("مع أحد الأقارب بالسيارة", "driven by family"),
-    "bus": ("باص", "bus"), "taxi": ("تكسي", "taxi"), "online": ("أونلاين", "online"),
+    "bus": ("حافلة", "bus"), "taxi": ("سيارة أجرة", "taxi"), "online": ("عبر الإنترنت", "online"),
 }
 STATUS_LABELS = {"served": ("تمت الخدمة", "Served"), "hardship": ("بصعوبة", "Hardship"), "left_out": ("مستبعد", "Left out")}
 
@@ -45,6 +53,12 @@ STATUS_LABELS = {"served": ("تمت الخدمة", "Served"), "hardship": ("بص
 def _n(x: float) -> str:
     x = round(float(x), 1)
     return str(int(x)) if x == int(x) else str(x)
+
+
+def _count_ar(x: float, singular: str, plural: str) -> str:
+    """Arabic counted noun: 3-10 take the plural (8 دقائق), everything else the singular (15 دقيقة, 1.5 ساعة)."""
+    v = round(float(x), 1)
+    return f"{_n(v)} {plural if v == int(v) and 3 <= v <= 10 else singular}"
 
 
 def _join_ar(parts: list[str]) -> str:
@@ -56,43 +70,45 @@ def _join_en(parts: list[str]) -> str:
 
 
 def voice(citizen: dict, o: dict) -> tuple[str, str]:
-    """(text_ar first-person, one-line English summary)."""
-    helper_ar = citizen.get("helper_relation_ar") or "واحد من أهلي"
+    """(text_ar first-person in فصحى, one-line English summary)."""
+    helper_ar = msa_helper(citizen.get("helper_relation_ar")) or "أحد أقاربي"
     helper_en = citizen.get("helper_relation_en") or "a relative"
     reasons = o.get("reasons") or []
     r_ar = [REASON_VOICE[r][0] for r in reasons if r in REASON_VOICE]
     r_en = [REASON_VOICE[r][1] for r in reasons if r in REASON_VOICE]
 
     if o["status"] == "left_out":
-        return (f"ما قدرت أخلّص المعاملة: {_join_ar(r_ar)}.",
+        return (f"لم أتمكن من إنجاز المعاملة: {_join_ar(r_ar)}.",
                 f"Couldn't renew: {_join_en(r_en)}.")
 
     if o.get("mode") == "online":
         if o["status"] == "served":
-            return (f"خلّصتها أونلاين من البيت، وكلّفتني {_n(o['cost_jd'])} دينار بس.",
+            return (f"أنجزت المعاملة عبر الإنترنت من البيت، وكلّفتني {_n(o['cost_jd'])} دينار فقط.",
                     f"Renewed online from home for {_n(o['cost_jd'])} JD.")
-        return (f"{helper_ar} خلّصلي ياها أونلاين، لأنه {_join_ar(r_ar)}.",
+        return (f"أنجز {helper_ar} المعاملة عني عبر الإنترنت؛ {_join_ar(r_ar)}.",
                 f"{helper_en.capitalize()} did it online for them because {_join_en(r_en)}.")
 
     mode = o.get("mode")
     transfers = o.get("bus_transfers", 0)
-    how_ar = {"car": "بسيارتي", "taxi": "بالتكسي", "helper_car": f"و{helper_ar} وصّلني بالسيارة",
-              "bus": ["بباص واحد", "بباصين", "بتلات باصات"][min(transfers, 2)]}.get(mode, "")
+    how_ar = {"car": "بسيارتي", "taxi": "بسيارة أجرة", "helper_car": f"وأوصلني {helper_ar} بالسيارة",
+              "bus": ["بحافلة واحدة", "بحافلتين", "بثلاث حافلات"][min(transfers, 2)]}.get(mode, "")
     how_en = {"car": "by car", "taxi": "by taxi", "helper_car": f"driven by {helper_en}",
               "bus": ["by one bus", "by two buses", "by three buses"][min(transfers, 2)]}.get(mode, "")
-    day_ar = f" يوم {DAY_AR[o['visit_day']]}" if o.get("visit_day") else ""
-    day_en = f" on {DAY_EN[o['visit_day']]}" if o.get("visit_day") else ""
-    ar = (f"رحت على {o['channel_name_ar']}{day_ar} {how_ar}، الطريق {_n(o['travel_minutes'])} دقيقة، "
-          f"وراح عليّ {_n(o['hours_lost'])} ساعات و{_n(o['cost_jd'])} دينار.")
-    en = (f"Went to the {o['channel_name_en']}{day_en} {how_en}: {_n(o['travel_minutes'])} min each way, "
+    day = o.get("visit_day")
+    # Mobile-unit channel names already include their day ("... يوم السبت"); don't repeat it.
+    day_ar = f" يوم {DAY_AR[day]}" if day and DAY_AR[day] not in (o.get("channel_name_ar") or "") else ""
+    day_en = f" on {DAY_EN[day]}" if day and DAY_EN[day] not in (o.get("channel_name_en") or "") else ""
+    ar = (f"ذهبت إلى {o['channel_name_ar']}{day_ar} {how_ar}. استغرق الطريق {_count_ar(round(o['travel_minutes']), 'دقيقة', 'دقائق')}، "
+          f"وخسرت {_count_ar(o['hours_lost'], 'ساعة', 'ساعات')} و{_count_ar(o['cost_jd'], 'دينار', 'دنانير')} في المجمل.")
+    en = (f"Went to the {o['channel_name_en']}{day_en} {how_en}: {round(o['travel_minutes'])} min each way, "
           f"{_n(o['hours_lost'])} h and {_n(o['cost_jd'])} JD in total.")
     if o.get("work_hours_missed"):
-        ar += f" وغبت عن شغلي {_n(o['work_hours_missed'])} ساعات."
+        ar += f" وتغيّبت عن عملي {_count_ar(o['work_hours_missed'], 'ساعة', 'ساعات')}."
         en += f" Missed {_n(o['work_hours_missed'])} h of work."
     if o["status"] == "hardship":
         extra = [x for x in reasons if x != "HOURS_CONFLICT_WORK"]
         if extra:
-            ar += f" وكمان {_join_ar([REASON_VOICE[r][0] for r in extra])}."
+            ar += f" إضافة إلى ذلك: {_join_ar([REASON_VOICE[r][0] for r in extra])}."
             en += f" Also, {_join_en([REASON_VOICE[r][1] for r in extra])}."
     return ar, en
 

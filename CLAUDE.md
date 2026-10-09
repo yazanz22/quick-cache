@@ -21,7 +21,7 @@ The engine runs every citizen through the service under the new policy. The map 
 - 🟡 served with hardship
 - 🔴 left out
 
-Click any citizen and they explain their outcome **in Jordanian Arabic**, e.g. *"بدي باصين ونص نهار، وابني ما بقدر ياخد إجازة يوصلني"* ("I'd need two buses and half a day, and my son can't take a day off to drive me").
+Click any citizen and they explain their outcome **in clear Modern Standard Arabic (فصحى)**, e.g. *"أحتاج إلى حافلتين ونصف يوم، وابني لا يستطيع أخذ إجازة ليوصلني"* ("I'd need two buses and half a day, and my son can't take a day off to drive me").
 
 Nas then **finds fixes**. The engine searches a grid of candidate fixes and verifies each one; the AI explains them and proposes one more that nobody listed, which the engine also verifies.
 
@@ -57,7 +57,7 @@ Nas then **finds fixes**. The engine searches a grid of candidate fixes and veri
   It also **searches the fix grid** (§6.4) and runs the **robustness check** (§6.5).
 - The **AI** has exactly four jobs:
   1. **Parse** a free-text policy (Arabic or English) into a Policy, or say honestly that it can't be modeled.
-  2. **Voice** a citizen's outcome in Jordanian Arabic, using *only* the numbers the engine computed.
+  2. **Voice** a citizen's outcome in Modern Standard Arabic (فصحى), using *only* the numbers the engine computed.
   3. **Report**: write the official-facing impact summary (Arabic + English).
   4. **Explain and propose fixes**: explain the engine's top 3 fixes, and propose **one** extra policy not on the grid. That extra policy is shown only if the engine confirms it beats the best grid fix.
 
@@ -73,7 +73,7 @@ Nas then **finds fixes**. The engine searches a grid of candidate fixes and veri
 - **Backend:** Python 3.11+, FastAPI, Pydantic v2, Uvicorn. Plain Python is enough; NumPy optional.
 - **AI:** provider-agnostic, chosen by `LLM_PROVIDER` in `.env`
   - **`gemini` (default, free tier):** the `google-genai` SDK with a free Google AI Studio key. Use Flash-class models; Pro models are not reliably on the free tier.
-  - **`groq` (fallback, free tier):** Groq's OpenAI-compatible endpoint via the `openai` SDK with `base_url="https://api.groq.com/openai/v1"`. Fast, but weaker at Jordanian dialect, so use it for JSON tasks, not voices.
+  - **`groq` (fallback, free tier):** Groq's OpenAI-compatible endpoint via the `openai` SDK with `base_url="https://api.groq.com/openai/v1"`. Fast, but weaker at natural Arabic, so prefer it for JSON tasks, not voices.
   - **`anthropic` (optional, paid):** the `anthropic` SDK with a Claude Console key.
   - Two model slots: `MODEL_FAST` (voices) and `MODEL_SMART` (parse, report, fixes). Model IDs live in `.env`, never hard-coded.
   - `llm/client.py` exposes one interface, `complete(task, system, user, json_schema=None, smart=False) -> str`, with one small adapter per provider. Nothing outside `llm/` imports a provider SDK.
@@ -376,7 +376,7 @@ The frontend calls `/fixgrid` first and renders the engine fixes **immediately**
 Every AI task except voices returns JSON, validated with Pydantic. On a validation failure, retry once with the error message, then use the fallback (§8.6).
 
 ### 8.2 Voices
-- Jordanian colloquial Arabic (عامية أردنية), first person, 1–3 sentences.
+- Clear, simple Modern Standard Arabic (فصحى), first person, 1–3 sentences. (Team decision: easier for the model to write correctly and for judges and officials to read than Jordanian dialect.)
 - Concrete details: buses, hours, dinars, the helper.
 - Respectful, never stereotyping or mocking.
 - The prompt receives the citizen profile **and** the engine's outcome: status, reasons, `channel_name_ar`, mode, `bus_transfers`, `visit_day`, minutes, cost and work hours missed. It must not invent numbers, places or people. It may mention only `helper_relation_ar` as a family member. "Two buses" is allowed only if `bus_transfers` says so.
@@ -403,7 +403,7 @@ Extract every number from AI text (Arabic-Indic and Western digits). Each must m
 
 ### 8.6 Fallbacks (`llm/fallbacks.py`)
 Every AI task has a deterministic template, filled from engine output and reason codes, in Arabic and English:
-- **Voice:** e.g. "ما قدرت أخلص المعاملة: ما عندي هاتف ذكي والمكتب بعيد ٤٥ دقيقة بالباص." built from reason codes + numbers.
+- **Voice:** e.g. "لم أتمكن من إنجاز المعاملة: لا أملك هاتفاً ذكياً، والمكتب بعيد ٤٥ دقيقة بالحافلة." built from reason codes + numbers.
 - **Fix explanation:** from the fix id and its drops, e.g. "Saturday mobile van in Marka: 9.1 pts fewer people left out, mostly elderly and no-car."
 - **Report:** a short templated summary of KPI deltas and the top-2 worst groups.
 - **Parse:** "Couldn't understand that. Try the controls on the left." (no fallback policy).
@@ -485,7 +485,7 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 
 **Side tasks (any one person, ~30 min each, early):**
 - Source the public figures for `anchors.json` (§6.3).
-- A native Jordanian Arabic speaker reviews ~20 generated voices in hour 3 and fixes the prompt.
+- A native Arabic speaker reviews ~20 generated voices in hour 3 and fixes the prompt.
 - With their consent, ask ~5 elderly or no-car relatives in east Amman: "If ID renewal needed an online appointment, could you book it alone?" Put their anonymized answers next to the simulated voices on one slide. No names, no personal details.
 
 ## 12. Build plan (we start at H1; ~10 hours)

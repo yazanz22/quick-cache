@@ -1,18 +1,19 @@
 {
  "task": "voice",
- "output": "ما عندي تلفون ذكي ولا بعرف بهاي الأمور، فاضطريت أجيب ابن يساعدني ودفعنا دينارين عشان نخلص المعاملة.",
+ "output": "واجهت صعوبة في تجديد هويتي عبر الإنترنت لأنني لا أملك هاتفًا ذكيًا ولا أعرف كيفية استخدام الخدمة الرقمية. اعتمدت على ابني لمساعدتي، ودفعت تكلفة إجمالية بلغت 2 دينار.",
  "meta": {
   "provider": "gemini",
-  "model": "gemini-3.5-flash-lite",
-  "seconds": 1.16,
-  "ts": "2026-10-09T17:10:41"
+  "model": "gemini-3.6-flash",
+  "seconds": 1.77,
+  "ts": "2026-10-09T17:17:52"
  },
  "inputs": {
+  "register": "msa",
   "profile": {
-   "age": 67,
-   "gender": "m",
-   "area_ar": "الوحدات",
-   "mobility": "wheelchair",
+   "age": 71,
+   "gender": "f",
+   "area_ar": "وسط البلد",
+   "mobility": "none",
    "has_car": false,
    "has_smartphone": false,
    "digital_literacy": "low",

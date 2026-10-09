@@ -44,3 +44,20 @@ def test_rate_limits_put_models_on_cooldown():
     assert daily[1] == "daily limit" and daily[0] > time.time() + 60
     assert minute[1] == "rate limit" and busy[1] == "overloaded"
     assert client._classify(ValueError("bad json")) is None
+
+
+def test_voice_style_checks():
+    assert checks.voice_style_problems("دفعت 4.5 ليرات", "ابني")
+    assert checks.voice_style_problems("اضطريت أجيب ابن يساعدني", "ابني")
+    assert checks.voice_style_problems("ابني ساعدني ودفعت دينارين", "ابني") == []
+    assert checks.voice_style_problems("ابن عمي", None) == []
+
+
+def test_voice_template_does_not_repeat_the_day_and_counts_nouns():
+    c = {"helper_relation_ar": "ابني", "helper_relation_en": "my son"}
+    o = {"status": "served", "mode": "taxi", "bus_transfers": 0, "visit_day": "sat", "travel_minutes": 8.0,
+         "cost_jd": 3.7, "hours_lost": 1.3, "work_hours_missed": 0.0, "reasons": [],
+         "channel_name_ar": "الوحدة المتنقلة في ماركا يوم السبت", "channel_name_en": "Mobile unit in Marka on Saturday"}
+    ar, en = fallbacks.voice(c, o)
+    assert ar.count("السبت") == 1 and en.count("Saturday") == 1
+    assert "8 دقائق" in ar and "1.3 ساعة" in ar
