@@ -19,8 +19,6 @@ def policy_errors(p: Policy) -> list[str]:
         for d, (op, cl) in o.schedule.items():
             if not (_hhmm(op) and _hhmm(cl) and op < cl):
                 errs.append(f"bad hours for office {o.id} on {d}: {op}-{cl}")
-    if len({o.id for o in p.offices}) != len(p.offices):
-        errs.append("office ids must be unique")
     for m in p.mobile_units:
         if m.area not in areas:
             errs.append(f"unknown area {m.area!r}; valid: {sorted(areas)}")

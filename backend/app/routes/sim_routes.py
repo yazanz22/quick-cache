@@ -6,6 +6,7 @@ import json
 
 from fastapi import APIRouter, HTTPException
 
+from ..config import SCENARIOS_DIR
 from ..models import (CompareRequest, CompareResult, FixCandidate, Policy, SensitivityRequest, SensitivityResult,
                       SimResult, SimulateRequest)
 from ..sim import assumptions as A
@@ -45,6 +46,17 @@ def get_sites():
 def nearest_site(lat: float, lng: float):
     """Snap a dragged office pin to the nearest candidate site."""
     return min(world.sites().values(), key=lambda s: haversine_km(lat, lng, s["lat"], s["lng"]))
+
+
+@router.get("/heroes")
+def get_heroes():
+    """Hero citizens for the demo path (scenarios/heroes.json, made by scripts/pick_heroes.py)."""
+    p = SCENARIOS_DIR / "heroes.json"
+    if not p.exists():
+        return []
+    h = json.loads(p.read_text(encoding="utf-8"))
+    return [{"id": x["citizen_id"], "note_ar": x.get("note_ar"), "note_en": x.get("note_en") or x.get("wanted"),
+             "profile": x.get("profile")} for x in h.get("heroes", [])]
 
 
 @router.get("/areas")

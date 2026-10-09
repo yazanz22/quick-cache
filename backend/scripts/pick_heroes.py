@@ -32,6 +32,14 @@ WANTED = [
 ]
 
 
+NOTE_AR = {
+    "Elderly woman in east Amman with no car; a family member helps her": "مسنّة في شرق عمّان بلا سيارة، يساعدها أحد أفراد عائلتها",
+    "Wheelchair user": "مستخدم كرسي متحرك",
+    "Factory worker on an early shift": "عامل في وردية صباحية مبكرة",
+    "Offline resident with nobody to help": "مقيم غير متصل رقمياً وليس لديه من يساعده",
+}
+
+
 def profile(c: dict) -> str:
     """Factual one-liner, so the demo script never describes a hero wrongly."""
     where = c.get("neighbourhood") or c["area"]
@@ -70,7 +78,7 @@ def main(scenario_id: str | None = None) -> None:
             continue
         i, c, strict = pick
         used.add(c["id"])
-        heroes.append({"citizen_id": c["id"], "wanted": note, "profile": profile(c), "name_en": c["name_en"], "area": c["area"],
+        heroes.append({"citizen_id": c["id"], "wanted": note, "note_en": note, "note_ar": NOTE_AR.get(note), "profile": profile(c), "name_en": c["name_en"], "area": c["area"],
                        "baseline": base[i]["status"], "scenario": scen[i]["status"], "with_top_fix": fix[i]["status"],
                        "recovers_with_fix": strict})
         print(f"{c['id']} {c['name_en']:12s} {c['area']:16s} {base[i]['status']:>9} -> {scen[i]['status']:<9} -> fix: {fix[i]['status']:<9} | {profile(c)}")

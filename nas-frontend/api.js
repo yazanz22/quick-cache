@@ -139,6 +139,17 @@
     return Object.assign({}, f, { title_ar: f.title_ar || f.id, title_en: f.title_en || f.id, source: f.source || "engine_grid",
       left_out_drop: +f.left_out_drop || 0, hardship_drop: +f.hardship_drop || 0 });
   }
+  // SensitivityResult: our backend sends details[] = [{param, factor, top2, fix_still_helps}, ...] with a
+  // leading "reference" row; the UI's per-run table wants detail[] = [{key, factor, top2, fixHelps}].
+  // The raw fields stay on the object because /report gets the result back unchanged.
+  function normSensitivity(r) {
+    if (r && !r.detail && Array.isArray(r.details)) {
+      r.detail = r.details.filter(function (d) { return d.param !== "reference"; })
+        .map(function (d) { return { key: d.param, factor: d.factor, top2: d.top2 || [], fixHelps: d.fix_still_helps }; });
+    }
+    return r;
+  }
+
   const fixList = function (raw) { return (arr(raw, "fixes") || arr(raw, "top") || arr(raw, "candidates") || []).map(normFix); };
 
   /* ---------- endpoints ---------- */
@@ -158,8 +169,12 @@
     fixgrid: function (baseline, scenario) { return post("/fixgrid", { baseline: baseline, scenario: scenario }).then(fixList); },
     // -> { fixes: FixCandidate[], source }  (explanations filled; may include one ai_proposed fix)
     fixes: function (baseline, scenario) { return post("/fixes", { baseline: baseline, scenario: scenario }).then(function (r) { return { fixes: fixList(r), source: r.source || null }; }); },
-    // -> SensitivityResult (+ optional .detail[] rows if the backend sends them)
-    sensitivity: function (baseline, scenario, fix) { return post("/sensitivity", { baseline: baseline, scenario: scenario, fix: fix }); },
+    // -> SensitivityResult (+ .detail[] rows {key, factor, top2, fixHelps} for the per-run table)
+    // Our backend takes the fix's Policy (models.py SensitivityRequest), so unwrap a FixCandidate here.
+    sensitivity: function (baseline, scenario, fix) {
+      const fixPolicy = fix && fix.policy ? fix.policy : fix;
+      return post("/sensitivity", { baseline: baseline, scenario: scenario, fix: fixPolicy }).then(normSensitivity);
+    },
     // -> ParseResult
     parse: function (text, policy, lang) { return post("/policy/parse", { text: text, current_policy: policy, lang: lang }); },
     // -> { text_ar, source }
