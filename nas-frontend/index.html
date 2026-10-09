@@ -169,6 +169,10 @@ textarea.input { height: auto; min-height: 76px; padding: 9px 10px; resize: vert
 .roadchip:disabled { opacity: .4; }
 .road-closed { stroke: var(--left); stroke-dasharray: 8 6; stroke-linecap: round; fill: none; }
 .detour-sub { margin-top: 8px; color: var(--ink-2); }
+.addoffice { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.sec-title .x { border: 0; background: transparent; color: var(--muted); font-size: 15px; width: 28px; height: 28px; border-radius: 6px; }
+.sec-title .x:hover { background: var(--surface-3); color: var(--left); }
+.gchip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--ink); font-weight: 600; }
 .seg-div { width: 1px; align-self: stretch; margin: 4px 4px; background: var(--line-strong); }
 .dot.d-none { fill: var(--faint); fill-opacity: .45; stroke: var(--surface); }
 .dot.d-skip { fill: var(--faint); fill-opacity: .15; stroke-opacity: 0; }

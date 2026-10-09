@@ -6,7 +6,8 @@
   const DAYS = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
   const GROUP_ORDER = ["elderly", "disabled", "no_car", "offline", "low_income", "worker", "student"];
   const REASON_ICON = { TOO_FAR: "ph-map-pin-line", NO_TRANSPORT: "ph-bus", HOURS_CONFLICT_WORK: "ph-clock-countdown", NO_SMARTPHONE: "ph-device-mobile-slash", LOW_DIGITAL_LITERACY: "ph-cursor-click", NOT_WHEELCHAIR_ACCESSIBLE: "ph-wheelchair", TOO_EXPENSIVE: "ph-coins", OFFICE_CLOSED_ON_AVAILABLE_DAYS: "ph-calendar-x" };
-  const MODE_ICON = { car: "ph-car-profile", helper_car: "ph-car-profile", bus: "ph-bus", taxi: "ph-taxi", online: "ph-globe-simple" };
+  const MODE_ICON = { car: "ph-car-profile", helper_car: "ph-car-profile", bus: "ph-bus", taxi: "ph-taxi", online: "ph-globe-simple", home: "ph-house-line" };
+  const PROTECT_GROUPS = ["elderly", "disabled", "no_car", "offline", "low_income", "worker", "student"];
 
   const $ = function (id) { return document.getElementById(id); };
   const esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]; }); };
@@ -29,6 +30,7 @@
     // reference data (GET)
     pop: [], byId: new Map(), sites: {}, areas: {}, scenarios: [], assumptions: [], heroes: [], roads: [], roadsOpen: false,
     daily: null, mapMode: "service",
+    feePct: 100, voucherJd: 3, newOfficeArea: null,
     baseline: null, policy: null, preset: null,
     prePolicy: null, preKpis: null, appliedFix: null,
     view: "after", reason: null, sel: null, tab: "impact",
@@ -206,6 +208,7 @@
       if (R.has("NO_TRANSPORT") && why.length < 2) why.push("no transport");
       return "Left out: " + why.slice(0, 3).join(", ") + ".";
     }
+    if (o.mode === "home") return "Served at home: a clerk came, " + f1(o.hours_lost) + " h waiting at home, " + (o.cost_jd >= 0.05 ? f1(o.cost_jd) + " JD." : "free of charge.");
     if (o.mode === "online") return o.status === "hardship" ? "Hardship: done online with help from " + (c.helper_relation_en || "a helper") + "." : "Served: done online from home.";
     const m = o.mode === "bus" ? ((o.bus_transfers || 0) + 1) + " bus" + ((o.bus_transfers || 0) ? "es" : "") + ", " + Math.round(o.travel_minutes) + " min each way" : (DICT.en["m_" + o.mode] || o.mode || "").toLowerCase();
     let s = (o.status === "served" ? "Served: " : "Hardship: ") + (o.channel_name_en || "") + (o.visit_day ? " on " + DICT.en["day_" + o.visit_day] : "") + (m ? ", " + m : "");
@@ -264,7 +267,7 @@
         const first = days.filter(function (d) { return d !== "thu"; })[0] || days[0];
         const hrs = first ? o.schedule[first] : ["08:00", "15:00"];
         const lateThu = o.schedule.thu && o.schedule.thu[1] === "19:00";
-        h += '<div class="sec"><h3 class="sec-title"><span>' + t("office") + (p.offices.length > 1 ? " " + (i + 1) : "") + '</span><i class="ph ph-bank" aria-hidden="true"></i></h3>' +
+        h += '<div class="sec"><h3 class="sec-title"><span><i class="ph ph-bank" aria-hidden="true"></i> ' + t("office") + (p.offices.length > 1 ? " " + (i + 1) : "") + '</span><button class="x" data-orm="' + i + '" aria-label="' + t("remove_office") + '" title="' + t("remove_office") + '"><i class="ph ph-trash"></i></button></h3>' +
           '<div class="field"><label class="label" for="site' + i + '">' + t("site") + '</label><select class="input" id="site' + i + '" data-site="' + i + '">' +
           Object.keys(S.sites).map(function (s) { return '<option value="' + esc(s) + '"' + (s === o.site_id ? " selected" : "") + ">" + esc(siteName(s)) + "</option>"; }).join("") +
           '</select><p class="help" style="margin:0">' + t("drag_hint") + "</p></div>" +
@@ -274,10 +277,15 @@
           '<div class="field" style="margin:0"><label class="label" for="cl' + i + '">' + t("closes") + '</label><input class="input num" type="time" step="1800" id="cl' + i + '" data-close="' + i + '" value="' + hrs[1] + '"></div></div>' +
           sw("late:" + i, lateThu, t("late_thu"), !o.schedule.thu) + sw("acc:" + i, o.wheelchair_accessible !== false, t("accessible")) + "</div>";
       });
+      h += '<div class="sec"><div class="addoffice">' + (p.offices.length ? "" : '<div class="empty" style="grid-column:1/-1">' + t("no_offices") + "</div>") +
+        '<select class="input" id="newOfficeArea" aria-label="' + t("add_office_in") + '">' + areaOptions(S.newOfficeArea) + '</select>' +
+        '<button class="btn sm ghost" id="addOffice"><i class="ph ph-plus"></i>' + t("add_office") + "</button></div></div>";
     }
 
     h += '<div class="sec"><h3 class="sec-title">' + t("rules") + "</h3>" +
       sw("online", p.online_enabled, t("online_enabled"), p.online_only) + sw("onlineOnly", p.online_only, t("online_only")) + sw("appt", p.appointment_required, t("appointment"), p.online_only) + "</div>";
+
+    h += protectHTML(p);
 
     if (S.roads.length) {
       const closed = p.closed_roads || [], open = S.roadsOpen || closed.length > 0;
@@ -303,6 +311,35 @@
     const focusId = document.activeElement && document.activeElement.id;
     el.innerHTML = h; el.scrollTop = sc;
     if (focusId === "nl") { const nl = $("nl"); nl.focus(); nl.setSelectionRange(nl.value.length, nl.value.length); }
+  }
+
+  // Group chips for one protection; `on` is the list of selected groups.
+  function groupChips(kind, on, dis) {
+    return '<div class="roadchips">' + PROTECT_GROUPS.map(function (g) {
+      return '<button class="roadchip gchip" data-gx="' + kind + ":" + g + '" aria-pressed="' + (on.indexOf(g) >= 0) + '"' + (dis ? " disabled" : "") + ">" + esc(groupLabel(g)) + "</button>";
+    }).join("") + "</div>";
+  }
+  function stepper(attr, val, unit) {
+    return '<div class="stepper"><button ' + attr + '="-1" aria-label="-">−</button><output class="num">' + val + (unit || "") + '</output><button ' + attr + '="1" aria-label="+">+</button></div>';
+  }
+  function protectHTML(p) {
+    const fd = p.fee_discounts || {}, fdGroups = Object.keys(fd), pct = fdGroups.length ? fd[fdGroups[0]] : S.feePct;
+    const v = (p.transport_vouchers || [])[0], vGroups = v ? v.groups : [], amt = v ? v.amount_jd : S.voucherJd;
+    const hv = p.home_visits, inPerson = !p.online_only;
+    let h = '<div class="sec"><h3 class="sec-title"><span><i class="ph ph-hand-heart" aria-hidden="true"></i> ' + t("protect") + "</span></h3>" +
+      '<p class="help" style="margin:-4px 0 10px">' + t("protect_help") + "</p>";
+    h += '<div class="field"><span class="label">' + t("walkin") + "</span>" + groupChips("exempt", p.appointment_exempt_groups || [], !p.appointment_required || !inPerson) +
+      (p.appointment_required ? "" : '<p class="help" style="margin:0">' + t("walkin_help") + "</p>") + "</div>";
+    h += '<div class="field"><span class="label">' + t("fee_off") + "</span>" + groupChips("fee", fdGroups) +
+      '<div class="row2"><span class="label" style="align-self:center">' + t("fee_pct") + "</span>" + stepper("data-feepct", pct, "%") + "</div></div>";
+    h += '<div class="field"><span class="label">' + t("voucher") + "</span>" + groupChips("voucher", vGroups, !inPerson) +
+      '<div class="row2"><span class="label" style="align-self:center">' + t("voucher_amt") + "</span>" + stepper("data-vjd", amt) + "</div></div>";
+    h += sw("home", !!hv, t("home_visits"), !inPerson);
+    if (hv) h += '<div class="field">' + groupChips("home", hv.groups || []) +
+      '<div class="row2"><span class="label" style="align-self:center">' + t("home_slots") + "</span>" + stepper("data-hslots", hv.slots) + "</div>" +
+      '<p class="help" style="margin:0">' + t("home_help") + "</p></div>";
+    h += sw("hybrid", !!p.hybrid_pickup, t("hybrid"), !inPerson) + '<p class="help" style="margin:0">' + t("hybrid_help") + "</p>";
+    return h + "</div>";
   }
 
   function renderParse() {
@@ -525,7 +562,7 @@
       const fact = function (k, val) { return '<div class="fact"><small>' + t(k) + "</small><b>" + val + "</b></div>"; };
       const facts = [fact("channel", esc(loc(o, "channel_name") || o.channel || "")),
         fact("mode", '<i class="ph ' + (MODE_ICON[o.mode] || "ph-dot") + '"></i> ' + t("m_" + o.mode) + (o.mode === "bus" ? ' <span class="num">(' + ((o.bus_transfers || 0) + 1) + ")</span>" : ""))];
-      if (o.mode !== "online") facts.push(fact("visit_day", o.visit_day ? dayName(o.visit_day) : "-"), fact("travel", '<span class="num">' + Math.round(o.travel_minutes || 0) + "</span> " + t("min")));
+      if (o.mode !== "online" && o.mode !== "home") facts.push(fact("visit_day", o.visit_day ? dayName(o.visit_day) : "-"), fact("travel", '<span class="num">' + Math.round(o.travel_minutes || 0) + "</span> " + t("min")));
       facts.push(fact("hours_lost", '<span class="num">' + f1(o.hours_lost) + "</span> " + t("hrs")), fact("cost", '<span class="num">' + f1(o.cost_jd) + "</span> " + t("jd")));
       h += '<div class="facts">' + facts.join("") + "</div>";
       if (o.detour_minutes > 0) h += '<div class="facts" style="grid-template-columns:1fr"><div class="fact" style="border:0"><small>' + t("detour") + '</small><b><span class="num">+' + f1(o.detour_minutes) + "</span> " + t("min") + " · " + esc(roadName(o.detour_road)) + "</b></div></div>";
@@ -585,6 +622,8 @@
     let h = '<div class="sec"><div class="kpis">' + [["pct_served", "served", false], ["pct_hardship", "hardship", true], ["pct_left_out", "left_out", true]].map(function (x) {
       return '<div class="kpi"><div class="kpi-label"><span class="sw-dot ' + x[1] + '"></span>' + t(x[1]) + '</div><div class="kpi-val num">' + f1(K[x[0]]) + "<small>%</small></div>" + (showD ? delta(D[x[0]], x[2]) : '<span class="delta flat">' + (S.view === "before" ? t("step_baseline") : t("vs_baseline")) + "</span>") + "</div>";
     }).join("") + "</div>";
+    const hvNow = viewPolicy().home_visits;
+    if (hvNow) h += '<div class="kpi-sub detour-sub"><span><i class="ph ph-house-line"></i> ' + t("home_used") + ' <b class="num">' + (K.n_home_visits || 0) + "</b> / " + hvNow.slots + "</span></div>";
     const closedNow = (viewPolicy().closed_roads || []).length;
     if (closedNow) h += '<div class="kpi-sub detour-sub"><span><i class="ph ph-traffic-cone"></i> ' + t("detour_kpi") + ' <b class="num">' + (K.n_detour || 0) + "</b> " + t("people") + (K.n_detour ? " · " + t("detour_avg", { m: '<b class="num">' + f1(K.avg_detour_min) + "</b>" }) : "") + "</span></div>";
     h += '<div class="kpi-sub"><span>' + t("avg_hours") + ' <b class="num">' + f1(K.avg_hours_lost) + "</b> " + t("hrs") + " " + (showD ? delta(D.avg_hours_lost, true, t("hrs")) : "") + "</span><span>" + t("avg_cost") + ' <b class="num">' + f1(K.avg_cost_jd) + "</b> " + t("jd") + " " + (showD ? delta(D.avg_cost_jd, true, t("jd")) : "") + "</span></div>";
@@ -855,6 +894,8 @@
           if (o.schedule.thu) o.schedule.thu = [o.schedule.thu[0], on ? "19:00" : (Object.keys(o.schedule).filter(function (d) { return d !== "thu"; }).map(function (d) { return o.schedule[d][1]; })[0] || "15:00")];
         }
         else if (id.indexOf("acc:") === 0) p.offices[+id.slice(4)].wheelchair_accessible = on;
+        else if (id === "home") p.home_visits = on ? { groups: ["disabled", "elderly"], slots: 20 } : null;
+        else if (id === "hybrid") p.hybrid_pickup = on;
       }, { now: true });
     }
     if ((el = q("[data-day]"))) {
@@ -874,6 +915,51 @@
         p.closed_roads = c; S.roadsOpen = true;
       }, { now: true });
     }
+    if ((el = q("[data-gx]"))) {
+      const parts = el.dataset.gx.split(":"), kind = parts[0], g = parts[1];
+      const toggle = function (list) { const i = list.indexOf(g); if (i >= 0) list.splice(i, 1); else list.push(g); return list; };
+      return edit(function (p) {
+        if (kind === "exempt") p.appointment_exempt_groups = toggle((p.appointment_exempt_groups || []).slice());
+        else if (kind === "fee") {
+          const fd = p.fee_discounts || {}, pct = Object.keys(fd).length ? fd[Object.keys(fd)[0]] : S.feePct;
+          if (fd[g] != null) delete fd[g]; else fd[g] = pct;
+          p.fee_discounts = fd;
+        } else if (kind === "voucher") {
+          const v = (p.transport_vouchers || [])[0], gs = toggle(v ? v.groups.slice() : []);
+          p.transport_vouchers = gs.length ? [{ groups: gs, amount_jd: v ? v.amount_jd : S.voucherJd }] : [];
+        } else if (kind === "home" && p.home_visits) {
+          const gs = toggle((p.home_visits.groups || []).slice());
+          if (gs.length) p.home_visits.groups = gs;
+        }
+      }, { now: true });
+    }
+    if ((el = q("[data-feepct]"))) return edit(function (p) {
+      const fd = p.fee_discounts || {}, keys = Object.keys(fd), cur = keys.length ? fd[keys[0]] : S.feePct;
+      S.feePct = Math.min(100, Math.max(25, cur + 25 * +el.dataset.feepct));
+      keys.forEach(function (g) { fd[g] = S.feePct; });
+      p.fee_discounts = fd;
+    });
+    if ((el = q("[data-vjd]"))) return edit(function (p) {
+      const v = (p.transport_vouchers || [])[0], cur = v ? v.amount_jd : S.voucherJd;
+      S.voucherJd = Math.min(20, Math.max(1, cur + +el.dataset.vjd));
+      if (v) p.transport_vouchers = [{ groups: v.groups, amount_jd: S.voucherJd }];
+    });
+    if ((el = q("[data-hslots]"))) return edit(function (p) { if (p.home_visits) p.home_visits.slots = Math.min(200, Math.max(10, p.home_visits.slots + 10 * +el.dataset.hslots)); });
+    if (q("#addOffice")) return edit(function (p) {
+      const area = ($("newOfficeArea") && $("newOfficeArea").value) || Object.keys(S.areas)[0];
+      S.newOfficeArea = area;
+      const ids = Object.keys(S.sites).filter(function (k) { return S.sites[k].area === area; });
+      const site = ids.find(function (k) { return k.indexOf("cspd_") === 0; }) || ids[0];
+      const ref = p.offices[0];
+      const o = { id: "", name_ar: "", name_en: "", site_id: site, wheelchair_accessible: true,
+        schedule: ref ? clone(ref.schedule) : { sun: ["08:30", "15:30"], mon: ["08:30", "15:30"], tue: ["08:30", "15:30"], wed: ["08:30", "15:30"], thu: ["08:30", "15:30"] } };
+      snapOffice(o, site);
+      let id = o.id, n = 2;
+      while (p.offices.some(function (x) { return x.id === id; })) id = o.id + "_" + (n++);
+      o.id = id;
+      p.offices.push(o);
+    }, { now: true });
+    if ((el = q("[data-orm]"))) return edit(function (p) { p.offices.splice(+el.dataset.orm, 1); }, { now: true });
     if (q("#addUnit")) return edit(function (p) {
       p.mobile_units = p.mobile_units || [];
       const used = p.mobile_units.map(function (u) { return u.area + u.day; });
@@ -902,6 +988,7 @@
   document.addEventListener("change", function (e) {
     const el = e.target;
     if (!S.cmp) return;
+    if (el.id === "newOfficeArea") { S.newOfficeArea = el.value; return; }
     if (el.dataset.site !== undefined) return edit(function (p) { snapOffice(p.offices[+el.dataset.site], el.value); }, { now: true });
     if (el.dataset.open !== undefined || el.dataset.close !== undefined) {
       const i = +(el.dataset.open !== undefined ? el.dataset.open : el.dataset.close), isOpen = el.dataset.open !== undefined;
