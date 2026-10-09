@@ -1,0 +1,43 @@
+{
+ "task": "voice",
+ "output": "ما قدرت أجدد الهوية لأنه ما عندي تليفون ذكي وما بعرف استعمله. غير هيك المعاملة غالية كتير علي وأوقات دوامي بتتعارض معهم.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "seconds": 1.18,
+  "ts": "2026-10-09T17:10:42"
+ },
+ "inputs": {
+  "profile": {
+   "age": 74,
+   "gender": "m",
+   "area_ar": "ماركا",
+   "mobility": "none",
+   "has_car": false,
+   "has_smartphone": false,
+   "digital_literacy": "low",
+   "works": true,
+   "work_start": "07:00",
+   "work_end": "16:00",
+   "income_band": "low",
+   "helper_relation_ar": null
+  },
+  "outcome": {
+   "status": "left_out",
+   "reasons": [
+    "NO_SMARTPHONE",
+    "LOW_DIGITAL_LITERACY",
+    "TOO_EXPENSIVE",
+    "HOURS_CONFLICT_WORK"
+   ],
+   "channel_name_ar": null,
+   "mode": null,
+   "bus_transfers": 0,
+   "visit_day_ar": null,
+   "travel_minutes_one_way": 0,
+   "total_cost_jd": 0.0,
+   "total_hours_lost_incl_waiting": 0.0,
+   "work_hours_missed": 0.0
+  }
+ }
+}

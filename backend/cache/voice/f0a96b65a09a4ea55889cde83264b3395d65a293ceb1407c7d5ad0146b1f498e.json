@@ -1,0 +1,38 @@
+{
+ "task": "voice",
+ "output": "الحمد لله قدرت أجدد الهوية عند الوحدة المتنقلة بوسط البلد يوم السبت. رحت بالتاكسي وأخد مني نص نهار و4.5 ليرات مع ابني.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "seconds": 1.15,
+  "ts": "2026-10-09T17:10:48"
+ },
+ "inputs": {
+  "profile": {
+   "age": 67,
+   "gender": "m",
+   "area_ar": "الوحدات",
+   "mobility": "wheelchair",
+   "has_car": false,
+   "has_smartphone": false,
+   "digital_literacy": "low",
+   "works": false,
+   "work_start": null,
+   "work_end": null,
+   "income_band": "middle",
+   "helper_relation_ar": "ابني"
+  },
+  "outcome": {
+   "status": "served",
+   "reasons": [],
+   "channel_name_ar": "الوحدة المتنقلة في وسط البلد يوم السبت",
+   "mode": "taxi",
+   "bus_transfers": 0,
+   "visit_day_ar": "السبت",
+   "travel_minutes_one_way": 15,
+   "total_cost_jd": 4.5,
+   "total_hours_lost_incl_waiting": 1.5,
+   "work_hours_missed": 0.0
+  }
+ }
+}

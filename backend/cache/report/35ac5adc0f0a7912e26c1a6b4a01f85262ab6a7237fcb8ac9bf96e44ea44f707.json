@@ -1,0 +1,97 @@
+{
+ "task": "report",
+ "output": {
+  "summary_ar": "بناءً على محاكاة محددة شملت 1000 من السكان الافتراضيين، تنخفض نسبة المخدومين في السيناريو المقترح بمقدار 5.3% وتزداد المشقة بنسبة 4.4% والمستبعدون بنسبة 0.9%. وتعد فئتا كبار السن والأفراد غير المتصلين بالإنترنت الأكثر تضرراً بزيادة في المشقة بلغت 29.2% و26% على التوالي، وذلك يعود بشكل رئيسي إلى ضعف المعرفة الرقمية وعدم امتلاك هواتف ذكية. أظهرت فحوصات الحساسية استقراراً تاماً حيث تحققت الترتيبات ونجاعة الإصلاحات في جميع الجولات الست. يُنصح في الخطوة التالية بمراجعة الحلول المقترحة لتخفيف العبء عن الفئات الأكثر تأثراً.",
+  "summary_en": "Based on a deterministic simulation of 1000 synthetic population citizens, the proposed policy reduces the served population by 5.3%, while increasing hardship by 4.4% and those left out by 0.9%. The elderly and offline groups are hit hardest, facing hardship increases of 29.2% and 26.0% respectively, primarily driven by low digital literacy and lack of smartphones. Robustness testing confirms high stability, with the group rankings holding true across all 6 sensitivity runs. Policymakers should next examine the suggested fixes to address these specific service barriers."
+ },
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.6-flash",
+  "seconds": 2.81,
+  "ts": "2026-10-09T17:11:09"
+ },
+ "inputs": {
+  "n_citizens": 1000,
+  "baseline_kpis": {
+   "pct_served": 84.9,
+   "pct_hardship": 14.5,
+   "pct_left_out": 0.6,
+   "avg_hours_lost": 0.51,
+   "avg_cost_jd": 2.2
+  },
+  "scenario_kpis": {
+   "pct_served": 79.6,
+   "pct_hardship": 18.9,
+   "pct_left_out": 1.5,
+   "avg_hours_lost": 0.63,
+   "avg_cost_jd": 2.33
+  },
+  "kpi_delta": {
+   "pct_served": -5.3,
+   "pct_hardship": 4.4,
+   "pct_left_out": 0.9,
+   "avg_hours_lost": 0.12,
+   "avg_cost_jd": 0.13
+  },
+  "worst_groups": [
+   "elderly",
+   "offline",
+   "disabled",
+   "low_income",
+   "no_car",
+   "worker"
+  ],
+  "group_deltas": {
+   "elderly": 29.2,
+   "disabled": 14.5,
+   "no_car": 3.8,
+   "offline": 26.0,
+   "low_income": 8.7,
+   "worker": 0.0
+  },
+  "group_scenario": {
+   "elderly": {
+    "hardship": 80.0,
+    "left_out": 7.7
+   },
+   "disabled": {
+    "hardship": 49.3,
+    "left_out": 8.7
+   },
+   "no_car": {
+    "hardship": 21.2,
+    "left_out": 2.8
+   },
+   "offline": {
+    "hardship": 92.6,
+    "left_out": 7.4
+   },
+   "low_income": {
+    "hardship": 27.7,
+    "left_out": 4.0
+   },
+   "worker": {
+    "hardship": 15.9,
+    "left_out": 1.6
+   }
+  },
+  "people_newly_worse": 64,
+  "top_reasons_not_served": {
+   "LOW_DIGITAL_LITERACY": 204,
+   "NO_SMARTPHONE": 44,
+   "TOO_FAR": 28,
+   "HOURS_CONFLICT_WORK": 24
+  },
+  "sensitivity": {
+   "runs": 6,
+   "ranking_held": 6,
+   "fix_still_helps": 6,
+   "stable_top_group": "elderly",
+   "stable_top2": [
+    "elderly",
+    "offline"
+   ],
+   "passed": true
+  }
+ }
+}

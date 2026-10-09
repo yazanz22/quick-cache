@@ -1,0 +1,60 @@
+{
+ "task": "parse",
+ "output": {
+  "status": "unsupported",
+  "policy": null,
+  "changes_ar": [],
+  "changes_en": [],
+  "message_ar": "لا يمكنني نمذجة الإعفاءات أو الرسوم المختلفة لفئات معينة مثل كبار السن. يمكنني فقط تغيير الرسوم العامة لجميع المراجعين.",
+  "message_en": "I cannot model fee waivers or different fees for specific groups like senior citizens. I can only change the standard fee for all applicants."
+ },
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "seconds": 1.42,
+  "ts": "2026-10-09T17:09:38"
+ },
+ "inputs": {
+  "text": "خلوها مجانيه لكبار السن",
+  "current_policy": {
+   "service": "id_renewal",
+   "offices": [
+    {
+     "id": "office_main",
+     "name_ar": "مكتب الأحوال المدنية - وسط البلد",
+     "name_en": "Civil Status office - Downtown",
+     "site_id": "site_downtown",
+     "schedule": {
+      "sun": [
+       "08:00",
+       "15:00"
+      ],
+      "mon": [
+       "08:00",
+       "15:00"
+      ],
+      "tue": [
+       "08:00",
+       "15:00"
+      ],
+      "wed": [
+       "08:00",
+       "15:00"
+      ],
+      "thu": [
+       "08:00",
+       "15:00"
+      ]
+     },
+     "wheelchair_accessible": true
+    }
+   ],
+   "online_enabled": true,
+   "online_only": false,
+   "mobile_units": [],
+   "appointment_required": false,
+   "fee_jd": 2.0,
+   "visits_required": 1
+  }
+ }
+}

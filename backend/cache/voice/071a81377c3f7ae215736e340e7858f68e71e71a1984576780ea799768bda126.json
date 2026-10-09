@@ -1,0 +1,38 @@
+{
+ "task": "voice",
+ "output": "روحت على الوحدة المتنقلة في وسط البلد يوم السبت بالتكسي ودفعت 4 دنانير، والحمد لله خلصت اموري بسهولة وبدون ما أتعطل عن شغلي.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "seconds": 1.29,
+  "ts": "2026-10-09T17:10:50"
+ },
+ "inputs": {
+  "profile": {
+   "age": 74,
+   "gender": "m",
+   "area_ar": "ماركا",
+   "mobility": "none",
+   "has_car": false,
+   "has_smartphone": false,
+   "digital_literacy": "low",
+   "works": true,
+   "work_start": "07:00",
+   "work_end": "16:00",
+   "income_band": "low",
+   "helper_relation_ar": null
+  },
+  "outcome": {
+   "status": "served",
+   "reasons": [],
+   "channel_name_ar": "الوحدة المتنقلة في وسط البلد يوم السبت",
+   "mode": "taxi",
+   "bus_transfers": 0,
+   "visit_day_ar": "السبت",
+   "travel_minutes_one_way": 8,
+   "total_cost_jd": 3.7,
+   "total_hours_lost_incl_waiting": 1.3,
+   "work_hours_missed": 0.0
+  }
+ }
+}

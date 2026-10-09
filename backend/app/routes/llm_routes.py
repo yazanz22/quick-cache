@@ -46,3 +46,10 @@ def get_labels():
     return {"reasons": pack(fallbacks.REASON_LABELS), "groups": pack(fallbacks.GROUP_LABELS),
             "modes": pack(fallbacks.MODE_LABELS), "statuses": pack(fallbacks.STATUS_LABELS),
             "days": {d: {"ar": world.DAY_AR[d], "en": world.DAY_EN[d]} for d in world.DAY_AR}}
+
+
+@router.get("/llm/status")
+def llm_status():
+    """Configured model chains, calls per model since start, and which models are cooling down."""
+    from ..llm import client
+    return client.status()

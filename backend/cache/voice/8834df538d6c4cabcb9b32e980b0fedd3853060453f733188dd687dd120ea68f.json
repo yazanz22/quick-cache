@@ -1,0 +1,38 @@
+{
+ "task": "voice",
+ "output": "الحمد لله قدرت أجدد هويتي بالوحدة المتنقلة عنا بيوم السبت بكل سهولة وما أخذ مني الموضوع غير ساعة ونص وطريق السيارة ما كلفني إلا دينارين وثلث.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "seconds": 1.31,
+  "ts": "2026-10-09T17:11:06"
+ },
+ "inputs": {
+  "profile": {
+   "age": 63,
+   "gender": "f",
+   "area_ar": "الوحدات",
+   "mobility": "none",
+   "has_car": true,
+   "has_smartphone": true,
+   "digital_literacy": "low",
+   "works": false,
+   "work_start": null,
+   "work_end": null,
+   "income_band": "high",
+   "helper_relation_ar": null
+  },
+  "outcome": {
+   "status": "served",
+   "reasons": [],
+   "channel_name_ar": "الوحدة المتنقلة في الوحدات يوم السبت",
+   "mode": "car",
+   "bus_transfers": 0,
+   "visit_day_ar": "السبت",
+   "travel_minutes_one_way": 14,
+   "total_cost_jd": 2.3,
+   "total_hours_lost_incl_waiting": 1.5,
+   "work_hours_missed": 0.0
+  }
+ }
+}

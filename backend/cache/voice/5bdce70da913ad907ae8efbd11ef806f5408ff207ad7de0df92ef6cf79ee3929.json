@@ -1,0 +1,40 @@
+{
+ "task": "voice",
+ "output": "ما قدرت أجدد إيدي لأنني ما بعرف أستخدم النظام الرقمي. ضيع وقتي ومصاري على الفاضي.",
+ "meta": {
+  "provider": "groq",
+  "model": "openai/gpt-oss-120b",
+  "seconds": 0.7,
+  "ts": "2026-10-09T17:03:56"
+ },
+ "inputs": {
+  "profile": {
+   "age": 41,
+   "gender": "m",
+   "area_ar": "الوحدات",
+   "mobility": "none",
+   "has_car": true,
+   "has_smartphone": true,
+   "digital_literacy": "low",
+   "works": true,
+   "work_start": "08:00",
+   "work_end": "16:00",
+   "income_band": "low",
+   "helper_relation_ar": null
+  },
+  "outcome": {
+   "status": "left_out",
+   "reasons": [
+    "LOW_DIGITAL_LITERACY"
+   ],
+   "channel_name_ar": null,
+   "mode": null,
+   "bus_transfers": 0,
+   "visit_day_ar": null,
+   "travel_minutes_one_way": 0,
+   "total_cost_jd": 0.0,
+   "total_hours_lost_incl_waiting": 0.0,
+   "work_hours_missed": 0.0
+  }
+ }
+}

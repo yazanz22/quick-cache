@@ -2,13 +2,18 @@
 
 complete(task, system, user, json_schema=None, smart=False) -> str
 
-On a rate limit / overload / timeout: back off once, then try LLM_FALLBACK_PROVIDER,
-then raise LLMUnavailable so the task can use its non-AI fallback.
+Free tiers limit requests PER MODEL (e.g. 20/day for a Gemini Flash model), so each slot is a
+comma-separated CHAIN of models in .env (MODEL_FAST, MODEL_SMART, GROQ_MODEL_FAST, GROQ_MODEL_SMART).
+A call tries the primary provider's chain, then LLM_FALLBACK_PROVIDER's chain, then raises
+LLMUnavailable so the task uses its non-AI fallback. A model that hits a limit is put on cooldown
+(daily limit: until the next reset; per-minute limit or overload: a short pause) and skipped, so an
+exhausted model never costs a wasted request.
 """
 from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime, timedelta, timezone
 
 from .. import config
 
@@ -16,20 +21,25 @@ log = logging.getLogger("nas.llm")
 
 # Records which provider/model answered the most recent call, for cache metadata.
 last_meta: dict = {}
+# (provider, model) -> unix time until which the model is skipped, and why.
+_cooldown: dict[tuple[str, str], tuple[float, str]] = {}
+# (provider, model) -> successful calls since the server started (shown by GET /llm/status).
+_calls: dict[tuple[str, str], int] = {}
+
+SHORT_COOLDOWN_S = 65.0   # per-minute limits reset within a minute
+OVERLOAD_COOLDOWN_S = 30.0
 
 
 class LLMUnavailable(Exception):
     pass
 
 
-def _models(provider: str) -> tuple[str, str]:
-    if provider == "gemini":
-        return config.env("MODEL_FAST"), config.env("MODEL_SMART")
-    if provider == "groq":
-        return config.env("GROQ_MODEL_FAST"), config.env("GROQ_MODEL_SMART")
-    if provider == "anthropic":
-        return config.env("ANTHROPIC_MODEL_FAST"), config.env("ANTHROPIC_MODEL_SMART")
-    return "", ""
+def _chain(provider: str, smart: bool) -> list[str]:
+    prefix = {"gemini": "", "groq": "GROQ_", "anthropic": "ANTHROPIC_"}.get(provider)
+    if prefix is None:
+        return []
+    raw = config.env(f"{prefix}MODEL_{'SMART' if smart else 'FAST'}")
+    return [m.strip() for m in raw.split(",") if m.strip()]
 
 
 # ------------------------------------------------------------------ adapters
@@ -39,11 +49,9 @@ def _gemini(model: str, system: str, user: str, want_json: bool) -> str:
     from google.genai import types
     client = genai.Client(api_key=config.env("GEMINI_API_KEY"),
                           http_options=types.HttpOptions(timeout=int(config.LLM_TIMEOUT_S * 1000)))
-    cfg = types.GenerateContentConfig(
-        system_instruction=system, temperature=0.4,
-        response_mime_type="application/json" if want_json else None,
-        thinking_config=types.ThinkingConfig(thinking_level="low"),
-    )
+    kw = {"thinking_config": types.ThinkingConfig(thinking_level="low")} if "lite" not in model else {}
+    cfg = types.GenerateContentConfig(system_instruction=system, temperature=0.4,
+                                      response_mime_type="application/json" if want_json else None, **kw)
     r = client.models.generate_content(model=model, contents=user, config=cfg)
     return r.text or ""
 
@@ -71,10 +79,27 @@ ADAPTERS = {"gemini": _gemini, "groq": _groq, "anthropic": _anthropic}
 KEYS = {"gemini": "GEMINI_API_KEY", "groq": "GROQ_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
 
 
-def _is_transient(e: Exception) -> bool:
+def _next_daily_reset() -> float:
+    """Gemini's daily quota resets at midnight Pacific time (~UTC-7/-8); use 08:00 UTC to be safe."""
+    now = datetime.now(timezone.utc)
+    reset = now.replace(hour=8, minute=0, second=0, microsecond=0)
+    if reset <= now:
+        reset += timedelta(days=1)
+    return reset.timestamp()
+
+
+def _classify(e: Exception) -> tuple[float, str] | None:
+    """Cooldown for a failed call, or None if the error isn't about limits/availability."""
     s = f"{type(e).__name__} {e}".lower()
-    return any(k in s for k in ("429", "rate", "quota", "resource_exhausted", "503", "unavailable",
-                                "overloaded", "500", "502", "504", "timeout", "timed out", "deadline"))
+    if "perday" in s or "per day" in s or "requests per day" in s or "rpd" in s:
+        return _next_daily_reset(), "daily limit"
+    if any(k in s for k in ("429", "rate limit", "rate_limit", "resource_exhausted", "quota", "tokens per minute")):
+        return time.time() + SHORT_COOLDOWN_S, "rate limit"
+    if any(k in s for k in ("503", "unavailable", "overloaded", "high demand", "500", "502", "504")):
+        return time.time() + OVERLOAD_COOLDOWN_S, "overloaded"
+    if any(k in s for k in ("timeout", "timed out", "deadline")):
+        return time.time() + OVERLOAD_COOLDOWN_S, "timeout"
+    return None
 
 
 def _providers() -> list[str]:
@@ -86,31 +111,45 @@ def _providers() -> list[str]:
 
 
 def complete(task: str, system: str, user: str, json_schema: dict | None = None, smart: bool = False) -> str:
-    """Return the model's text. json_schema (or any truthy value) asks for JSON output."""
+    """Return the model's text. json_schema (or any non-None value) asks for JSON output."""
     if config.DEMO_OFFLINE:
         raise LLMUnavailable("DEMO_OFFLINE=1")
     want_json = json_schema is not None
     errors = []
-    for i, provider in enumerate(_providers()):
-        fast, smart_m = _models(provider)
-        model = smart_m if smart else fast
-        if not model:
-            errors.append(f"{provider}: no model configured")
-            continue
-        attempts = 2 if i == 0 else 1  # back off once on the primary, then move on
-        for attempt in range(attempts):
+    for provider in _providers():
+        for model in _chain(provider, smart):
+            until, why = _cooldown.get((provider, model), (0.0, ""))
+            if until > time.time():
+                errors.append(f"{provider}/{model}: skipped ({why})")
+                continue
             t0 = time.perf_counter()
             try:
                 text = ADAPTERS[provider](model, system, user, want_json)
-                last_meta.clear()
-                last_meta.update(provider=provider, model=model, seconds=round(time.perf_counter() - t0, 2))
-                log.info("llm %s via %s/%s in %.1fs", task, provider, model, last_meta["seconds"])
-                return text
-            except Exception as e:  # noqa: BLE001 - any provider failure falls through to the next option
-                errors.append(f"{provider}/{model}: {type(e).__name__}: {str(e)[:200]}")
-                log.warning("llm %s failed on %s: %s", task, provider, errors[-1])
-                if attempt + 1 < attempts and _is_transient(e) and "timeout" not in str(e).lower():
-                    time.sleep(2.0)
-                    continue
-                break
+            except Exception as e:  # noqa: BLE001 - any failure moves on to the next model
+                cd = _classify(e)
+                if cd:
+                    _cooldown[(provider, model)] = cd
+                errors.append(f"{provider}/{model}: {type(e).__name__}: {str(e)[:160]}")
+                log.warning("llm %s failed on %s/%s (%s)", task, provider, model, cd[1] if cd else type(e).__name__)
+                continue
+            _calls[(provider, model)] = _calls.get((provider, model), 0) + 1
+            last_meta.clear()
+            last_meta.update(provider=provider, model=model, seconds=round(time.perf_counter() - t0, 2))
+            log.info("llm %s via %s/%s in %.1fs", task, provider, model, last_meta["seconds"])
+            return text
     raise LLMUnavailable("; ".join(errors) or "no provider configured")
+
+
+def status() -> dict:
+    """Which models are configured, how often each answered, and which are cooling down."""
+    now = time.time()
+    out = {"offline": config.DEMO_OFFLINE, "providers": _providers(), "models": []}
+    for p in _providers():
+        for slot, smart in (("fast", False), ("smart", True)):
+            for m in _chain(p, smart):
+                until, why = _cooldown.get((p, m), (0.0, ""))
+                out["models"].append({
+                    "provider": p, "slot": slot, "model": m, "calls_since_start": _calls.get((p, m), 0),
+                    "available": until <= now,
+                    "cooldown": None if until <= now else {"reason": why, "seconds_left": round(until - now)}})
+    return out

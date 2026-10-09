@@ -33,3 +33,14 @@ def test_offline_tasks_fall_back_never_blank():
         assert checks.has_arabic(v.text_ar)
     p = tasks.parse_policy("some text that is definitely not cached 12345", world.scenario_policy("baseline"))
     assert p.status == "unsupported" and p.source == "fallback"
+
+
+def test_rate_limits_put_models_on_cooldown():
+    import time
+    from app.llm import client
+    daily = client._classify(Exception("429 RESOURCE_EXHAUSTED quotaId GenerateRequestsPerDayPerProjectPerModel-FreeTier"))
+    minute = client._classify(Exception("Error code: 429 - Rate limit reached on tokens per minute (TPM)"))
+    busy = client._classify(Exception("503 UNAVAILABLE high demand"))
+    assert daily[1] == "daily limit" and daily[0] > time.time() + 60
+    assert minute[1] == "rate limit" and busy[1] == "overloaded"
+    assert client._classify(ValueError("bad json")) is None

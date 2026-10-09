@@ -1,0 +1,41 @@
+{
+ "task": "voice",
+ "output": "ما عندي تلفون ذكي ولا بعرف بهاي الأمور، فاضطريت أجيب ابن يساعدني ودفعنا دينارين عشان نخلص المعاملة.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "seconds": 1.16,
+  "ts": "2026-10-09T17:10:41"
+ },
+ "inputs": {
+  "profile": {
+   "age": 67,
+   "gender": "m",
+   "area_ar": "الوحدات",
+   "mobility": "wheelchair",
+   "has_car": false,
+   "has_smartphone": false,
+   "digital_literacy": "low",
+   "works": false,
+   "work_start": null,
+   "work_end": null,
+   "income_band": "middle",
+   "helper_relation_ar": "ابني"
+  },
+  "outcome": {
+   "status": "hardship",
+   "reasons": [
+    "NO_SMARTPHONE",
+    "LOW_DIGITAL_LITERACY"
+   ],
+   "channel_name_ar": "أونلاين",
+   "mode": "online",
+   "bus_transfers": 0,
+   "visit_day_ar": null,
+   "travel_minutes_one_way": 0,
+   "total_cost_jd": 2.0,
+   "total_hours_lost_incl_waiting": 0.3,
+   "work_hours_missed": 0.0
+  }
+ }
+}

@@ -1,0 +1,40 @@
+{
+ "task": "voice",
+ "output": "كان عليّ أدفع 2 دينار وعملت نص ساعة على الموقع، وصعب عليّ لأنني ما بعرف أستعمله كويس، أخوي ساعدني.",
+ "meta": {
+  "provider": "groq",
+  "model": "openai/gpt-oss-120b",
+  "seconds": 0.93,
+  "ts": "2026-10-09T17:04:16"
+ },
+ "inputs": {
+  "profile": {
+   "age": 22,
+   "gender": "m",
+   "area_ar": "الوحدات",
+   "mobility": "none",
+   "has_car": false,
+   "has_smartphone": true,
+   "digital_literacy": "low",
+   "works": false,
+   "work_start": null,
+   "work_end": null,
+   "income_band": "low",
+   "helper_relation_ar": "أخوي"
+  },
+  "outcome": {
+   "status": "hardship",
+   "reasons": [
+    "LOW_DIGITAL_LITERACY"
+   ],
+   "channel_name_ar": "أونلاين",
+   "mode": "online",
+   "bus_transfers": 0,
+   "visit_day_ar": null,
+   "travel_minutes_one_way": 0,
+   "total_cost_jd": 2.0,
+   "total_hours_lost_incl_waiting": 0.3,
+   "work_hours_missed": 0.0
+  }
+ }
+}

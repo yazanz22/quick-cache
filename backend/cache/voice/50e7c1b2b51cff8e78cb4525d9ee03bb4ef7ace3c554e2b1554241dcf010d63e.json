@@ -1,0 +1,41 @@
+{
+ "task": "voice",
+ "output": "جددت الهوية أونلاين بس غلبتني الشغلة لأني ما عندي هاتف ذكي وما بعرف لهي التطبيقات، لولا ابني ساعدني وكلفتني 2 دينار ما كنت عرفت أدبرها.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.8-flash",
+  "seconds": 7.49,
+  "ts": "2026-10-09T17:08:22"
+ },
+ "inputs": {
+  "profile": {
+   "age": 71,
+   "gender": "f",
+   "area_ar": "وسط البلد",
+   "mobility": "none",
+   "has_car": false,
+   "has_smartphone": false,
+   "digital_literacy": "low",
+   "works": false,
+   "work_start": null,
+   "work_end": null,
+   "income_band": "middle",
+   "helper_relation_ar": "ابني"
+  },
+  "outcome": {
+   "status": "hardship",
+   "reasons": [
+    "NO_SMARTPHONE",
+    "LOW_DIGITAL_LITERACY"
+   ],
+   "channel_name_ar": "أونلاين",
+   "mode": "online",
+   "bus_transfers": 0,
+   "visit_day_ar": null,
+   "travel_minutes_one_way": 0,
+   "total_cost_jd": 2.0,
+   "total_hours_lost_incl_waiting": 0.3,
+   "work_hours_missed": 0.0
+  }
+ }
+}

@@ -1,0 +1,82 @@
+{
+ "task": "parse",
+ "output": {
+  "status": "ok",
+  "policy": {
+   "service": "id_renewal",
+   "offices": [],
+   "online_enabled": true,
+   "online_only": false,
+   "mobile_units": [
+    {
+     "area": "wehdat",
+     "day": "sat",
+     "open": "09:00",
+     "close": "14:00"
+    }
+   ],
+   "appointment_required": false,
+   "fee_jd": 2.0,
+   "visits_required": 1
+  },
+  "changes_ar": [
+   "إلغاء المكاتب الثابتة لتفعيل الخدمة الإلكترونية والوحدة المتنقلة",
+   "إضافة وحدة متنقلة في الوحدات يوم السبت"
+  ],
+  "changes_en": [
+   "Removed fixed offices to enable online service with a mobile unit",
+   "Added a mobile unit in Wehdat on Saturday"
+  ],
+  "message_ar": null,
+  "message_en": null
+ },
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "seconds": 1.66,
+  "ts": "2026-10-09T17:09:31"
+ },
+ "inputs": {
+  "text": "make it online-only but keep a saturday van in wehdat",
+  "current_policy": {
+   "service": "id_renewal",
+   "offices": [
+    {
+     "id": "office_main",
+     "name_ar": "مكتب الأحوال المدنية - وسط البلد",
+     "name_en": "Civil Status office - Downtown",
+     "site_id": "site_downtown",
+     "schedule": {
+      "sun": [
+       "08:00",
+       "15:00"
+      ],
+      "mon": [
+       "08:00",
+       "15:00"
+      ],
+      "tue": [
+       "08:00",
+       "15:00"
+      ],
+      "wed": [
+       "08:00",
+       "15:00"
+      ],
+      "thu": [
+       "08:00",
+       "15:00"
+      ]
+     },
+     "wheelchair_accessible": true
+    }
+   ],
+   "online_enabled": true,
+   "online_only": false,
+   "mobile_units": [],
+   "appointment_required": false,
+   "fee_jd": 2.0,
+   "visits_required": 1
+  }
+ }
+}

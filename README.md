@@ -21,7 +21,7 @@ uvicorn app.main:app --reload --port 8000
 - Copy `.env.example` to `.env` (repo root) and add your own free Gemini and Groq keys.
 - Open http://localhost:8000/ for the **debug page** (map, KPIs, fixes, robustness, voices, parse).
 - Open http://localhost:8000/docs for the interactive API docs.
-- `pytest -q` runs 22 offline tests (no AI calls).
+- `pytest -q` runs 25 offline tests (no AI calls).
 - `DEMO_OFFLINE=1` in `.env`: cache + templates only, never a network call.
 
 ## API (for the frontend)
@@ -36,6 +36,7 @@ Types: [frontend/lib/types.ts](frontend/lib/types.ts) mirrors [backend/app/model
 | GET | `/sites/nearest?lat=&lng=` | → `Site` (snap a dragged office pin) |
 | GET | `/assumptions` | → `AssumptionRow[]` (for AssumptionsTable) |
 | GET | `/labels` | → Arabic/English labels for reasons, groups, modes, statuses, days |
+| GET | `/llm/status` | → model chains, calls per model, which models are cooling down (rate limits) |
 | POST | `/simulate` | `{policy}` → `SimResult` |
 | POST | `/compare` | `{baseline, scenario}` → `CompareResult` (~50 ms) |
 | POST | `/fixgrid` | `{baseline, scenario}` → `FixCandidate[]` top 3, engine only (~0.3 s) |
