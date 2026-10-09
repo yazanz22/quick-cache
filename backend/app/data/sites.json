@@ -1,0 +1,13 @@
+{
+  "_note": "8 candidate office sites, one per area, placed near each centroid. Dragged office pins snap to the nearest site. Generic site names, not real buildings.",
+  "sites": [
+    {"id": "site_downtown",  "area": "downtown",         "name_ar": "موقع وسط البلد",  "name_en": "Downtown site",         "lat": 31.9515, "lng": 35.9335},
+    {"id": "site_abdali",    "area": "abdali",           "name_ar": "موقع العبدلي",    "name_en": "Abdali site",           "lat": 31.9625, "lng": 35.9095},
+    {"id": "site_jabal",     "area": "jabal_al_hussein", "name_ar": "موقع جبل الحسين", "name_en": "Jabal Al-Hussein site", "lat": 31.9675, "lng": 35.9205},
+    {"id": "site_marka",     "area": "marka",            "name_ar": "موقع ماركا",      "name_en": "Marka site",            "lat": 31.9745, "lng": 35.9845},
+    {"id": "site_wehdat",    "area": "wehdat",           "name_ar": "موقع الوحدات",    "name_en": "Wehdat site",           "lat": 31.9355, "lng": 35.9395},
+    {"id": "site_tabarbour", "area": "tabarbour",        "name_ar": "موقع طبربور",     "name_en": "Tabarbour site",        "lat": 31.9995, "lng": 35.9405},
+    {"id": "site_sweileh",   "area": "sweileh",          "name_ar": "موقع صويلح",      "name_en": "Sweileh site",          "lat": 32.0195, "lng": 35.8405},
+    {"id": "site_khalda",    "area": "khalda",           "name_ar": "موقع خلدا",       "name_en": "Khalda site",           "lat": 31.9945, "lng": 35.8355}
+  ]
+}
