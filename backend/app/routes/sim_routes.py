@@ -7,7 +7,7 @@ import json
 from fastapi import APIRouter, HTTPException
 
 from ..config import SCENARIOS_DIR
-from ..models import (Area, Citizen, CompareRequest, CompareResult, FixCandidate, Hero, Policy, Scenario,
+from ..models import (Area, Citizen, CompareRequest, CompareResult, FixCandidate, Hero, Policy, Road, Scenario,
                       SensitivityRequest, SensitivityResult, SimResult, SimulateRequest, Site)
 from ..sim import assumptions as A
 from ..sim.assumption_labels import label_rows
@@ -56,6 +56,12 @@ def get_heroes():
 @router.get("/areas", response_model=list[Area])
 def get_areas():
     return list(world.areas().values())
+
+
+@router.get("/roads", response_model=list[Road])
+def get_roads():
+    """Closable major roads with their map geometry (data/roads.json, from OpenStreetMap)."""
+    return list(world.roads().values())
 
 
 @router.get("/assumptions")

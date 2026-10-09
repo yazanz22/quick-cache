@@ -82,13 +82,23 @@ def _sites_areas() -> dict:
                        "real_cspd_office": s.get("real", False)}
                       for s in world.sites().values()],
             "areas": [{"id": a["id"], "name_en": a["name_en"], "name_ar": a["name_ar"], "side": a["side"]}
-                      for a in world.areas().values()]}
+                      for a in world.areas().values()],
+            "roads": [{"id": r["id"], "name_en": r["name_en"], "name_ar": r["name_ar"]} for r in world.roads().values()]}
+
+
+def policy_json(p: Policy) -> dict:
+    """A policy as JSON for cache keys. closed_roads is left out while empty, so keys made before road
+    closures existed (the warmed demo cache) still match."""
+    d = p.model_dump(mode="json")
+    if not d.get("closed_roads"):
+        d.pop("closed_roads", None)
+    return d
 
 
 # ---------------------------------------------------------------------- parse
 
 def parse_policy(text: str, current: Policy, lang: str = "ar") -> ParseResult:
-    cur = current.model_dump(mode="json")
+    cur = policy_json(current)
     inputs = {"text": cache.normalize_text(text), "current_policy": cur}
     user = json.dumps({"current_policy": cur, **_sites_areas(), "official_text": text}, ensure_ascii=False)
 
@@ -124,7 +134,7 @@ def parse_policy(text: str, current: Policy, lang: str = "ar") -> ParseResult:
 
 def voice_facts(citizen: dict, o: dict) -> dict:
     a = world.areas()[citizen["area"]]
-    return {
+    facts = {
         "register": "msa",  # voices are فصحى; part of the cache key so old dialect voices are never reused
         "profile": {
             "age": citizen["age"], "gender": citizen["gender"], "area_ar": a["name_ar"],
@@ -142,6 +152,11 @@ def voice_facts(citizen: dict, o: dict) -> dict:
             "work_hours_missed": round(o.get("work_hours_missed", 0), 1),
         },
     }
+    road = world.roads().get(o.get("detour_road") or "")
+    if road and round(o.get("detour_minutes", 0)) >= 1:  # only when a closed road really lengthened the trip
+        facts["outcome"]["closed_road_ar"] = road["name_ar"]
+        facts["outcome"]["detour_minutes_one_way"] = round(o["detour_minutes"])
+    return facts
 
 
 def voice_citizen(citizen: dict, outcome: dict) -> VoiceResponse:
@@ -239,7 +254,7 @@ def explain_and_propose_fixes(baseline: Policy, scenario: Policy, hint: str | No
         c["improved_groups"] = _improved_groups(c["groups"], sg)
 
     inputs = {
-        "scenario_policy": scenario.model_dump(mode="json"),
+        "scenario_policy": policy_json(scenario),
         "scenario_by_group": {g: {"hardship": sg[g]["hardship"], "left_out": sg[g]["left_out"]} for g in world.EQUITY_GROUPS},
         "scenario_kpis": {k: sk[k] for k in ["pct_served", "pct_hardship", "pct_left_out"]},
         "left_out_by_area": dict(sorted(Counter(c["area"] for c, o in zip(pop, scen_out)
@@ -277,6 +292,9 @@ def explain_and_propose_fixes(baseline: Policy, scenario: Policy, hint: str | No
                 errs = policy_errors(pol)
                 if errs:
                     raise Rejected("; ".join(errs))
+                if sorted(set(pol.closed_roads)) != sorted(set(scenario.closed_roads)):
+                    raise Rejected("keep closed_roads exactly as in the scenario: road works are not the service's "
+                                   f"decision; closed_roads must be {sorted(set(scenario.closed_roads))}")
                 n = count_changes(scenario, pol)
                 if n > MAX_AI_CHANGES:
                     raise Rejected(f"proposal makes {n} changes; at most {MAX_AI_CHANGES} are allowed "

@@ -1,4 +1,4 @@
-"""Policy checks beyond the Pydantic schema: known sites/areas, sane hours."""
+"""Policy checks beyond the Pydantic schema: known sites/areas/roads, sane hours."""
 from __future__ import annotations
 
 from ..models import Policy
@@ -24,6 +24,10 @@ def policy_errors(p: Policy) -> list[str]:
             errs.append(f"unknown area {m.area!r}; valid: {sorted(areas)}")
         if not (_hhmm(m.open) and _hhmm(m.close) and m.open < m.close):
             errs.append(f"bad mobile unit hours {m.open}-{m.close}")
+    roads = world.roads()
+    for r in p.closed_roads:
+        if r not in roads:
+            errs.append(f"unknown road {r!r}; valid: {sorted(roads)}")
     if p.fee_jd < 0:
         errs.append("fee_jd must be >= 0")
     if p.service != "id_renewal":
@@ -38,13 +42,15 @@ def canonical(p: Policy) -> str:
     d["offices"] = sorted(({**o, "schedule": dict(sorted(o["schedule"].items())), "name_ar": "", "name_en": ""}
                            for o in d["offices"]), key=lambda o: o["id"])
     d["mobile_units"] = sorted(d["mobile_units"], key=lambda m: (m["area"], m["day"], m["open"], m["close"]))
+    d["closed_roads"] = sorted(set(d["closed_roads"]))
     return json.dumps(d, sort_keys=True)
 
 
 def count_changes(before: Policy, after: Policy) -> int:
     """Rough number of distinct policy changes, for keeping AI proposals comparable to grid fixes.
     Each added/removed mobile unit = 1. Per office: moved, accessibility, days added, days removed,
-    hours changed on existing days = 1 each. Each global setting changed = 1. Added/removed office = 1."""
+    hours changed on existing days = 1 each. Each global setting changed = 1. Added/removed office = 1.
+    Each road closed or reopened = 1."""
     n = 0
     mu = lambda p: {(m.area, m.day, m.open, m.close) for m in p.mobile_units}
     n += len(mu(before) ^ mu(after))
@@ -57,6 +63,7 @@ def count_changes(before: Policy, after: Policy) -> int:
         n += bool(set(a.schedule) - set(b.schedule))
         n += bool(set(b.schedule) - set(a.schedule))
         n += any(tuple(b.schedule[d]) != tuple(a.schedule[d]) for d in set(a.schedule) & set(b.schedule))
+    n += len(set(before.closed_roads) ^ set(after.closed_roads))
     for f in ("online_enabled", "online_only", "appointment_required", "fee_jd", "visits_required"):
         n += getattr(before, f) != getattr(after, f)
     return n

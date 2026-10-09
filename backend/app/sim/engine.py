@@ -33,6 +33,7 @@ def _sorted_reasons(rs) -> list[str]:
 def _channels(policy: Policy) -> list[dict]:
     """Normalise the policy into channel dicts. online_only => online is the only channel."""
     areas, sites = world.areas(), world.sites()
+    closed = tuple(sorted(set(policy.closed_roads)))
     chans = []
     if policy.online_enabled or policy.online_only:
         chans.append({"kind": "online", "id": "online", "name_ar": "أونلاين", "name_en": "Online"})
@@ -43,6 +44,7 @@ def _channels(policy: Policy) -> list[dict]:
         ar = areas[s["area"]]
         chans.append({
             "kind": "office", "id": o.id, "dest": o.site_id, "lat": s["lat"], "lng": s["lng"], "area": s["area"],
+            "closed": closed,
             "accessible": o.wheelchair_accessible, "appointment": policy.appointment_required,
             "schedule": tuple(sorted((d, to_min(h[0]), to_min(h[1])) for d, h in o.schedule.items())),
             # Real CSPD offices carry their own name; generic sites are named after their area.
@@ -53,7 +55,7 @@ def _channels(policy: Policy) -> list[dict]:
         ar = areas[m.area]
         chans.append({
             "kind": "van", "id": f"mobile:{m.area}:{m.day}", "dest": f"area:{m.area}", "lat": ar["lat"], "lng": ar["lng"],
-            "area": m.area, "accessible": True, "appointment": False,
+            "area": m.area, "accessible": True, "appointment": False, "closed": closed,
             "schedule": ((m.day, to_min(m.open), to_min(m.close)),),
             "name_ar": f"الوحدة المتنقلة في {ar['name_ar']} يوم {world.DAY_AR[m.day]}",
             "name_en": f"Mobile unit in {ar['name_en']} on {world.DAY_EN[m.day]}",
@@ -65,7 +67,7 @@ def _channel_key(ch: dict, policy: Policy) -> tuple:
     if ch["kind"] == "online":
         return ("online", policy.fee_jd)
     return (ch["kind"], ch["id"], ch["dest"], ch["accessible"], ch["appointment"], ch["schedule"],
-            policy.fee_jd, policy.visits_required)
+            policy.fee_jd, policy.visits_required, ch["closed"])
 
 
 # -------------------------------------------------------------- per citizen
@@ -79,7 +81,8 @@ def _online_ability(c: dict) -> tuple[bool, list[str]]:
     return not reasons, reasons
 
 
-def _option(ch, *, burden, flags, hours, cost, work, mode, transfers, day, travel, reasons, a):
+def _option(ch, *, burden, flags, hours, cost, work, mode, transfers, day, travel, reasons, a,
+            detour=0.0, detour_road=None):
     served = burden < a.HARDSHIP_THRESHOLD and flags == 0
     rs = list(reasons)
     if not served and burden >= a.HARDSHIP_THRESHOLD and travel >= a.LONG_TRIP_MINUTES:
@@ -92,6 +95,8 @@ def _option(ch, *, burden, flags, hours, cost, work, mode, transfers, day, trave
         "bus_transfers": transfers, "visit_day": day, "travel_minutes": round(travel, 1),
         "cost_jd": round(cost, 2), "hours_lost": round(hours, 2), "work_hours_missed": round(work, 2),
         "reasons": _sorted_reasons(rs),
+        "detour_minutes": round(detour, 1) if detour >= 0.05 else 0.0,
+        "detour_road": detour_road if detour >= 0.05 else None,
     }
 
 
@@ -107,33 +112,38 @@ def _eval_online(c: dict, ch: dict, policy: Policy, a: Assumptions):
 
 
 def _modes(c: dict, ch: dict, a: Assumptions, matrix: dict, sides: dict):
-    """Day-independent travel modes: list of (mode, one-way min, round-trip cost, transfers, uses_helper)."""
+    """Day-independent travel modes: list of (mode, one-way min, round-trip cost, transfers, uses_helper,
+    detour min). Closed roads add their detour (world.detour) to the trip; detour min = the extra one-way time."""
     fails: set[str] = set()
-    km, drive_min = road(c, ch["dest"], ch["lat"], ch["lng"], matrix, a)
+    ds, dm, droad = world.detour(c["id"], ch["dest"], ch["closed"]) if ch["closed"] else (0.0, 0.0, None)
+    km, drive_min = road(c, ch["dest"], ch["lat"], ch["lng"], matrix, a, (ds, dm))
+    km0, drive0 = road(c, ch["dest"], ch["lat"], ch["lng"], matrix, a) if droad else (km, drive_min)
     modes = []
     if c["has_car"] or c["has_helper"]:
         t, cost = car(km, drive_min, a)
         if t > a.MAX_TRAVEL_MINUTES:
             fails.add("TOO_FAR")
         else:
+            extra = t - car(km0, drive0, a)[0]
             if c["has_car"]:
-                modes.append(("car", t, cost, 0, False))
+                modes.append(("car", t, cost, 0, False, extra))
             if c["has_helper"]:
-                modes.append(("helper_car", t, cost, 0, True))
+                modes.append(("helper_car", t, cost, 0, True, extra))
     if c["mobility"] != "wheelchair":
         n = bus_transfers(c["area"], ch["area"], sides)
-        t, cost = bus(km, n, c["mobility"] == "limited", a)
+        limited = c["mobility"] == "limited"
+        t, cost = bus(km, n, limited, a)
         if t > a.MAX_TRAVEL_MINUTES:
             fails.add("TOO_FAR")
         else:
-            modes.append(("bus", t, cost, n, False))
+            modes.append(("bus", t, cost, n, False, t - bus(km0, n, limited, a)[0]))
     t, cost = taxi(km, drive_min, a)
     if cost > a.TAXI_MAX_JD[c["income_band"]]:
         fails.add("TOO_EXPENSIVE")
     elif t > a.MAX_TRAVEL_MINUTES:
         fails.add("TOO_FAR")
     else:
-        modes.append(("taxi", t, cost, 0, False))
+        modes.append(("taxi", t, cost, 0, False, t - taxi(km0, drive0, a)[0]))
     if not modes and not c["has_car"] and not c["has_helper"] and c["mobility"] == "wheelchair":
         fails.add("NO_TRANSPORT")
     return modes, fails
@@ -145,6 +155,7 @@ def _eval_in_person(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: d
     modes, fails = _modes(c, ch, a, matrix, sides)
     if not modes:
         return None, fails or {"NO_TRANSPORT"}
+    droad = world.detour(c["id"], ch["dest"], ch["closed"])[2] if ch["closed"] else None
 
     # Appointments (offices only, rule 3): book online yourself, via a helper (hardship),
     # or make one wasted trip first.
@@ -171,7 +182,7 @@ def _eval_in_person(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: d
     capped = False
     for day, op, cl in ch["schedule"]:
         weekend = day in WEEKEND
-        for mode, t, rt_cost, transfers, uses_helper in modes:
+        for mode, t, rt_cost, transfers, uses_helper, extra in modes:
             h_free = 0 if (not uses_helper or weekend) else helper_from
             visit_h = (2 * t + S) / 60
             hours = visit_h * visits + book_min / 60
@@ -180,28 +191,28 @@ def _eval_in_person(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: d
             if works and not weekend:
                 arr = max(op, max(we, h_free) + t)  # after work
                 if arr + S <= cl:
-                    outside.append((day, mode, t, transfers, hours, cost, 0.0, flags, []))
+                    outside.append((day, mode, t, transfers, hours, cost, 0.0, flags, [], extra))
                 arr = max(op, h_free + t)  # during work
                 if arr + S <= cl and arr - t < we and arr + S + t > ws:
                     work = visit_h * visits
                     if work > cap:
                         capped = True
                     else:
-                        during.append((day, mode, t, transfers, hours, cost, work, flags + 1, ["HOURS_CONFLICT_WORK"]))
+                        during.append((day, mode, t, transfers, hours, cost, work, flags + 1, ["HOURS_CONFLICT_WORK"], extra))
             else:
                 arr = max(op, h_free + t)
                 if arr + S <= cl:
-                    outside.append((day, mode, t, transfers, hours, cost, 0.0, flags, []))
+                    outside.append((day, mode, t, transfers, hours, cost, 0.0, flags, [], extra))
 
     cands = outside or during  # rule 5: an outside-work slot always wins if one exists
     if not cands:
         return None, fails | ({"HOURS_CONFLICT_WORK"} if capped else {"OFFICE_CLOSED_ON_AVAILABLE_DAYS"})
     best = None
-    for day, mode, t, transfers, hours, cost, work, flags, rs in cands:
+    for day, mode, t, transfers, hours, cost, work, flags, rs, extra in cands:
         burden = hours + a.COST_WEIGHT * cost + a.WORK_WEIGHT * work
         opt = _option(ch, burden=burden, flags=flags, hours=hours, cost=cost, work=work, mode=mode,
                       transfers=transfers if mode == "bus" else 0, day=day, travel=t,
-                      reasons=book_reasons + rs, a=a)
+                      reasons=book_reasons + rs, a=a, detour=extra, detour_road=droad)
         if best is None or opt["key"] < best["key"]:
             best = opt
     return best, set()
@@ -242,7 +253,7 @@ def run(policy: Policy, population: list[dict] | None = None, assumptions: Assum
             out.append({"citizen_id": c["id"], "status": "left_out", "channel": None, "channel_name_ar": None,
                         "channel_name_en": None, "mode": None, "bus_transfers": 0, "visit_day": None,
                         "travel_minutes": 0.0, "cost_jd": 0.0, "hours_lost": 0.0, "work_hours_missed": 0.0,
-                        "reasons": _sorted_reasons(reasons or {"OFFICE_CLOSED_ON_AVAILABLE_DAYS"})})
+                        "detour_minutes": 0.0, "detour_road": None, "reasons": _sorted_reasons(reasons or {"OFFICE_CLOSED_ON_AVAILABLE_DAYS"})})
         else:
             o = {k: v for k, v in best.items() if k != "key"}
             o["citizen_id"] = c["id"]
@@ -255,8 +266,8 @@ def summarize(outcomes: list[dict], pop: list[dict] | None = None) -> tuple[dict
     n = len(outcomes)
     counts = {"served": 0, "hardship": 0, "left_out": 0}
     groups = {g: {"served": 0, "hardship": 0, "left_out": 0, "n": 0} for g in ["all"] + world.ALL_GROUPS}
-    hours = cost = 0.0
-    reached = 0
+    hours = cost = detour = 0.0
+    reached = detoured = 0
     for c, o in zip(pop, outcomes):
         st = o["status"]
         counts[st] += 1
@@ -264,6 +275,9 @@ def summarize(outcomes: list[dict], pop: list[dict] | None = None) -> tuple[dict
             reached += 1
             hours += o["hours_lost"]
             cost += o["cost_jd"]
+            if o.get("detour_minutes", 0) > 0:
+                detoured += 1
+                detour += o["detour_minutes"]
         for g in ["all"] + [t for t in c["tags"] if t in groups]:
             groups[g][st] += 1
             groups[g]["n"] += 1
@@ -274,6 +288,8 @@ def summarize(outcomes: list[dict], pop: list[dict] | None = None) -> tuple[dict
         "avg_hours_lost": round(hours / reached, 2) if reached else 0.0,
         "avg_cost_jd": round(cost / reached, 2) if reached else 0.0,
         "n": n, "n_served": counts["served"], "n_hardship": counts["hardship"], "n_left_out": counts["left_out"],
+        # closed roads: citizens whose chosen trip takes a detour, and its average extra one-way minutes
+        "n_detour": detoured, "avg_detour_min": round(detour / detoured, 1) if detoured else 0.0,
     }
     by_group = {g: {"served": pct(v["served"], v["n"]), "hardship": pct(v["hardship"], v["n"]),
                     "left_out": pct(v["left_out"], v["n"]), "n": v["n"]} for g, v in groups.items()}

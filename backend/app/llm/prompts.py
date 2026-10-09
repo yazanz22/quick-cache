@@ -11,8 +11,11 @@ CAN_MODEL = """WHAT NAS CAN MODEL (the Policy schema, nothing else):
 - appointment_required: office visits need an online booking first (offices only; mobile units never need one).
 - fee_jd: the service fee in Jordanian dinars (one fee for everyone).
 - visits_required: number of in-person visits needed (1-5).
+- closed_roads: list of road ids that are closed (e.g. road works). Only the major roads in the "roads" list can be
+  closed; trips that used them take a detour. "Reopen X" removes X from the list.
 Everything else is NOT supported yet, for example: a fee waiver or discount for one group, an office outside the 8 sites,
-a different or second service, changes to bus routes or transport, home visits, extra staff or queue length."""
+a different or second service, closing a road that is not in the roads list, closing a road only on some days or hours,
+changes to bus routes or transport, home visits, extra staff or queue length."""
 
 PARSE_SYSTEM = f"""You turn a government official's description of a policy change (Arabic, Jordanian dialect, or English)
 into a structured policy for "Nas", a policy simulator for ID-card renewal in Amman.
@@ -33,6 +36,9 @@ Interpretation rules:
   online_enabled true, and add the mobile unit. Mention this in the change list.
 - A mobile unit without stated hours runs 09:00-14:00.
 - "double the fee" multiplies fee_jd by 2; "two visits" sets visits_required 2.
+- "close Zahran Street" / "سكّروا شارع زهران" adds that road's id to closed_roads (match the road by its Arabic or
+  English name, e.g. "Gardens" = gardens, "Airport Road" = airport_road). If current_policy has no closed_roads, it is [].
+  A road closure is not an office closure: keep offices as they are.
 - If ANY part of the request is not supported, return status "unsupported" (do not half-apply it), say briefly in
   message_ar/message_en what can't be modelled, and suggest the closest supported change.
 
@@ -60,6 +66,8 @@ Rules:
 - The only family member or person you may mention is the helper given in helper_relation_ar, and only if relevant.
   When you mention them, write helper_relation_ar exactly as given (e.g. "ابني", never "ابن").
 - Money is Jordanian dinars: say دينار / ديناران / دنانير (never ليرة or ليرات).
+- If closed_road_ar is given, that road is closed and the trip took detour_minutes_one_way extra minutes each way;
+  you may mention it. Never mention road closures otherwise.
 - Mention buses (حافلة) only if mode is "bus"; say "حافلتين" only if bus_transfers is 1, "ثلاث حافلات" only if it is 2.
 - status "served": they managed fine. "hardship": they managed but it cost them (say why, from reasons).
   "left_out": they could not renew at all (say why, from reasons).
@@ -92,6 +100,7 @@ Your two jobs:
    e.g. a mobile unit on a different day or with longer hours, a Saturday or evening opening at the office, a second
    office at another site, or a combination. Keep it realistic: at most 3 changes compared with the scenario policy.
    Return the FULL policy (scenario policy + your changes). Use only valid site ids, area ids, days and HH:MM times.
+   Keep closed_roads exactly as in the scenario policy: road works are not the service's decision.
    Fixes are ranked first by left_out_drop, then by hardship_drop, so first reach the people LEFT OUT
    (left_out_by_area shows where they live), then reduce hardship.
    The engine will test it; it is shown only if it really beats the best engine fix. Do NOT put any numbers in

@@ -5,6 +5,7 @@ Built only from engine output and reason codes, in Arabic and English.
 from __future__ import annotations
 
 from ..models import ParseResult
+from ..sim import world
 from ..sim.world import DAY_AR, DAY_EN
 
 # First-person clauses for voices, in Modern Standard Arabic (فصحى).
@@ -86,6 +87,11 @@ def voice(citizen: dict, o: dict) -> tuple[str, str]:
           f"وخسرت {_count_ar(o['hours_lost'], 'ساعة', 'ساعات')} و{_count_ar(o['cost_jd'], 'دينار', 'دنانير')} في المجمل.")
     en = (f"Went to the {o['channel_name_en']}{day_en} {how_en}: {round(o['travel_minutes'])} min each way, "
           f"{_n(o['hours_lost'])} h and {_n(o['cost_jd'])} JD in total.")
+    road = world.roads().get(o.get("detour_road") or "")
+    if road and round(o.get("detour_minutes", 0)) >= 1:
+        d = round(o["detour_minutes"])
+        ar += f" وبسبب إغلاق {road['name_ar']} طال الطريق {_count_ar(d, 'دقيقة', 'دقائق')} في كل اتجاه."
+        en += f" {road['name_en']} closed: +{d} min each way."
     if o.get("work_hours_missed"):
         ar += f" وتغيّبت عن عملي {_count_ar(o['work_hours_missed'], 'ساعة', 'ساعات')}."
         en += f" Missed {_n(o['work_hours_missed'])} h of work."

@@ -108,7 +108,17 @@ class Policy(BaseModel):
     appointment_required: bool = False
     fee_jd: float
     visits_required: int = Field(default=1, ge=1, le=5)
+    closed_roads: list[str] = []   # ids from roads.json (GET /roads); trips that used them take the detour
 
+
+class Road(BaseModel):
+    """A closable major road (data/roads.json, built from OpenStreetMap by app/data/fetch_roads.py)."""
+    id: str
+    name_ar: str
+    name_en: str
+    km: float
+    osm_ways: int
+    lines: list[list[list[float]]] = []   # simplified geometry, [[lat, lng], ...] per OSM way, for the map
 
 class Scenario(BaseModel):
     id: str
@@ -136,6 +146,8 @@ class CitizenOutcome(BaseModel):
     hours_lost: float = 0.0
     work_hours_missed: float = 0.0
     reasons: list[ReasonCode] = []
+    detour_minutes: float = 0.0          # extra one-way minutes caused by closed roads (0 if none)
+    detour_road: str | None = None       # the closed road behind the detour (road id)
 
 
 class SimResult(BaseModel):
