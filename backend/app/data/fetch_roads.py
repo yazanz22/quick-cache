@@ -42,6 +42,9 @@ SPEED_KMH = {"motorway": 80, "trunk": 65, "primary": 50, "secondary": 40, "terti
              "secondary_link": 30, "tertiary_link": 25}
 SNAP_CLASSES = {"tertiary", "unclassified", "residential", "living_street"}  # homes and offices sit on local streets
 MIN_DELTA_S = 1.0  # store only detours of at least a second
+# Zarqa city (east of here) has its own streets named Queen Rania, Army, Prince Al-Hasan, Wasfi Al-Tal...; a road
+# only includes ways west of this longitude unless it sets its own "max_lng" (the Amman-Zarqa highway).
+AMMAN_MAX_LNG = 36.05
 
 # The catalogue: 19 major Amman roads. `osm` = exact OSM `name` values (Arabic) of the ways that make up the road.
 ROADS = [
@@ -66,7 +69,7 @@ ROADS = [
     {"id": "al_istiqlal", "name_ar": "شارع الاستقلال", "name_en": "Al-Istiqlal Street", "osm": ["شارع الاستقلال"]},
     {"id": "al_shaheed", "name_ar": "شارع الشهيد", "name_en": "Al-Shaheed Street", "osm": ["شارع الشهيد"]},
     {"id": "amman_zarqa", "name_ar": "أوتوستراد عمّان - الزرقاء", "name_en": "Amman-Zarqa Highway",
-     "osm": ["أوتوستراد عمان - الزرقاء"]},
+     "osm": ["أوتوستراد عمان - الزرقاء"], "max_lng": 36.2},
     {"id": "al_salt", "name_ar": "شارع السلط", "name_en": "Al-Salt Street", "osm": ["شارع السلط"]},
     {"id": "yajouz", "name_ar": "شارع ياجوز", "name_en": "Yajouz Street", "osm": ["شارع ياجوز"]},
     {"id": "prince_hasan", "name_ar": "شارع الأمير الحسن", "name_en": "Prince Al-Hasan Street",
@@ -113,9 +116,10 @@ def _speed(tags: dict) -> float:
     return float(SPEED_KMH.get(tags["highway"], 30))
 
 
-def _road_of(name: str | None) -> int:
+def _road_of(name: str | None, lng: float) -> int:
+    """Catalogue index of a way (by its OSM name and position), or -1 for any other street."""
     for i, r in enumerate(ROADS):
-        if name in r["osm"]:
+        if name in r["osm"] and lng <= r.get("max_lng", AMMAN_MAX_LNG):
             return i
     return -1
 
@@ -148,7 +152,7 @@ class Graph:
         for w in ways:
             t = w["tags"]
             hw = t["highway"]
-            r = _road_of(t.get("name"))
+            r = _road_of(t.get("name"), sum(coords[n][1] for n in w["nodes"]) / len(w["nodes"]))
             ow = t.get("oneway")
             forward_only = ow in ("yes", "true", "1") or hw == "motorway" or t.get("junction") in ("roundabout", "circular")
             backward_only = ow == "-1"
