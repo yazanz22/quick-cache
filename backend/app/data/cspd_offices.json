@@ -1,0 +1,34 @@
+{
+ "_source": "OpenStreetMap via Overpass API, ODbL. Features named like Civil Status offices.",
+ "_fetched": "2026-10-09",
+ "offices": [
+  {
+   "osm": "node/4003465704",
+   "lat": 32.0769737,
+   "lng": 36.0756439,
+   "name": "الأحوال المدنية",
+   "name_en": null,
+   "tags": {
+    "addr:city": "الزرقاء",
+    "name": "الأحوال المدنية",
+    "office": "government"
+   }
+  },
+  {
+   "osm": "way/800520931",
+   "lat": 31.9086586,
+   "lng": 35.9361686,
+   "name": "دائره الأحوال المدنية والجوازات الاشرفيه",
+   "name_en": null,
+   "tags": {
+    "building": "yes",
+    "government": "administrative",
+    "name": "دائره الأحوال المدنية والجوازات الاشرفيه",
+    "office": "government",
+    "opening_hours": "Sa-Th 08:30-15:30",
+    "phone": "+96265636666",
+    "website": "https://www.cspd.gov.jo/"
+   }
+  }
+ ]
+}

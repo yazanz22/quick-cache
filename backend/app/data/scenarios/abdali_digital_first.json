@@ -1,0 +1,49 @@
+{
+ "id": "abdali_digital_first",
+ "order": 4,
+ "name_ar": "العبدلي + التحول الرقمي",
+ "name_en": "Abdali + digital first",
+ "description_ar": "المكتب في العبدلي، الكاونترات تسكر الساعة ١، والزيارة بموعد مسبق أونلاين.",
+ "description_en": "Office at Abdali, counters close at 13:00, office visits need an online appointment.",
+ "policy": {
+  "service": "id_renewal",
+  "offices": [
+   {
+    "id": "office_main",
+    "name_ar": "مكتب الأحوال المدنية - العبدلي",
+    "name_en": "Civil Status office - Abdali",
+    "site_id": "site_abdali",
+    "schedule": {
+     "sun": [
+      "08:00",
+      "13:00"
+     ],
+     "mon": [
+      "08:00",
+      "13:00"
+     ],
+     "tue": [
+      "08:00",
+      "13:00"
+     ],
+     "wed": [
+      "08:00",
+      "13:00"
+     ],
+     "thu": [
+      "08:00",
+      "13:00"
+     ]
+    },
+    "wheelchair_accessible": true
+   }
+  ],
+  "online_enabled": true,
+  "online_only": false,
+  "mobile_units": [],
+  "appointment_required": true,
+  "fee_jd": 2.0,
+  "visits_required": 1
+ },
+ "_note": "fee_jd 2.0 is a placeholder pending the CSPD fee from the anchor research"
+}

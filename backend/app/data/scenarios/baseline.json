@@ -1,0 +1,49 @@
+{
+ "id": "baseline",
+ "order": 0,
+ "name_ar": "الوضع الحالي",
+ "name_en": "Baseline",
+ "description_ar": "مكتب واحد في وسط البلد، ٨–٣ من الأحد للخميس، بدون موعد، والخدمة متاحة أونلاين.",
+ "description_en": "One office in Downtown, 08:00–15:00 Sun–Thu, walk-in, online enabled.",
+ "policy": {
+  "service": "id_renewal",
+  "offices": [
+   {
+    "id": "office_main",
+    "name_ar": "مكتب الأحوال المدنية - وسط البلد",
+    "name_en": "Civil Status office - Downtown",
+    "site_id": "site_downtown",
+    "schedule": {
+     "sun": [
+      "08:00",
+      "15:00"
+     ],
+     "mon": [
+      "08:00",
+      "15:00"
+     ],
+     "tue": [
+      "08:00",
+      "15:00"
+     ],
+     "wed": [
+      "08:00",
+      "15:00"
+     ],
+     "thu": [
+      "08:00",
+      "15:00"
+     ]
+    },
+    "wheelchair_accessible": true
+   }
+  ],
+  "online_enabled": true,
+  "online_only": false,
+  "mobile_units": [],
+  "appointment_required": false,
+  "fee_jd": 2.0,
+  "visits_required": 1
+ },
+ "_note": "fee_jd 2.0 is a placeholder pending the CSPD fee from the anchor research"
+}

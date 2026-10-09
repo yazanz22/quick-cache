@@ -1,0 +1,12 @@
+{
+  "_note": "Public figures used by seed.py. A value is used ONLY when status is ANCHORED and it has a real source_name + url. Until then seed.py uses its own fallback value tagged ASSUMPTION. Fill from the Qwen research after checking each URL.",
+  "anchors": {
+    "share_65_plus_of_adults": {"value": null, "status": "PENDING", "source_name": null, "url": null, "year": null, "notes": "65+ as a share of residents aged 16+ (ID-card age). Derive from DoS age bands for Amman."},
+    "share_female":            {"value": null, "status": "PENDING", "source_name": null, "url": null, "year": null, "notes": ""},
+    "household_car_ownership": {"value": null, "status": "PENDING", "source_name": null, "url": null, "year": null, "notes": "Share of households with at least one private car, Amman."},
+    "smartphone_by_age":       {"value": null, "status": "PENDING", "source_name": null, "url": null, "year": null, "notes": "Dict of age band -> share owning a smartphone / using the internet."},
+    "disability_by_age":       {"value": null, "status": "PENDING", "source_name": null, "url": null, "year": null, "notes": "Dict of age band -> share with a mobility difficulty."},
+    "female_employment_rate":  {"value": null, "status": "PENDING", "source_name": null, "url": null, "year": null, "notes": ""},
+    "male_employment_rate":    {"value": null, "status": "PENDING", "source_name": null, "url": null, "year": null, "notes": ""}
+  }
+}
