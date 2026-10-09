@@ -61,3 +61,13 @@ def test_voice_template_does_not_repeat_the_day_and_counts_nouns():
     ar, en = fallbacks.voice(c, o)
     assert ar.count("السبت") == 1 and en.count("Saturday") == 1
     assert "8 دقائق" in ar and "1.3 ساعة" in ar
+
+
+def test_fallback_providers_list_skips_missing_keys(monkeypatch):
+    from app import config
+    from app.llm import client
+    monkeypatch.setattr(config, "LLM_PROVIDER", "gemini")
+    monkeypatch.setattr(config, "LLM_FALLBACK_PROVIDER", "groq, openai")
+    keys = {"GEMINI_API_KEY": "x", "GROQ_API_KEY": "", "OPENAI_API_KEY": "y"}
+    monkeypatch.setattr(config, "env", lambda name, default="": keys.get(name, default))
+    assert client._providers() == ["gemini", "openai"]

@@ -35,7 +35,7 @@ class LLMUnavailable(Exception):
 
 
 def _chain(provider: str, smart: bool) -> list[str]:
-    prefix = {"gemini": "", "groq": "GROQ_", "anthropic": "ANTHROPIC_"}.get(provider)
+    prefix = {"gemini": "", "groq": "GROQ_", "openai": "OPENAI_", "anthropic": "ANTHROPIC_"}.get(provider)
     if prefix is None:
         return []
     raw = config.env(f"{prefix}MODEL_{'SMART' if smart else 'FAST'}")
@@ -67,6 +67,16 @@ def _groq(model: str, system: str, user: str, want_json: bool) -> str:
     return r.choices[0].message.content or ""
 
 
+def _openai(model: str, system: str, user: str, want_json: bool) -> str:
+    from openai import OpenAI
+    client = OpenAI(api_key=config.env("OPENAI_API_KEY"), timeout=config.LLM_TIMEOUT_S, max_retries=0)
+    kw = {"response_format": {"type": "json_object"}} if want_json else {}
+    # No temperature: some current OpenAI models only accept the default.
+    r = client.chat.completions.create(model=model, messages=[{"role": "system", "content": system},
+                                                              {"role": "user", "content": user}], **kw)
+    return r.choices[0].message.content or ""
+
+
 def _anthropic(model: str, system: str, user: str, want_json: bool) -> str:
     import anthropic
     client = anthropic.Anthropic(api_key=config.env("ANTHROPIC_API_KEY"), timeout=config.LLM_TIMEOUT_S, max_retries=0)
@@ -75,8 +85,8 @@ def _anthropic(model: str, system: str, user: str, want_json: bool) -> str:
     return "".join(b.text for b in r.content if getattr(b, "type", "") == "text")
 
 
-ADAPTERS = {"gemini": _gemini, "groq": _groq, "anthropic": _anthropic}
-KEYS = {"gemini": "GEMINI_API_KEY", "groq": "GROQ_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
+ADAPTERS = {"gemini": _gemini, "groq": _groq, "openai": _openai, "anthropic": _anthropic}
+KEYS = {"gemini": "GEMINI_API_KEY", "groq": "GROQ_API_KEY", "openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
 
 
 def _next_daily_reset() -> float:
@@ -103,8 +113,10 @@ def _classify(e: Exception) -> tuple[float, str] | None:
 
 
 def _providers() -> list[str]:
+    """Primary provider, then each fallback in order (LLM_FALLBACK_PROVIDER may list several: "groq,openai").
+    Providers without a key are skipped."""
     out = []
-    for p in (config.LLM_PROVIDER, config.LLM_FALLBACK_PROVIDER):
+    for p in [config.LLM_PROVIDER] + [x.strip() for x in config.LLM_FALLBACK_PROVIDER.split(",")]:
         if p and p in ADAPTERS and p not in out and config.env(KEYS[p]):
             out.append(p)
     return out

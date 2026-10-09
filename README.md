@@ -18,7 +18,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-- Copy `.env.example` to `.env` (repo root) and add your own free Gemini and Groq keys.
+- Copy `.env.example` to `.env` (repo root) and add your own free Gemini and Groq keys (an OpenAI key is optional: set `OPENAI_MODEL_*` too).
 - Open http://localhost:8000/ for the **debug page** (map, KPIs, fixes, robustness, voices, parse).
 - Open http://localhost:8000/docs for the interactive API docs.
 - `pytest -q` runs 25 offline tests (no AI calls).
