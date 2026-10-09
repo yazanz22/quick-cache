@@ -1,0 +1,174 @@
+{
+ "task": "parse",
+ "output": {
+  "status": "ok",
+  "policy": {
+   "service": "id_renewal",
+   "offices": [
+    {
+     "id": "office_tabarbour",
+     "name_ar": "مكتب الأحوال المدنية - طبربور (المكتب الرئيسي)",
+     "name_en": "CSPD office - Tabarbour (head office)",
+     "site_id": "cspd_tabarbour",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "13:00"
+      ],
+      "mon": [
+       "08:30",
+       "13:00"
+      ],
+      "tue": [
+       "08:30",
+       "13:00"
+      ],
+      "wed": [
+       "08:30",
+       "13:00"
+      ],
+      "thu": [
+       "08:30",
+       "13:00"
+      ]
+     },
+     "wheelchair_accessible": true
+    },
+    {
+     "id": "office_jabal_amman",
+     "name_ar": "مكتب الأحوال المدنية - جبل عمان",
+     "name_en": "CSPD office - Jabal Amman",
+     "site_id": "cspd_jabal_amman",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "13:00"
+      ],
+      "mon": [
+       "08:30",
+       "13:00"
+      ],
+      "tue": [
+       "08:30",
+       "13:00"
+      ],
+      "wed": [
+       "08:30",
+       "13:00"
+      ],
+      "thu": [
+       "08:30",
+       "13:00"
+      ]
+     },
+     "wheelchair_accessible": true
+    }
+   ],
+   "online_enabled": true,
+   "online_only": false,
+   "mobile_units": [],
+   "appointment_required": true,
+   "fee_jd": 2.0,
+   "visits_required": 1,
+   "closed_roads": [],
+   "appointment_exempt_groups": [],
+   "fee_discounts": {},
+   "home_visits": null,
+   "transport_vouchers": [
+    {
+     "groups": [
+      "low_income"
+     ],
+     "amount_jd": 3.0
+    }
+   ],
+   "hybrid_pickup": false
+  },
+  "changes_ar": [
+   "إضافة قسائم نقل (تكسي) لذوي الدخل المحدود بحد أقصى 3 دنانير"
+  ],
+  "changes_en": [
+   "Added transport vouchers for low-income people up to 3 JD"
+  ],
+  "message_ar": null,
+  "message_en": null
+ },
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "seconds": 2.77,
+  "ts": "2026-10-09T22:10:04"
+ },
+ "inputs": {
+  "text": "ادفعوا اجره التكسي لذوي الدخل المحدود لحد 3 دنانير",
+  "current_policy": {
+   "service": "id_renewal",
+   "offices": [
+    {
+     "id": "office_tabarbour",
+     "name_ar": "مكتب الأحوال المدنية - طبربور (المكتب الرئيسي)",
+     "name_en": "CSPD office - Tabarbour (head office)",
+     "site_id": "cspd_tabarbour",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "13:00"
+      ],
+      "mon": [
+       "08:30",
+       "13:00"
+      ],
+      "tue": [
+       "08:30",
+       "13:00"
+      ],
+      "wed": [
+       "08:30",
+       "13:00"
+      ],
+      "thu": [
+       "08:30",
+       "13:00"
+      ]
+     },
+     "wheelchair_accessible": true
+    },
+    {
+     "id": "office_jabal_amman",
+     "name_ar": "مكتب الأحوال المدنية - جبل عمان",
+     "name_en": "CSPD office - Jabal Amman",
+     "site_id": "cspd_jabal_amman",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "13:00"
+      ],
+      "mon": [
+       "08:30",
+       "13:00"
+      ],
+      "tue": [
+       "08:30",
+       "13:00"
+      ],
+      "wed": [
+       "08:30",
+       "13:00"
+      ],
+      "thu": [
+       "08:30",
+       "13:00"
+      ]
+     },
+     "wheelchair_accessible": true
+    }
+   ],
+   "online_enabled": true,
+   "online_only": false,
+   "mobile_units": [],
+   "appointment_required": true,
+   "fee_jd": 2.0,
+   "visits_required": 1
+  }
+ }
+}

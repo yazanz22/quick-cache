@@ -1,6 +1,8 @@
 """Policy checks beyond the Pydantic schema: known sites/areas/roads, sane hours."""
 from __future__ import annotations
 
+import json
+
 from ..models import Policy
 from . import world
 
@@ -28,6 +30,14 @@ def policy_errors(p: Policy) -> list[str]:
     for r in p.closed_roads:
         if r not in roads:
             errs.append(f"unknown road {r!r}; valid: {sorted(roads)}")
+    for g, pct in p.fee_discounts.items():
+        if not 0 <= pct <= 100:
+            errs.append(f"fee discount for {g} must be 0-100 percent, got {pct}")
+    if p.home_visits is not None and not p.home_visits.groups:
+        errs.append("home_visits needs at least one eligible group")
+    for v in p.transport_vouchers:
+        if not v.groups:
+            errs.append("each transport voucher needs at least one group")
     if p.fee_jd < 0:
         errs.append("fee_jd must be >= 0")
     if p.service != "id_renewal":
@@ -43,6 +53,11 @@ def canonical(p: Policy) -> str:
                            for o in d["offices"]), key=lambda o: o["id"])
     d["mobile_units"] = sorted(d["mobile_units"], key=lambda m: (m["area"], m["day"], m["open"], m["close"]))
     d["closed_roads"] = sorted(set(d["closed_roads"]))
+    d["appointment_exempt_groups"] = sorted(set(d["appointment_exempt_groups"]))
+    d["transport_vouchers"] = sorted(({**v, "groups": sorted(set(v["groups"]))} for v in d["transport_vouchers"]),
+                                     key=lambda v: (v["groups"], v["amount_jd"]))
+    if d["home_visits"]:
+        d["home_visits"]["groups"] = sorted(set(d["home_visits"]["groups"]))
     return json.dumps(d, sort_keys=True)
 
 
@@ -50,7 +65,8 @@ def count_changes(before: Policy, after: Policy) -> int:
     """Rough number of distinct policy changes, for keeping AI proposals comparable to grid fixes.
     Each added/removed mobile unit = 1. Per office: moved, accessibility, days added, days removed,
     hours changed on existing days = 1 each. Each global setting changed = 1. Added/removed office = 1.
-    Each road closed or reopened = 1."""
+    Each road closed or reopened = 1. Each group protection changed (walk-in exemptions, fee discounts, home
+    visits, transport vouchers, hybrid pickup) = 1."""
     n = 0
     mu = lambda p: {(m.area, m.day, m.open, m.close) for m in p.mobile_units}
     n += len(mu(before) ^ mu(after))
@@ -64,6 +80,9 @@ def count_changes(before: Policy, after: Policy) -> int:
         n += bool(set(b.schedule) - set(a.schedule))
         n += any(tuple(b.schedule[d]) != tuple(a.schedule[d]) for d in set(a.schedule) & set(b.schedule))
     n += len(set(before.closed_roads) ^ set(after.closed_roads))
+    bd, ad = json.loads(canonical(before)), json.loads(canonical(after))
+    for f in ("appointment_exempt_groups", "fee_discounts", "home_visits", "transport_vouchers", "hybrid_pickup"):
+        n += bd[f] != ad[f]
     for f in ("online_enabled", "online_only", "appointment_required", "fee_jd", "visits_required"):
         n += getattr(before, f) != getattr(after, f)
     return n

@@ -86,12 +86,18 @@ def _sites_areas() -> dict:
             "roads": [{"id": r["id"], "name_en": r["name_en"], "name_ar": r["name_ar"]} for r in world.roads().values()]}
 
 
+# Policy fields added after the AI cache was warmed, with their defaults.
+_LATER_FIELDS = {"closed_roads": [], "appointment_exempt_groups": [], "fee_discounts": {}, "home_visits": None,
+                 "transport_vouchers": [], "hybrid_pickup": False}
+
+
 def policy_json(p: Policy) -> dict:
-    """A policy as JSON for cache keys. closed_roads is left out while empty, so keys made before road
-    closures existed (the warmed demo cache) still match."""
+    """A policy as JSON for cache keys. Fields added later are left out while at their default, so keys made
+    before they existed (the warmed demo cache) still match."""
     d = p.model_dump(mode="json")
-    if not d.get("closed_roads"):
-        d.pop("closed_roads", None)
+    for k, default in _LATER_FIELDS.items():
+        if k in d and d[k] == default:
+            d.pop(k)
     return d
 
 

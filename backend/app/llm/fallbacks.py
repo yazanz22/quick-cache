@@ -73,6 +73,11 @@ def voice(citizen: dict, o: dict) -> tuple[str, str]:
         return (f"أنجز {helper_ar} المعاملة عني عبر الإنترنت؛ {_join_ar(r_ar)}.",
                 f"{helper_en.capitalize()} did it online for them because {_join_en(r_en)}.")
 
+    if o.get("mode") == "home":
+        ar = f"جاء موظف الأحوال المدنية إلى بيتي وجدّد هويتي، وكلّفني ذلك {_count_ar(o['cost_jd'], 'دينار', 'دنانير')}."
+        en = f"A clerk came to their home: {_n(o['hours_lost'])} h waiting at home, {_n(o['cost_jd'])} JD."
+        return ar, en
+
     mode = o.get("mode")
     transfers = o.get("bus_transfers", 0)
     how_ar = {"car": "بسيارتي", "taxi": "بسيارة أجرة", "helper_car": f"وأوصلني {helper_ar} بالسيارة",

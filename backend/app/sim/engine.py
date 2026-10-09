@@ -63,14 +63,33 @@ def _channels(policy: Policy) -> list[dict]:
     return chans
 
 
+def _terms(policy: Policy) -> tuple:
+    """The per-citizen policy terms (group protections), hashable for the memo key."""
+    return (tuple(sorted(set(policy.appointment_exempt_groups))), tuple(sorted(policy.fee_discounts.items())),
+            tuple(sorted((tuple(sorted(set(v.groups))), v.amount_jd) for v in policy.transport_vouchers)),
+            policy.hybrid_pickup)
+
+
 def _channel_key(ch: dict, policy: Policy) -> tuple:
     if ch["kind"] == "online":
-        return ("online", policy.fee_jd)
+        return ("online", policy.fee_jd, tuple(sorted(policy.fee_discounts.items())))
     return (ch["kind"], ch["id"], ch["dest"], ch["accessible"], ch["appointment"], ch["schedule"],
-            policy.fee_jd, policy.visits_required, ch["closed"])
+            policy.fee_jd, policy.visits_required, ch["closed"], _terms(policy))
 
 
 # -------------------------------------------------------------- per citizen
+
+def _fee(c: dict, policy: Policy) -> float:
+    """The fee this citizen pays: fee_jd minus their largest group discount (percent)."""
+    d = max((policy.fee_discounts.get(t, 0.0) for t in c["tags"]), default=0.0)
+    return policy.fee_jd * (1 - min(max(d, 0.0), 100.0) / 100)
+
+
+def _voucher(c: dict, policy: Policy) -> float:
+    """JD of bus/taxi fare covered per round trip for this citizen (their largest voucher)."""
+    tags = set(c["tags"])
+    return max((v.amount_jd for v in policy.transport_vouchers if tags & set(v.groups)), default=0.0)
+
 
 def _online_ability(c: dict) -> tuple[bool, list[str]]:
     reasons = []
@@ -106,14 +125,15 @@ def _eval_online(c: dict, ch: dict, policy: Policy, a: Assumptions):
         return None, set(reasons)
     flags = 0 if ok else 1  # a helper doing it online for you is a hardship
     hours = a.ONLINE_MINUTES / 60
-    cost = policy.fee_jd
+    cost = _fee(c, policy)
     return _option(ch, burden=hours + a.COST_WEIGHT * cost, flags=flags, hours=hours, cost=cost, work=0.0,
                    mode="online", transfers=0, day=None, travel=0.0, reasons=[] if ok else reasons, a=a), set()
 
 
-def _modes(c: dict, ch: dict, a: Assumptions, matrix: dict, sides: dict):
+def _modes(c: dict, ch: dict, a: Assumptions, matrix: dict, sides: dict, voucher: float = 0.0):
     """Day-independent travel modes: list of (mode, one-way min, round-trip cost, transfers, uses_helper,
-    detour min). Closed roads add their detour (world.detour) to the trip; detour min = the extra one-way time."""
+    detour min). Closed roads add their detour (world.detour) to the trip; detour min = the extra one-way time.
+    A transport voucher pays bus or taxi fares up to `voucher` JD per round trip (costs = what the citizen pays)."""
     fails: set[str] = set()
     ds, dm, droad = world.detour(c["id"], ch["dest"], ch["closed"]) if ch["closed"] else (0.0, 0.0, None)
     km, drive_min = road(c, ch["dest"], ch["lat"], ch["lng"], matrix, a, (ds, dm))
@@ -136,8 +156,9 @@ def _modes(c: dict, ch: dict, a: Assumptions, matrix: dict, sides: dict):
         if t > a.MAX_TRAVEL_MINUTES:
             fails.add("TOO_FAR")
         else:
-            modes.append(("bus", t, cost, n, False, t - bus(km0, n, limited, a)[0]))
+            modes.append(("bus", t, max(0.0, cost - voucher), n, False, t - bus(km0, n, limited, a)[0]))
     t, cost = taxi(km, drive_min, a)
+    cost = max(0.0, cost - voucher)
     if cost > a.TAXI_MAX_JD[c["income_band"]]:
         fails.add("TOO_EXPENSIVE")
     elif t > a.MAX_TRAVEL_MINUTES:
@@ -152,69 +173,76 @@ def _modes(c: dict, ch: dict, a: Assumptions, matrix: dict, sides: dict):
 def _eval_in_person(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: dict, sides: dict):
     if c["mobility"] == "wheelchair" and not ch["accessible"]:
         return None, {"NOT_WHEELCHAIR_ACCESSIBLE"}
-    modes, fails = _modes(c, ch, a, matrix, sides)
+    modes, fails = _modes(c, ch, a, matrix, sides, _voucher(c, policy))
     if not modes:
         return None, fails or {"NO_TRANSPORT"}
     droad = world.detour(c["id"], ch["dest"], ch["closed"])[2] if ch["closed"] else None
 
     # Appointments (offices only, rule 3): book online yourself, via a helper (hardship),
-    # or make one wasted trip first.
+    # or make one wasted trip first. Citizens in an exempt group walk in.
     visits = policy.visits_required
-    book_flag, book_reasons, book_min = 0, [], 0.0
-    if ch["appointment"]:
+    variants = []  # (service minutes at the counter, visits, booking minutes, booking flag, booking reasons)
+    appointment = ch["appointment"] and not (set(c["tags"]) & set(policy.appointment_exempt_groups))
+    if appointment:
         ok, rs = _online_ability(c)
-        book_min = a.ONLINE_MINUTES
-        if not ok:
-            book_flag, book_reasons = 1, rs
-            if not c["has_helper"]:
-                visits += 1
-                book_min = 0.0
+        if ok:
+            variants.append((a.SERVICE_MINUTES, visits, a.ONLINE_MINUTES, 0, []))
+        elif c["has_helper"]:
+            variants.append((a.SERVICE_MINUTES, visits, a.ONLINE_MINUTES, 1, rs))
+        else:
+            variants.append((a.SERVICE_MINUTES, visits + 1, 0.0, 1, rs))
+    else:
+        variants.append((a.SERVICE_MINUTES, visits, 0.0, 0, []))
+    if policy.hybrid_pickup:
+        # Also possible: apply online (yourself, or a helper does it: hardship), then one short visit to collect the
+        # card. The online application replaces any appointment. The citizen takes whichever option is better.
+        ok, rs = _online_ability(c)
+        if ok or c["has_helper"]:
+            variants.append((a.PICKUP_MINUTES, 1, a.ONLINE_MINUTES, 0 if ok else 1, [] if ok else rs))
 
     helper_from = to_min(a.HELPER_FREE_FROM)
     works = c["works"]
     ws = to_min(c["work_start"]) if works else 0
     we = to_min(c["work_end"]) if works else 0
-    S = a.SERVICE_MINUTES
     cap = a.MAX_WORK_HOURS_MISSED[c["income_band"]]
-    fee = policy.fee_jd
+    fee = _fee(c, policy)
 
-    outside, during = [], []
-    capped = False
-    for day, op, cl in ch["schedule"]:
-        weekend = day in WEEKEND
-        for mode, t, rt_cost, transfers, uses_helper, extra in modes:
-            h_free = 0 if (not uses_helper or weekend) else helper_from
-            visit_h = (2 * t + S) / 60
-            hours = visit_h * visits + book_min / 60
-            cost = fee + rt_cost * visits
-            flags = int(uses_helper) + book_flag
-            if works and not weekend:
-                arr = max(op, max(we, h_free) + t)  # after work
-                if arr + S <= cl:
-                    outside.append((day, mode, t, transfers, hours, cost, 0.0, flags, [], extra))
-                arr = max(op, h_free + t)  # during work
-                if arr + S <= cl and arr - t < we and arr + S + t > ws:
-                    work = visit_h * visits
-                    if work > cap:
-                        capped = True
-                    else:
-                        during.append((day, mode, t, transfers, hours, cost, work, flags + 1, ["HOURS_CONFLICT_WORK"], extra))
-            else:
-                arr = max(op, h_free + t)
-                if arr + S <= cl:
-                    outside.append((day, mode, t, transfers, hours, cost, 0.0, flags, [], extra))
-
-    cands = outside or during  # rule 5: an outside-work slot always wins if one exists
-    if not cands:
+    best, capped = None, False
+    for S, n_visits, book_min, book_flag, book_reasons in variants:
+        outside, during = [], []
+        for day, op, cl in ch["schedule"]:
+            weekend = day in WEEKEND
+            for mode, t, rt_cost, transfers, uses_helper, extra in modes:
+                h_free = 0 if (not uses_helper or weekend) else helper_from
+                visit_h = (2 * t + S) / 60
+                hours = visit_h * n_visits + book_min / 60
+                cost = fee + rt_cost * n_visits
+                flags = int(uses_helper) + book_flag
+                if works and not weekend:
+                    arr = max(op, max(we, h_free) + t)  # after work
+                    if arr + S <= cl:
+                        outside.append((day, mode, t, transfers, hours, cost, 0.0, flags, [], extra))
+                    arr = max(op, h_free + t)  # during work
+                    if arr + S <= cl and arr - t < we and arr + S + t > ws:
+                        work = visit_h * n_visits
+                        if work > cap:
+                            capped = True
+                        else:
+                            during.append((day, mode, t, transfers, hours, cost, work, flags + 1,
+                                           ["HOURS_CONFLICT_WORK"], extra))
+                else:
+                    arr = max(op, h_free + t)
+                    if arr + S <= cl:
+                        outside.append((day, mode, t, transfers, hours, cost, 0.0, flags, [], extra))
+        for day, mode, t, transfers, hours, cost, work, flags, rs, extra in outside or during:  # rule 5
+            burden = hours + a.COST_WEIGHT * cost + a.WORK_WEIGHT * work
+            opt = _option(ch, burden=burden, flags=flags, hours=hours, cost=cost, work=work, mode=mode,
+                          transfers=transfers if mode == "bus" else 0, day=day, travel=t,
+                          reasons=book_reasons + rs, a=a, detour=extra, detour_road=droad)
+            if best is None or opt["key"] < best["key"]:
+                best = opt
+    if best is None:
         return None, fails | ({"HOURS_CONFLICT_WORK"} if capped else {"OFFICE_CLOSED_ON_AVAILABLE_DAYS"})
-    best = None
-    for day, mode, t, transfers, hours, cost, work, flags, rs, extra in cands:
-        burden = hours + a.COST_WEIGHT * cost + a.WORK_WEIGHT * work
-        opt = _option(ch, burden=burden, flags=flags, hours=hours, cost=cost, work=work, mode=mode,
-                      transfers=transfers if mode == "bus" else 0, day=day, travel=t,
-                      reasons=book_reasons + rs, a=a, detour=extra, detour_road=droad)
-        if best is None or opt["key"] < best["key"]:
-            best = opt
     return best, set()
 
 
@@ -234,6 +262,29 @@ def _channel_results(ch: dict, policy: Policy, pop: list[dict], a: Assumptions) 
     return res
 
 
+HOME = {"kind": "home", "id": "home_visit", "name_ar": "زيارة منزلية", "name_en": "Home visit"}
+
+
+def _allocate_home_visits(policy: Policy, pop: list[dict], bests: list, a: Assumptions) -> None:
+    """Home-visit slots go to eligible citizens who are worst off without one: left out first, then the heaviest
+    hardship (ties by id). A slot is used only if the home visit is better for that citizen. Deterministic."""
+    hv = policy.home_visits
+    if not hv or hv.slots <= 0 or policy.online_only:
+        return
+    groups = set(hv.groups)
+    queue = sorted((0 if b is None else 1, -(b["key"][1] if b else 0.0), c["id"], i)
+                   for i, (c, b) in enumerate(zip(pop, bests))
+                   if groups & set(c["tags"]) and (b is None or b["status"] != "served"))
+    for *_, i in queue[:hv.slots]:
+        c = pop[i]
+        hours = a.HOME_VISIT_MINUTES / 60 * policy.visits_required
+        cost = _fee(c, policy)
+        opt = _option(HOME, burden=hours + a.COST_WEIGHT * cost, flags=0, hours=hours, cost=cost, work=0.0,
+                      mode="home", transfers=0, day=None, travel=0.0, reasons=[], a=a)
+        if bests[i] is None or opt["key"] < bests[i]["key"]:
+            bests[i] = opt
+
+
 # ------------------------------------------------------------------- public
 
 def run(policy: Policy, population: list[dict] | None = None, assumptions: Assumptions | None = None) -> list[dict]:
@@ -241,7 +292,7 @@ def run(policy: Policy, population: list[dict] | None = None, assumptions: Assum
     pop = population if population is not None else world.population()
     a = assumptions or DEFAULT
     per_channel = [_channel_results(ch, policy, pop, a) for ch in _channels(policy)]
-    out = []
+    bests, fails_by = [], []
     for i, c in enumerate(pop):
         best, reasons = None, set()
         for res in per_channel:
@@ -249,6 +300,11 @@ def run(policy: Policy, population: list[dict] | None = None, assumptions: Assum
             reasons |= fails
             if opt is not None and (best is None or opt["key"] < best["key"]):
                 best = opt
+        bests.append(best)
+        fails_by.append(reasons)
+    _allocate_home_visits(policy, pop, bests, a)
+    out = []
+    for c, best, reasons in zip(pop, bests, fails_by):
         if best is None:
             out.append({"citizen_id": c["id"], "status": "left_out", "channel": None, "channel_name_ar": None,
                         "channel_name_en": None, "mode": None, "bus_transfers": 0, "visit_day": None,
@@ -290,6 +346,7 @@ def summarize(outcomes: list[dict], pop: list[dict] | None = None) -> tuple[dict
         "n": n, "n_served": counts["served"], "n_hardship": counts["hardship"], "n_left_out": counts["left_out"],
         # closed roads: citizens whose chosen trip takes a detour, and its average extra one-way minutes
         "n_detour": detoured, "avg_detour_min": round(detour / detoured, 1) if detoured else 0.0,
+        "n_home_visits": sum(o.get("channel") == "home_visit" for o in outcomes),
     }
     by_group = {g: {"served": pct(v["served"], v["n"]), "hardship": pct(v["hardship"], v["n"]),
                     "left_out": pct(v["left_out"], v["n"]), "n": v["n"]} for g, v in groups.items()}

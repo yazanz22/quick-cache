@@ -99,6 +99,22 @@ class MobileUnit(BaseModel):
     close: str
 
 
+Group = Literal["elderly", "disabled", "no_car", "offline", "low_income", "worker", "student"]
+
+
+class HomeVisits(BaseModel):
+    """A clerk renews the ID at the citizen's home. Slots are limited; they go to eligible citizens who are worst
+    off without one (left out first, then the heaviest hardship)."""
+    groups: list[Group] = ["disabled", "elderly"]
+    slots: int = Field(default=20, ge=0, le=1000)   # home visits available for the 1,000 synthetic residents
+
+
+class TransportVoucher(BaseModel):
+    """Covers bus or taxi fares for these groups, up to amount_jd per round trip (not private-car costs)."""
+    groups: list[Group]
+    amount_jd: float = Field(ge=0, le=50)
+
+
 class Policy(BaseModel):
     service: str = "id_renewal"
     offices: list[Office]
@@ -109,6 +125,12 @@ class Policy(BaseModel):
     fee_jd: float
     visits_required: int = Field(default=1, ge=1, le=5)
     closed_roads: list[str] = []   # ids from roads.json (GET /roads); trips that used them take the detour
+    # Protections for groups (a citizen belongs to a group by their tags):
+    appointment_exempt_groups: list[Group] = []   # may walk in to an office without an online appointment
+    fee_discounts: dict[Group, float] = {}        # percent off fee_jd (0-100); a citizen gets their largest discount
+    home_visits: HomeVisits | None = None
+    transport_vouchers: list[TransportVoucher] = []
+    hybrid_pickup: bool = False   # apply online (yourself or via a helper), then one short visit to collect the card
 
 
 class Road(BaseModel):

@@ -13,9 +13,20 @@ CAN_MODEL = """WHAT NAS CAN MODEL (the Policy schema, nothing else):
 - visits_required: number of in-person visits needed (1-5).
 - closed_roads: list of road ids that are closed (e.g. road works). Only the major roads in the "roads" list can be
   closed; trips that used them take a detour. "Reopen X" removes X from the list.
-Everything else is NOT supported yet, for example: a fee waiver or discount for one group, an office outside the 8 sites,
-a different or second service, closing a road that is not in the roads list, closing a road only on some days or hours,
-changes to bus routes or transport, home visits, extra staff or queue length."""
+Protections for groups. The groups are exactly: elderly (65+), disabled (any mobility limitation), no_car, offline
+(no smartphone or low digital skills), low_income, worker, student (18-24, not working).
+- appointment_exempt_groups: groups who may walk in to an office without the online appointment.
+- fee_discounts: {group: percent off the fee, 0-100}; e.g. free for over-65s = {"elderly": 100}. A person in several
+  groups gets their largest discount.
+- home_visits: null or {"groups": [...], "slots": N}: a clerk renews the ID at home. N visits for the 1,000 residents;
+  they go to the eligible residents who are worst off without one. Default groups ["disabled", "elderly"], slots 20.
+- transport_vouchers: list of {"groups": [...], "amount_jd": X}: bus or taxi fares paid up to X JD per round trip.
+- hybrid_pickup: true = residents can apply online (themselves or via a family member), then make one short visit
+  to collect the card instead of the full visit.
+Everything else is NOT supported yet, for example: a group that is not in the list above (e.g. pregnant women,
+refugees), an age threshold other than 65, an office outside the 15 sites, a different or second service, closing
+a road that is not in the roads list, closing a road only on some days or hours, changes to bus routes, extra staff
+or queue length."""
 
 PARSE_SYSTEM = f"""You turn a government official's description of a policy change (Arabic, Jordanian dialect, or English)
 into a structured policy for "Nas", a policy simulator for ID-card renewal in Amman.
@@ -36,6 +47,11 @@ Interpretation rules:
   online_enabled true, and add the mobile unit. Mention this in the change list.
 - A mobile unit without stated hours runs 09:00-14:00.
 - "double the fee" multiplies fee_jd by 2; "two visits" sets visits_required 2.
+- "make it free for the elderly / for people over 65" sets fee_discounts {{"elderly": 100}}; "half price for low-income
+  families" sets {{"low_income": 50}}. "let elderly and disabled people come without an appointment" sets
+  appointment_exempt_groups ["elderly", "disabled"]. "home visits for wheelchair users" sets home_visits with groups
+  ["disabled"] (slots 20 unless a number is given). "pay the taxi for low-income people up to 3 JD" adds a transport
+  voucher. "apply online and pick it up" sets hybrid_pickup true. "open a new office in X" adds an office at X's site.
 - "close Zahran Street" / "سكّروا شارع زهران" adds that road's id to closed_roads (match the road by its Arabic or
   English name, e.g. "Gardens" = gardens, "Airport Road" = airport_road). If current_policy has no closed_roads, it is [].
   A road closure is not an office closure: keep offices as they are.
@@ -70,6 +86,7 @@ Rules:
 - Money is Jordanian dinars: say دينار / ديناران / دنانير (never ليرة or ليرات).
 - If closed_road_ar is given, that road is closed and the trip took detour_minutes_one_way extra minutes each way;
   you may mention it. Never mention road closures otherwise.
+- mode "home" means a clerk came to their home: they did not travel. Say so.
 - Mention buses (حافلة) only if mode is "bus"; say "حافلتين" only if bus_transfers is 1, "ثلاث حافلات" only if it is 2.
 - status "served": they managed fine. "hardship": they managed but it cost them (say why, from reasons).
   "left_out": they could not renew at all (say why, from reasons).

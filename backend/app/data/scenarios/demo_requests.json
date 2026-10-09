@@ -44,12 +44,12 @@
   {
    "text": "Make it free for people over 65",
    "apply_to": "baseline",
-   "expect": "unsupported"
+   "expect": "ok"
   },
   {
    "text": "خلّوها مجانية لكبار السن",
    "apply_to": "baseline",
-   "expect": "unsupported"
+   "expect": "ok"
   },
   {
    "text": "سكّروا شارع الملكة رانيا",
@@ -91,6 +91,36 @@
   },
   {
    "text": "Close Zahran Street on Fridays only",
+   "apply_to": "baseline",
+   "expect": "unsupported"
+  },
+  {
+   "text": "خلّوا كبار السن وذوي الإعاقة يراجعوا بدون موعد",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "Home visits for wheelchair users, 30 visits",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "ادفعوا أجرة التكسي لذوي الدخل المحدود لحد 3 دنانير",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok"
+  },
+  {
+   "text": "Let people apply online and just pick up the card",
+   "apply_to": "baseline",
+   "expect": "ok"
+  },
+  {
+   "text": "افتحوا مكتب جديد في ماركا",
+   "apply_to": "consolidate",
+   "expect": "ok"
+  },
+  {
+   "text": "Add more staff at the Marka office",
    "apply_to": "baseline",
    "expect": "unsupported"
   }

@@ -217,30 +217,28 @@
    "visits_required": 1,
    "closed_roads": [],
    "appointment_exempt_groups": [],
-   "fee_discounts": {
-    "elderly": 100.0
-   },
+   "fee_discounts": {},
    "home_visits": null,
    "transport_vouchers": [],
-   "hybrid_pickup": false
+   "hybrid_pickup": true
   },
   "changes_ar": [
-   "جعل الخدمة مجانية لكبار السن (فوق 65 عاماً)"
+   "تفعيل خيار استلام البطاقة شخصياً بعد التقديم عبر الإنترنت"
   ],
   "changes_en": [
-   "Made the service free for people over 65"
+   "Enabled hybrid pickup for online applications"
   ],
   "message_ar": null,
   "message_en": null
  },
  "meta": {
   "provider": "gemini",
-  "model": "gemini-3.5-flash-lite",
-  "seconds": 14.26,
-  "ts": "2026-10-09T22:11:21"
+  "model": "gemini-3.1-flash-lite",
+  "seconds": 4.64,
+  "ts": "2026-10-09T22:10:55"
  },
  "inputs": {
-  "text": "make it free for people over 65",
+  "text": "let people apply online and just pick up the card",
   "current_policy": {
    "service": "id_renewal",
    "offices": [
