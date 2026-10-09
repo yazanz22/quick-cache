@@ -159,6 +159,192 @@
    "text": "سكّروا شارع زهران",
    "apply_to": "consolidate_digital_first",
    "expect": "unsupported"
+  },
+  {
+   "text": "خلّوا الكاونترات تسكر الساعة 1 الظهر، وما حدا يراجع المكتب إلا بموعد مسبق أونلاين",
+   "apply_to": "baseline",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "خلّوا الكاونترات تسكر الساعة 1 الظهر، وما حدا يراجع المكتب إلا بموعد مسبق أونلاين",
+   "apply_to": "consolidate",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "خلّوا الكاونترات تسكر الساعة 1 الظهر، وما حدا يراجع المكتب إلا بموعد مسبق أونلاين",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "اسكروا المكاتب يوم الخميس",
+   "apply_to": "consolidate",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "خلّوها مجانية لكبار السن",
+   "apply_to": "consolidate",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "ضيفوا وحدة متنقلة في ماركا يوم السبت",
+   "apply_to": "baseline",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "ضيفوا وحدة متنقلة في ماركا يوم السبت",
+   "apply_to": "consolidate",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "ضيفوا وحدة متنقلة في ماركا يوم السبت",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "Close the counters at 1 PM and require an online appointment for office visits",
+   "apply_to": "baseline",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "Close the counters at 1 PM and require an online appointment for office visits",
+   "apply_to": "consolidate",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "Close the counters at 1 PM and require an online appointment for office visits",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "Close all offices on Thursdays",
+   "apply_to": "consolidate",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "Make it free for people over 65",
+   "apply_to": "consolidate",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "Add a Saturday mobile van in Marka",
+   "apply_to": "baseline",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "Add a Saturday mobile van in Marka",
+   "apply_to": "consolidate",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "Add a Saturday mobile van in Marka",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "UI example chip: must be cached from every preset a judge might click it on"
+  },
+  {
+   "text": "افتحوا المكاتب يوم السبت",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "Open the offices on Saturdays",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "خلّوا المكاتب مفتوحة لحد الساعة 7 المسا",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "Keep the offices open until 7 PM",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "رجّعوا كل المكاتب",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "Reopen all the offices",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "نص السعر لذوي الدخل المحدود",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "Half price for low-income families",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "Make it free for everyone",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "Close the Tabarbour office",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "Move the Jabal Amman office to Wehdat",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "انقلوا مكتب جبل عمان إلى الوحدات",
+   "apply_to": "consolidate_digital_first",
+   "expect": "ok",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "زيدوا الباصات",
+   "apply_to": "consolidate_digital_first",
+   "expect": "unsupported",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "Add more buses",
+   "apply_to": "consolidate_digital_first",
+   "expect": "unsupported",
+   "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "Make it free for pregnant women",
+   "apply_to": "consolidate_digital_first",
+   "expect": "unsupported",
+   "expected": "likely judge request on the demo path"
   }
  ]
 }

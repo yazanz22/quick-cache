@@ -43,8 +43,14 @@ Interpretation rules:
   in X" adds an office at X's site (prefer the real CSPD site, real: true) with the same hours and settings as the others.
 - "online-only but keep a van in X on Saturday": online_only must stay false (it would hide the van), set offices to [],
   online_enabled true, and add the mobile unit. Mention this in the change list.
+- "reopen all the offices" / "رجّعوا كل المكاتب" / "bring back every office" adds an office at every real CSPD site
+  (real: true) that has no office yet, each with the same hours and settings as the existing offices.
+- Hours changes ARE supported: "keep the offices open until 7 PM" / "خلّوا المكاتب مفتوحة لحد الساعة 7 المسا" /
+  "extend the hours to 19:00" sets the close time to 19:00 on every open day of every office (unless one office or one
+  day is named). "open the offices on Saturdays" adds sat with the same hours as the other days.
 - A mobile unit without stated hours runs 09:00-14:00.
-- "double the fee" multiplies fee_jd by 2; "two visits" sets visits_required 2.
+- "double the fee" multiplies fee_jd by 2; "two visits" sets visits_required 2. "make it free for everyone" / "خلّوها
+  مجانية للكل" sets fee_jd to 0 (no discounts needed). "نص السعر" / "نصف السعر" / "half price" means a 50% discount.
 - "make it free for the elderly / for people over 65" sets fee_discounts {{"elderly": 100}}; "half price for low-income
   families" sets {{"low_income": 50}}. "let elderly and disabled people come without an appointment" sets
   appointment_exempt_groups ["elderly", "disabled"]. "home visits for wheelchair users" sets home_visits with groups
