@@ -23,19 +23,10 @@ REQUESTS = json.loads((SCENARIOS_DIR / "demo_requests.json").read_text(encoding=
 HEROES = json.loads((SCENARIOS_DIR / "heroes.json").read_text(encoding="utf-8"))
 DEMO = HEROES["scenario"]
 
-# Rehearsed requests cached on 2026-10-09 (the rest of demo_requests.json was added later).
-CACHED_REQUESTS = {
-    ("اسكروا المكاتب يوم الخميس", "baseline"), ("Close all offices on Thursdays", "baseline"),
-    ("Close the Marka office", "baseline"), ("Reopen the Marka office", "consolidate"),
-    ("Make it online-only but keep a Saturday van in Wehdat", "baseline"), ("Double the fee", "baseline"),
-    ("Require two visits", "baseline"), ("Make it free for people over 65", "baseline"),
-    ("خلّوها مجانية لكبار السن", "baseline"), ("خلّوا كبار السن وذوي الإعاقة يراجعوا بدون موعد", DEMO),
-    ("Home visits for wheelchair users, 30 visits", DEMO), ("ادفعوا أجرة التكسي لذوي الدخل المحدود لحد 3 دنانير", DEMO),
-    ("Let people apply online and just pick up the card", "baseline"), ("افتحوا مكتب جديد في ماركا", "consolidate"),
-    ("Add more staff at the Marka office", "baseline"), ("سكّروا شارع زهران", "baseline"),
-}
-# Hero voices not cached yet: (citizen, policy label).
-PENDING_VOICES = {("c_0837", "top_fix"), ("c_0020", "top_fix"), ("c_0837", "ai_fix"), ("c_0020", "ai_fix")}
+# Every request in demo_requests.json was warmed on 2026-10-10; a miss here is a real regression (a cache-key change or
+# a deleted entry), so there is no xfail for requests any more.
+# Hero voices not cached yet: (citizen, policy label). Only Amina after the AI fix is pending (Gemini voice models were out).
+PENDING_VOICES = {("c_0020", "ai_fix")}
 
 
 @functools.lru_cache(maxsize=1)
@@ -55,18 +46,26 @@ def test_stage_sentence_hits_and_equals_the_demo_preset():
 
 def _request_params():
     for x in REQUESTS["requests"]:
-        marks = [] if (x["text"], x["apply_to"]) in CACHED_REQUESTS else [pytest.mark.xfail(strict=False, reason=PENDING)]
-        yield pytest.param(x, marks=marks, id=f"{x['apply_to']}:{x['text'][:40]}")
+        yield pytest.param(x, id=f"{x['apply_to']}:{x['text'][:40]}")
 
 
 @pytest.mark.parametrize("x", list(_request_params()))
 def test_rehearsed_request_hits(x):
     r = tasks.parse_policy(x["text"], world.scenario_policy(x["apply_to"]))
-    assert r.source == "ai" and r.status == x["expect"]
+    assert r.source == "ai", f"cache miss for {x['text']!r} on {x['apply_to']}: re-run scripts.warm_cache --parse-only"
+    assert r.status == x["expect"]
 
 
-def test_every_baseline_request_is_cached_today():
-    assert {(x["text"], x["apply_to"]) for x in REQUESTS["requests"] if x["apply_to"] == "baseline"} <= CACHED_REQUESTS
+def test_ui_example_chips_are_cached_from_every_preset():
+    """The four example chips in the policy box (i18n example_1..4, ar + en) can be clicked from any preset."""
+    chips = ["خلّوا الكاونترات تسكر الساعة 1 الظهر، وما حدا يراجع المكتب إلا بموعد مسبق أونلاين", "اسكروا المكاتب يوم الخميس",
+             "خلّوها مجانية لكبار السن", "ضيفوا وحدة متنقلة في ماركا يوم السبت",
+             "Close the counters at 1 PM and require an online appointment for office visits", "Close all offices on Thursdays",
+             "Make it free for people over 65", "Add a Saturday mobile van in Marka"]
+    have = {(x["text"], x["apply_to"]) for x in REQUESTS["requests"]}
+    for c in chips:
+        for sid in ("baseline", "consolidate", DEMO):
+            assert (c, sid) in have, f"chip {c!r} is not rehearsed on {sid}"
 
 
 def test_demo_fixes_hit_with_the_ai_proposal_shown():
@@ -105,7 +104,6 @@ def test_report_with_top_fix_robustness_hits():
     assert r.source == "ai"
 
 
-@pytest.mark.xfail(strict=False, reason=PENDING)
 @pytest.mark.parametrize("fix", [None, "top_fix", "ai_fix"])
 def test_report_from_policies_hits(fix):
     p = _policies()

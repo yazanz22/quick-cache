@@ -1,6 +1,7 @@
 # HANDOFF: Nas (ناس), state of the project
 
-Read this first in a new context window, then `CLAUDE.md` (the full spec). Last updated 2026-10-10 (morning, Amman),
+Read this first in a new context window, then `CLAUDE.md` (the full spec). **For the stage: `DEMO_RUNBOOK.md`** (clicks,
+numbers, cached judge requests, fallbacks, morning checklist). Last updated 2026-10-10 (early morning, Amman),
 after a full review pass: 42 issues fixed and 26 improvements added by four parallel agents (engine, AI layer, frontend, docs);
 see §14 for what is deliberately on hold.
 
