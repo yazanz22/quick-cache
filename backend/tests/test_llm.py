@@ -1,0 +1,35 @@
+from app.llm import cache, checks, fallbacks, tasks
+from app.sim import engine, world
+
+
+def test_grounding_handles_arabic_digits_and_times():
+    inputs = {"travel_minutes": 45.3, "cost_jd": 3.8, "close": "13:00"}
+    assert checks.ungrounded("الطريق ٤٥ دقيقة وكلفتني 3.8 دينار، بسكر الساعة 1", inputs) == []
+    assert checks.ungrounded("الطريق 90 دقيقة", inputs) == [90.0]
+
+
+def test_foreign_people_check():
+    assert checks.foreign_people("ابني وصلني", "ابني") == []
+    assert checks.foreign_people("جاري وصلني", "ابني") == ["جاري"]
+
+
+def test_cache_key_normalises_text():
+    a = cache.key("parse", {"text": cache.normalize_text("  أغلق   المكتب يوم الخميس ")})
+    b = cache.key("parse", {"text": cache.normalize_text("اغلق المكتب يوم الخميس")})
+    assert a == b
+
+
+def test_every_reason_has_voice_text():
+    assert set(fallbacks.REASON_VOICE) == set(fallbacks.REASON_LABELS)
+
+
+def test_offline_tasks_fall_back_never_blank():
+    pop = world.population()
+    outs = engine.run(world.scenario_policy("abdali_digital_first"))
+    for st in ["served", "hardship", "left_out"]:
+        i = next(k for k, o in enumerate(outs) if o["status"] == st)
+        v = tasks.voice_citizen(pop[i], outs[i])
+        assert v.text_ar and v.summary_en and v.source in ("fallback", "ai")
+        assert checks.has_arabic(v.text_ar)
+    p = tasks.parse_policy("some text that is definitely not cached 12345", world.scenario_policy("baseline"))
+    assert p.status == "unsupported" and p.source == "fallback"

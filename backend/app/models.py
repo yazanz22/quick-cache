@@ -172,6 +172,7 @@ class SensitivityResult(BaseModel):
     ranking_held: int
     fix_still_helps: int
     stable_top_group: str | None = None
+    stable_top2: list[str] | None = None   # the top-2 groups as a set, if the same in every run (order may flip)
     passed: bool
     details: list[dict] = []
 
@@ -224,3 +225,6 @@ class ReportResponse(BaseModel):
 class FixesResponse(BaseModel):
     fixes: list[FixCandidate]
     source: Literal["ai", "fallback"]
+    # What happened to the AI's off-grid idea: status is "shown", "hidden_not_better", "hidden_worsens_a_group",
+    # "hidden_duplicate_of_grid", "hidden_no_change", "invalid", "ai_unavailable" or "no_grid_fixes".
+    ai_proposal: dict | None = None
