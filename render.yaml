@@ -1,0 +1,42 @@
+# Render Blueprint: one free web service runs the API and serves the UI at /.
+# Render dashboard -> New -> Blueprint -> pick this repo. Enter the API keys when asked (sync: false).
+services:
+  - type: web
+    name: nas
+    runtime: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      # Secrets: typed into the Render dashboard, never committed.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      # Same settings as .env.example.
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: LLM_FALLBACK_PROVIDER
+        value: groq,openai
+      - key: MODEL_FAST
+        value: gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash
+      - key: MODEL_SMART
+        value: gemini-3.6-flash,gemini-3.7-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite
+      - key: GROQ_MODEL_SMART
+        value: openai/gpt-oss-120b,openai/gpt-oss-20b,qwen/qwen3.8-27b
+      - key: OPENAI_MODEL_FAST
+        value: gpt-4.1-mini,gpt-5.4-mini
+      - key: OPENAI_MODEL_SMART
+        value: gpt-4.1-mini,gpt-5.4-mini
+      - key: LLM_TIMEOUT_S
+        value: "15"
+      - key: LLM_TOTAL_BUDGET_S
+        value: "17"
+      - key: DEMO_OFFLINE
+        value: "0"
