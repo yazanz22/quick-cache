@@ -73,7 +73,8 @@ def _ai(task: str, inputs, system: str, user: str, check: Callable[[str, bool], 
 
 
 def _sites_areas() -> dict:
-    return {"sites": [{"id": s["id"], "area": s["area"], "name_en": s["name_en"], "name_ar": s["name_ar"]}
+    return {"sites": [{"id": s["id"], "area": s["area"], "name_en": s["name_en"], "name_ar": s["name_ar"],
+                       "real_cspd_office": s.get("real", False)}
                       for s in world.sites().values()],
             "areas": [{"id": a["id"], "name_en": a["name_en"], "name_ar": a["name_ar"], "side": a["side"]}
                       for a in world.areas().values()]}

@@ -54,7 +54,7 @@ def test_every_citizen_has_osrm_travel_times():
 
 
 def test_simulate_is_deterministic_and_fast():
-    p = world.scenario_policy("abdali_digital_first")
+    p = world.scenario_policy(world.demo_scenario_id())
     engine._MEMO.clear()
     t = time.perf_counter()
     a = engine.run(p)

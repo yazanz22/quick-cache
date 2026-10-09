@@ -73,6 +73,9 @@ class Site(BaseModel):
     name_en: str
     lat: float
     lng: float
+    real: bool = False               # True for the 7 real CSPD offices in Amman
+    address_en: str | None = None    # CSPD's published address (real sites only)
+    geocode: str | None = None       # how the coordinates were found, with precision
 
 
 # -------------------------------------------------------------------- policy
@@ -111,6 +114,7 @@ class Scenario(BaseModel):
     description_ar: str = ""
     description_en: str = ""
     policy: Policy
+    demo: bool = False   # the demo path (CLAUDE.md §10)
 
 
 # ---------------------------------------------------------------- simulation

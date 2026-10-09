@@ -1,0 +1,289 @@
+{
+ "task": "fixes",
+ "output": {
+  "explanations": [
+   {
+    "id": "pair:van:sweileh:sat+van:downtown:sat",
+    "explanation_ar": "يساعد هذا الحل في تقليل الأشخاص غير المستفيدين بنسبة 0.8 نقطة مئوية وخفض الصعوبات بنسبة 10.5 نقطة مئوية، مع الاستفادة بشكل رئيسي لمجموعات غير المتصلين بالإنترنت وكبار السن وذوي الإعاقة.",
+    "explanation_en": "This helps by dropping left-out individuals by 0.8 percentage points and hardship by 10.5 percentage points, primarily benefiting offline groups, the elderly, and disabled individuals."
+   },
+   {
+    "id": "pair:van:khalda:sat+van:downtown:sat",
+    "explanation_ar": "يساهم هذا الإجراء في خفض نسبة غير المستفيدين بواقع 0.8 نقطة مئوية وتقليل الصعوبات بنسبة 10.4 نقطة مئوية، مستهدفاً بشكل أساسي فئات غير المتصلين بالإنترنت وكبار السن وذوي الإعاقة.",
+    "explanation_en": "This reduces left-out individuals by 0.8 percentage points and hardship by 10.4 percentage points, mainly improving conditions for offline groups, the elderly, and disabled individuals."
+   },
+   {
+    "id": "pair:van:sweileh:sat+van:wehdat:sat",
+    "explanation_ar": "يعمل هذا التعديل على خفض معدل الاستبعاد بنسبة 0.8 نقطة مئوية وتقليل الصعوبات بواقع 9.7 نقطة مئوية، مما يدعم بشكل رئيسي فئات غير المتصلين بالإنترنت وكبار السن وذوي الإعاقة.",
+    "explanation_en": "This achieves a left-out drop of 0.8 percentage points and a hardship drop of 9.7 percentage points, with the main improvements seen among offline groups, the elderly, and disabled individuals."
+   }
+  ],
+  "proposal": {
+   "title_ar": "إضافة وحدات متنقلة يوم السبت في صويلح والوحدات ووسط البلد",
+   "title_en": "Add Saturday mobile units in Sweileh, Wehdat, and Downtown",
+   "rationale_ar": "إضافة وحدات متنقلة تعمل أيام السبت بدون موعد مسبق في المناطق الأكثر احتياجاً لتغطية الفئات غير المتصلة رقمياً وكبار السن وذوي الإعاقة الذين تواجههم صعوبات في الوصول المكتبي خلال أيام العمل الرسمية.",
+   "rationale_en": "Adding walk-in mobile units on Saturdays in key high-demand areas to better serve offline populations, the elderly, and disabled individuals facing accessibility barriers during regular workdays.",
+   "policy": {
+    "service": "id_renewal",
+    "offices": [
+     {
+      "id": "office_tabarbour",
+      "name_ar": "مكتب الأحوال المدنية - طبربور (المكتب الرئيسي)",
+      "name_en": "CSPD office - Tabarbour (head office)",
+      "site_id": "cspd_tabarbour",
+      "schedule": {
+       "sun": [
+        "08:30",
+        "13:00"
+       ],
+       "mon": [
+        "08:30",
+        "13:00"
+       ],
+       "tue": [
+        "08:30",
+        "13:00"
+       ],
+       "wed": [
+        "08:30",
+        "13:00"
+       ],
+       "thu": [
+        "08:30",
+        "13:00"
+       ]
+      },
+      "wheelchair_accessible": true
+     },
+     {
+      "id": "office_jabal_amman",
+      "name_ar": "مكتب الأحوال المدنية - جبل عمان",
+      "name_en": "CSPD office - Jabal Amman",
+      "site_id": "cspd_jabal_amman",
+      "schedule": {
+       "sun": [
+        "08:30",
+        "13:00"
+       ],
+       "mon": [
+        "08:30",
+        "13:00"
+       ],
+       "tue": [
+        "08:30",
+        "13:00"
+       ],
+       "wed": [
+        "08:30",
+        "13:00"
+       ],
+       "thu": [
+        "08:30",
+        "13:00"
+       ]
+      },
+      "wheelchair_accessible": true
+     }
+    ],
+    "online_enabled": true,
+    "online_only": false,
+    "mobile_units": [
+     {
+      "area": "sweileh",
+      "day": "sat",
+      "open": "09:00",
+      "close": "14:00"
+     },
+     {
+      "area": "wehdat",
+      "day": "sat",
+      "open": "09:00",
+      "close": "14:00"
+     },
+     {
+      "area": "downtown",
+      "day": "sat",
+      "open": "09:00",
+      "close": "14:00"
+     }
+    ],
+    "appointment_required": true,
+    "fee_jd": 2.0,
+    "visits_required": 1
+   }
+  },
+  "proposal_error": null
+ },
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "seconds": 4.07,
+  "hint": null,
+  "ts": "2026-10-09T17:25:43"
+ },
+ "inputs": {
+  "scenario_policy": {
+   "service": "id_renewal",
+   "offices": [
+    {
+     "id": "office_tabarbour",
+     "name_ar": "مكتب الأحوال المدنية - طبربور (المكتب الرئيسي)",
+     "name_en": "CSPD office - Tabarbour (head office)",
+     "site_id": "cspd_tabarbour",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "13:00"
+      ],
+      "mon": [
+       "08:30",
+       "13:00"
+      ],
+      "tue": [
+       "08:30",
+       "13:00"
+      ],
+      "wed": [
+       "08:30",
+       "13:00"
+      ],
+      "thu": [
+       "08:30",
+       "13:00"
+      ]
+     },
+     "wheelchair_accessible": true
+    },
+    {
+     "id": "office_jabal_amman",
+     "name_ar": "مكتب الأحوال المدنية - جبل عمان",
+     "name_en": "CSPD office - Jabal Amman",
+     "site_id": "cspd_jabal_amman",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "13:00"
+      ],
+      "mon": [
+       "08:30",
+       "13:00"
+      ],
+      "tue": [
+       "08:30",
+       "13:00"
+      ],
+      "wed": [
+       "08:30",
+       "13:00"
+      ],
+      "thu": [
+       "08:30",
+       "13:00"
+      ]
+     },
+     "wheelchair_accessible": true
+    }
+   ],
+   "online_enabled": true,
+   "online_only": false,
+   "mobile_units": [],
+   "appointment_required": true,
+   "fee_jd": 2.0,
+   "visits_required": 1
+  },
+  "scenario_by_group": {
+   "elderly": {
+    "hardship": 84.6,
+    "left_out": 3.1
+   },
+   "disabled": {
+    "hardship": 52.2,
+    "left_out": 5.8
+   },
+   "no_car": {
+    "hardship": 22.5,
+    "left_out": 1.5
+   },
+   "offline": {
+    "hardship": 95.6,
+    "left_out": 4.4
+   },
+   "low_income": {
+    "hardship": 29.0,
+    "left_out": 2.7
+   },
+   "worker": {
+    "hardship": 16.2,
+    "left_out": 1.2
+   }
+  },
+  "scenario_kpis": {
+   "pct_served": 79.6,
+   "pct_hardship": 19.5,
+   "pct_left_out": 0.9
+  },
+  "left_out_by_area": {
+   "jabal_al_hussein": 1,
+   "khalda": 2,
+   "marka": 1,
+   "sweileh": 3,
+   "wehdat": 2
+  },
+  "not_served_by_area": {
+   "abdali": 20,
+   "downtown": 17,
+   "jabal_al_hussein": 24,
+   "khalda": 21,
+   "marka": 28,
+   "sweileh": 26,
+   "tabarbour": 11,
+   "wehdat": 57
+  },
+  "reasons_not_served": {
+   "LOW_DIGITAL_LITERACY": 204,
+   "NO_SMARTPHONE": 44,
+   "TOO_FAR": 23,
+   "HOURS_CONFLICT_WORK": 23,
+   "TOO_EXPENSIVE": 9,
+   "NO_TRANSPORT": 1
+  },
+  "engine_fixes": [
+   {
+    "id": "pair:van:sweileh:sat+van:downtown:sat",
+    "title_ar": "وحدة متنقلة في صويلح يوم السبت (٩–٢، بدون موعد) + وحدة متنقلة في وسط البلد يوم السبت (٩–٢، بدون موعد)",
+    "title_en": "Mobile unit in Sweileh on Saturday (09:00–14:00, walk-in) + Mobile unit in Downtown on Saturday (09:00–14:00, walk-in)",
+    "left_out_drop": 0.8,
+    "hardship_drop": 10.5,
+    "improved_groups": [
+     "offline",
+     "elderly",
+     "disabled"
+    ]
+   },
+   {
+    "id": "pair:van:khalda:sat+van:downtown:sat",
+    "title_ar": "وحدة متنقلة في خلدا يوم السبت (٩–٢، بدون موعد) + وحدة متنقلة في وسط البلد يوم السبت (٩–٢، بدون موعد)",
+    "title_en": "Mobile unit in Khalda on Saturday (09:00–14:00, walk-in) + Mobile unit in Downtown on Saturday (09:00–14:00, walk-in)",
+    "left_out_drop": 0.8,
+    "hardship_drop": 10.4,
+    "improved_groups": [
+     "offline",
+     "elderly",
+     "disabled"
+    ]
+   },
+   {
+    "id": "pair:van:sweileh:sat+van:wehdat:sat",
+    "title_ar": "وحدة متنقلة في صويلح يوم السبت (٩–٢، بدون موعد) + وحدة متنقلة في الوحدات يوم السبت (٩–٢، بدون موعد)",
+    "title_en": "Mobile unit in Sweileh on Saturday (09:00–14:00, walk-in) + Mobile unit in Wehdat on Saturday (09:00–14:00, walk-in)",
+    "left_out_drop": 0.8,
+    "hardship_drop": 9.7,
+    "improved_groups": [
+     "offline",
+     "elderly",
+     "disabled"
+    ]
+   }
+  ]
+ }
+}

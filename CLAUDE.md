@@ -446,16 +446,16 @@ Policy Panel · Map · Impact Panel. The Citizen Card opens as a drawer over the
 
 ## 10. Demo scenarios (preset JSON in `data/scenarios/`)
 
-1. **`baseline`:** ID renewal office in Downtown, 08:00–15:00 Sun–Thu, walk-in, online enabled, accessible.
-2. **`move_to_abdali`:** the office moves to Abdali. East Amman residents without cars feel it.
-3. **`digital_first`:** counters close at 13:00 and office visits need an online appointment. A realistic "digital transformation" policy with a hidden cost to elderly, offline and worker citizens.
+1. **`baseline`:** today's network: the **7 real CSPD offices in Amman** (Tabarbour head office, Jabal Amman, Marka, Sweileh, Jabal Al-Hussein, Tla' Al-Ali, Wadi Al-Seer; addresses from CSPD's own office list, located with OpenStreetMap, real: true in `sites.json`), 08:30–15:30 Sun–Thu as CSPD publishes, walk-in, online enabled. Wheelchair access is assumed; the fee is a placeholder.
+2. **`consolidate`:** close 5 offices, keep only Tabarbour and Jabal Amman. Elderly, offline and no-car residents far from those two feel it.
+3. **`digital_first`:** all 7 offices close at 13:00 and office visits need an online appointment. A realistic "digital transformation" policy with a hidden cost to elderly, offline and worker citizens.
 4. **`online_only`:** the extreme version, kept as a backup.
-5. **`abdali_digital_first`:** the **demo path**: office at Abdali **plus** the `digital_first` rules. This is exactly what the §13 script produces, so tune scenarios, pick heroes, find the AI fix and warm the cache against **this** preset. It is also the preset-button fallback if the free-text parse fails on stage.
+5. **`consolidate_digital_first`:** the **demo path** (`"demo": true` in its JSON): `consolidate` **plus** the `digital_first` rules. This is exactly what the §13 script produces, so tune scenarios, pick heroes, find the AI fix and warm the cache against **this** preset. It is also the preset-button fallback if the free-text parse fails on stage. Scripts and the debug page find it by its `demo` flag.
 
 **If a scenario's story doesn't appear, change the scenario, not the assumptions (§6.2).**
 
 ### The demo fix
-For `abdali_digital_first`, the engine's top grid fix is expected to be a pair such as a Saturday Marka van + late Thursday. Whatever the grid actually returns is what we show.
+For `consolidate_digital_first`, the engine's top grid fix is a pair of Saturday vans (currently Sweileh + Downtown: service comes back near the closed branches). Whatever the grid actually returns is what we show.
 
 **Guaranteed AI fix:** before warming the cache, run `/fixes` for the demo path until the AI proposes an off-grid policy that the engine verifies beats the best grid fix (try a few prompt variations if needed; e.g. vans in two areas on different days, or a late day plus a Saturday office opening). Save its inputs and output in the cache and note it in `demo_requests.json`. The demo then always shows one "AI-proposed · verified" fix. If none can be found, say so on stage honestly: "the AI's own idea didn't beat the engine's best this time, so it's hidden."
 
@@ -464,8 +464,8 @@ After scenarios are final, pick 3–4 fixed citizen IDs and save them in `heroes
 
 ### Judge-request rehearsal (`demo_requests.json`)
 List ~6 policies a judge is likely to ask for, run each live once, and keep the cached results:
-- "Close the office on Thursdays" / "اسكروا المكتب يوم الخميس"
-- "Move the office to Sweileh"
+- "Close all offices on Thursdays" / "اسكروا المكاتب يوم الخميس"
+- "Close the Marka office" and "Reopen the Marka office"
 - "Make it online-only but keep a Saturday van in Wehdat"
 - "Double the fee"
 - "Require two visits"
@@ -506,7 +506,7 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 
 1. **0:00–0:45 Problem.** "Every new policy in Jordan is tested on real people after launch. The ones who fall through the cracks are the ones who can't complain: elderly, disabled, no car, no smartphone. Nas reaches them before the policy does."
 2. **0:45–1:15 What Nas is.** 1,000 synthetic citizens of east and west Amman, AI-voiced, anchored to public statistics. Show the baseline map and the synthetic badge. Flip the language once to show it's fully bilingual, then stay in Arabic.
-3. **1:15–3:00 Break it.** Drag the office to Abdali. Then type the `digital_first` rules in Arabic in the free-text box, using the **rehearsed sentence** from `demo_requests.json`; show the "understood as" list; Apply. The result must equal the `abdali_digital_first` preset (if parsing fails, click that preset). Red spreads. Click the hero elderly woman in Marka and read her voice.
+3. **1:15–3:00 Break it.** Click the `consolidate` preset: 5 of the 7 real offices close, only Tabarbour and Jabal Amman stay. Then type the `digital_first` rules in Arabic in the free-text box, using the **rehearsed sentence** from `demo_requests.json`; show the "understood as" list; Apply. The result must equal the `consolidate_digital_first` preset (if parsing fails, click that preset). Yellow spreads (hardship roughly doubles) and left-out rises. Click the first hero in `heroes.json` (an elderly woman whose son helps her) and read her voice.
 4. **3:00–4:15 Understand it.** Equity bars: elderly and offline citizens hit hardest. Click the robustness badge: "this ranking holds when we move our uncertain assumptions by ±20%."
 5. **4:15–5:45 Fix it.** Click "Suggest fixes": the engine's verified fixes appear instantly, then the AI explains them and adds its own idea, also verified. Apply the best one. Green returns. Click the hero again: she's served now.
 6. **5:45–6:30 Impact & business.** Who pays: municipalities, ministries, digital transformation programs. Next steps: calibrate with more public data, add more services and cities. One slide with the relatives' real answers next to the simulated voices.

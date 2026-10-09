@@ -1,13 +1,161 @@
 {
-  "_note": "8 candidate office sites, one per area, placed near each centroid. Dragged office pins snap to the nearest site. Generic site names, not real buildings.",
-  "sites": [
-    {"id": "site_downtown",  "area": "downtown",         "name_ar": "موقع وسط البلد",  "name_en": "Downtown site",         "lat": 31.9515, "lng": 35.9335},
-    {"id": "site_abdali",    "area": "abdali",           "name_ar": "موقع العبدلي",    "name_en": "Abdali site",           "lat": 31.9625, "lng": 35.9095},
-    {"id": "site_jabal",     "area": "jabal_al_hussein", "name_ar": "موقع جبل الحسين", "name_en": "Jabal Al-Hussein site", "lat": 31.9675, "lng": 35.9205},
-    {"id": "site_marka",     "area": "marka",            "name_ar": "موقع ماركا",      "name_en": "Marka site",            "lat": 31.9745, "lng": 35.9845},
-    {"id": "site_wehdat",    "area": "wehdat",           "name_ar": "موقع الوحدات",    "name_en": "Wehdat site",           "lat": 31.9355, "lng": 35.9395},
-    {"id": "site_tabarbour", "area": "tabarbour",        "name_ar": "موقع طبربور",     "name_en": "Tabarbour site",        "lat": 31.9995, "lng": 35.9405},
-    {"id": "site_sweileh",   "area": "sweileh",          "name_ar": "موقع صويلح",      "name_en": "Sweileh site",          "lat": 32.0195, "lng": 35.8405},
-    {"id": "site_khalda",    "area": "khalda",           "name_ar": "موقع خلدا",       "name_en": "Khalda site",           "lat": 31.9945, "lng": 35.8355}
-  ]
+ "_note": "15 candidate office sites. 7 are the real Civil Status & Passports Department (CSPD) offices in Amman (real: true; addresses from CSPD's office list, located once with OpenStreetMap Nominatim, precision noted). 8 are generic sites, one per area, so dragged office pins have somewhere to snap. 'area' is the engine area used for bus transfers.",
+ "sites": [
+  {
+   "id": "site_downtown",
+   "area": "downtown",
+   "name_ar": "موقع وسط البلد",
+   "name_en": "Downtown site",
+   "lat": 31.9515,
+   "lng": 35.9335,
+   "real": false
+  },
+  {
+   "id": "site_abdali",
+   "area": "abdali",
+   "name_ar": "موقع العبدلي",
+   "name_en": "Abdali site",
+   "lat": 31.9625,
+   "lng": 35.9095,
+   "real": false
+  },
+  {
+   "id": "site_jabal",
+   "area": "jabal_al_hussein",
+   "name_ar": "موقع جبل الحسين",
+   "name_en": "Jabal Al-Hussein site",
+   "lat": 31.9675,
+   "lng": 35.9205,
+   "real": false
+  },
+  {
+   "id": "site_marka",
+   "area": "marka",
+   "name_ar": "موقع ماركا",
+   "name_en": "Marka site",
+   "lat": 31.9745,
+   "lng": 35.9845,
+   "real": false
+  },
+  {
+   "id": "site_wehdat",
+   "area": "wehdat",
+   "name_ar": "موقع الوحدات",
+   "name_en": "Wehdat site",
+   "lat": 31.9355,
+   "lng": 35.9395,
+   "real": false
+  },
+  {
+   "id": "site_tabarbour",
+   "area": "tabarbour",
+   "name_ar": "موقع طبربور",
+   "name_en": "Tabarbour site",
+   "lat": 31.9995,
+   "lng": 35.9405,
+   "real": false
+  },
+  {
+   "id": "site_sweileh",
+   "area": "sweileh",
+   "name_ar": "موقع صويلح",
+   "name_en": "Sweileh site",
+   "lat": 32.0195,
+   "lng": 35.8405,
+   "real": false
+  },
+  {
+   "id": "site_khalda",
+   "area": "khalda",
+   "name_ar": "موقع خلدا",
+   "name_en": "Khalda site",
+   "lat": 31.9945,
+   "lng": 35.8355,
+   "real": false
+  },
+  {
+   "id": "cspd_tabarbour",
+   "area": "tabarbour",
+   "name_ar": "مكتب الأحوال المدنية - طبربور (المكتب الرئيسي)",
+   "name_en": "CSPD office - Tabarbour (head office)",
+   "lat": 32.00306,
+   "lng": 35.94722,
+   "real": true,
+   "address_en": "Tabarbour, Al Mashaghel Circle, next to the Public Security Directorate",
+   "geocode": "Nominatim: Tabarbour neighbourhood centre (circle not in OSM), ±1 km",
+   "source": "https://cspd.gov.jo/EN/ListDetails/Department_Directorates_and_Offices/17/1"
+  },
+  {
+   "id": "cspd_jabal_amman",
+   "area": "downtown",
+   "name_ar": "مكتب الأحوال المدنية - جبل عمان",
+   "name_en": "CSPD office - Jabal Amman",
+   "lat": 31.95143,
+   "lng": 35.92082,
+   "real": true,
+   "address_en": "Jabal Amman, First Circle, behind the Iraqi Embassy",
+   "geocode": "Nominatim: Embassy of Iraq, ±200 m",
+   "source": "https://cspd.gov.jo/EN/ListDetails/Department_Directorates_and_Offices/17/1"
+  },
+  {
+   "id": "cspd_marka",
+   "area": "marka",
+   "name_ar": "مكتب الأحوال المدنية - ماركا",
+   "name_en": "CSPD office - Marka",
+   "lat": 31.9733,
+   "lng": 35.99444,
+   "real": true,
+   "address_en": "Marka, airport area, Khalid Falah Al Atwi Street",
+   "geocode": "Nominatim: Amman Civil (Marka) Airport, ±1 km",
+   "source": "https://cspd.gov.jo/EN/ListDetails/Department_Directorates_and_Offices/17/1"
+  },
+  {
+   "id": "cspd_sweileh",
+   "area": "sweileh",
+   "name_ar": "مكتب الأحوال المدنية - صويلح",
+   "name_en": "CSPD office - Sweileh",
+   "lat": 32.02207,
+   "lng": 35.84489,
+   "real": true,
+   "address_en": "Sweileh, Queen Rania Al Abdullah Street, commercial complex No. 410",
+   "geocode": "Nominatim: Queen Rania St in Sweileh, ±500 m",
+   "source": "https://cspd.gov.jo/EN/ListDetails/Department_Directorates_and_Offices/17/1"
+  },
+  {
+   "id": "cspd_jabal_al_hussein",
+   "area": "jabal_al_hussein",
+   "name_ar": "مكتب الأحوال المدنية - جبل الحسين",
+   "name_en": "CSPD office - Jabal Al-Hussein",
+   "lat": 31.96329,
+   "lng": 35.91318,
+   "real": true,
+   "address_en": "Jabal Al Hussein, Salah Al Din Street, building No. 167",
+   "geocode": "Nominatim: Jabal Al-Hussein (King Hussein St), ±500 m",
+   "source": "https://cspd.gov.jo/EN/ListDetails/Department_Directorates_and_Offices/17/1"
+  },
+  {
+   "id": "cspd_tla_al_ali",
+   "area": "khalda",
+   "name_ar": "مكتب الأحوال المدنية - تلاع العلي",
+   "name_en": "CSPD office - Tla' Al-Ali",
+   "lat": 32.00889,
+   "lng": 35.86514,
+   "real": true,
+   "address_en": "Tla' Al-Ali, Mohammed Al Tarawneh Street, Al-Zoubi Commercial Complex 2",
+   "geocode": "Nominatim: Tla' Al-Ali neighbourhood centre, ±1 km",
+   "source": "https://cspd.gov.jo/EN/ListDetails/Department_Directorates_and_Offices/17/1"
+  },
+  {
+   "id": "cspd_wadi_al_seer",
+   "area": "khalda",
+   "name_ar": "مكتب الأحوال المدنية - وادي السير",
+   "name_en": "CSPD office - Wadi Al-Seer",
+   "lat": 31.96068,
+   "lng": 35.84063,
+   "real": true,
+   "address_en": "Wadi Al Seer, Al Jandawil, next to the Shari'a Court",
+   "geocode": "Nominatim: Al-Jandaweel, ±500 m",
+   "source": "https://cspd.gov.jo/EN/ListDetails/Department_Directorates_and_Offices/17/1"
+  }
+ ]
 }

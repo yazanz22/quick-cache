@@ -31,7 +31,7 @@ Types: [frontend/lib/types.ts](frontend/lib/types.ts) mirrors [backend/app/model
 | Method | Path | Body → Response |
 |---|---|---|
 | GET | `/population` | → `Citizen[]` (1,000) |
-| GET | `/scenarios` | → `Scenario[]` (baseline, move_to_abdali, digital_first, online_only, abdali_digital_first) |
+| GET | `/scenarios` | → `Scenario[]` (baseline = the 7 real CSPD offices, consolidate, digital_first, online_only, consolidate_digital_first = demo path, marked `demo: true`) |
 | GET | `/sites`, `/areas` | → `Site[]`, `Area[]` |
 | GET | `/sites/nearest?lat=&lng=` | → `Site` (snap a dragged office pin) |
 | GET | `/assumptions` | → `AssumptionRow[]` (for AssumptionsTable) |

@@ -24,7 +24,13 @@ export interface Citizen {
 
 // extra: GET /areas, GET /sites
 export interface Area { id: string; name_ar: string; name_en: string; lat: number; lng: number; side: "east" | "west"; weight: number }
-export interface Site { id: string; area: string; name_ar: string; name_en: string; lat: number; lng: number }
+export interface Site {
+  id: string; area: string; name_ar: string; name_en: string; lat: number; lng: number;
+  real: boolean;               // extra: one of the 7 real CSPD offices in Amman
+  address_en?: string | null;  // extra: CSPD's published address
+  geocode?: string | null;     // extra: how the coordinates were found, with precision
+  source?: string;
+}
 
 export interface Office {
   id: string; name_ar: string; name_en: string; site_id: string;
@@ -41,6 +47,7 @@ export interface Policy {
 export interface Scenario {
   id: string; order: number; name_ar: string; name_en: string;
   description_ar: string; description_en: string; policy: Policy;
+  demo?: boolean;  // extra: true for the demo path (consolidate_digital_first)
 }
 
 export interface CitizenOutcome {

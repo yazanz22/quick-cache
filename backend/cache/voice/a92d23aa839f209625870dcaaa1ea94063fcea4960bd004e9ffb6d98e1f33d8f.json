@@ -1,0 +1,39 @@
+{
+ "task": "voice",
+ "output": "جددتُ هويتي يوم الأحد في مكتب الأحوال المدنية - جبل عمان. استغرقت الرحلة اتجاهاً واحداً بالحافلة 44 دقيقة، وبلغت التكلفة الإجمالية 2.9 دينار. أمضيتُ ساعتين ونصف في هذه العملية دون الحاجة للغياب عن العمل.",
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.6-flash",
+  "seconds": 4.85,
+  "ts": "2026-10-09T17:27:16"
+ },
+ "inputs": {
+  "register": "msa",
+  "profile": {
+   "age": 71,
+   "gender": "f",
+   "area_ar": "وسط البلد",
+   "mobility": "none",
+   "has_car": false,
+   "has_smartphone": false,
+   "digital_literacy": "low",
+   "works": false,
+   "work_start": null,
+   "work_end": null,
+   "income_band": "middle",
+   "helper_relation_ar": "ابني"
+  },
+  "outcome": {
+   "status": "served",
+   "reasons": [],
+   "channel_name_ar": "مكتب الأحوال المدنية - جبل عمان",
+   "mode": "bus",
+   "bus_transfers": 0,
+   "visit_day_ar": "الأحد",
+   "travel_minutes_one_way": 44,
+   "total_cost_jd": 2.9,
+   "total_hours_lost_incl_waiting": 2.5,
+   "work_hours_missed": 0.0
+  }
+ }
+}

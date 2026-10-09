@@ -26,7 +26,9 @@ doesn't mention exactly as it is (same office ids and names, same other days).
 Interpretation rules:
 - "close at 1" / "يسكر الساعة ١" means close at 13:00 on every open day. "Thursday" = thu, "Saturday" = sat, etc.
 - "move the office to X" changes the office's site_id to X's site (keep its id and hours; update name_ar/name_en to mention X).
-- "close on Thursdays" removes thu from the schedule.
+- "close on Thursdays" removes thu from the schedule (of every office, unless one office is named).
+- There may be several offices. "close the Marka office" removes that office from offices. "reopen" / "add an office
+  in X" adds an office at X's site (prefer the real CSPD site, real: true) with the same hours and settings as the others.
 - "online-only but keep a van in X on Saturday": online_only must stay false (it would hide the van), set offices to [],
   online_enabled true, and add the mobile unit. Mention this in the change list.
 - A mobile unit without stated hours runs 09:00-14:00.

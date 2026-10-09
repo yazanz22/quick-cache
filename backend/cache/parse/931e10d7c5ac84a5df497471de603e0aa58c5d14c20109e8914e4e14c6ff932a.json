@@ -1,0 +1,190 @@
+{
+ "task": "parse",
+ "output": {
+  "status": "ok",
+  "policy": {
+   "service": "id_renewal",
+   "offices": [
+    {
+     "id": "office_tabarbour",
+     "name_ar": "مكتب الأحوال المدنية - طبربور (المكتب الرئيسي)",
+     "name_en": "CSPD office - Tabarbour (head office)",
+     "site_id": "cspd_tabarbour",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "15:30"
+      ],
+      "mon": [
+       "08:30",
+       "15:30"
+      ],
+      "tue": [
+       "08:30",
+       "15:30"
+      ],
+      "wed": [
+       "08:30",
+       "15:30"
+      ],
+      "thu": [
+       "08:30",
+       "15:30"
+      ]
+     },
+     "wheelchair_accessible": true
+    },
+    {
+     "id": "office_jabal_amman",
+     "name_ar": "مكتب الأحوال المدنية - جبل عمان",
+     "name_en": "CSPD office - Jabal Amman",
+     "site_id": "cspd_jabal_amman",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "15:30"
+      ],
+      "mon": [
+       "08:30",
+       "15:30"
+      ],
+      "tue": [
+       "08:30",
+       "15:30"
+      ],
+      "wed": [
+       "08:30",
+       "15:30"
+      ],
+      "thu": [
+       "08:30",
+       "15:30"
+      ]
+     },
+     "wheelchair_accessible": true
+    },
+    {
+     "id": "office_marka",
+     "name_ar": "مكتب الأحوال المدنية - ماركا",
+     "name_en": "CSPD office - Marka",
+     "site_id": "cspd_marka",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "15:30"
+      ],
+      "mon": [
+       "08:30",
+       "15:30"
+      ],
+      "tue": [
+       "08:30",
+       "15:30"
+      ],
+      "wed": [
+       "08:30",
+       "15:30"
+      ],
+      "thu": [
+       "08:30",
+       "15:30"
+      ]
+     },
+     "wheelchair_accessible": true
+    }
+   ],
+   "online_enabled": true,
+   "online_only": false,
+   "mobile_units": [],
+   "appointment_required": false,
+   "fee_jd": 2.0,
+   "visits_required": 1
+  },
+  "changes_ar": [
+   "إعادة فتح مكتب ماركا للأحوال المدنية"
+  ],
+  "changes_en": [
+   "Reopened the Marka CSPD office"
+  ],
+  "message_ar": null,
+  "message_en": null
+ },
+ "meta": {
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "seconds": 2.53,
+  "ts": "2026-10-09T17:26:24"
+ },
+ "inputs": {
+  "text": "reopen the marka office",
+  "current_policy": {
+   "service": "id_renewal",
+   "offices": [
+    {
+     "id": "office_tabarbour",
+     "name_ar": "مكتب الأحوال المدنية - طبربور (المكتب الرئيسي)",
+     "name_en": "CSPD office - Tabarbour (head office)",
+     "site_id": "cspd_tabarbour",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "15:30"
+      ],
+      "mon": [
+       "08:30",
+       "15:30"
+      ],
+      "tue": [
+       "08:30",
+       "15:30"
+      ],
+      "wed": [
+       "08:30",
+       "15:30"
+      ],
+      "thu": [
+       "08:30",
+       "15:30"
+      ]
+     },
+     "wheelchair_accessible": true
+    },
+    {
+     "id": "office_jabal_amman",
+     "name_ar": "مكتب الأحوال المدنية - جبل عمان",
+     "name_en": "CSPD office - Jabal Amman",
+     "site_id": "cspd_jabal_amman",
+     "schedule": {
+      "sun": [
+       "08:30",
+       "15:30"
+      ],
+      "mon": [
+       "08:30",
+       "15:30"
+      ],
+      "tue": [
+       "08:30",
+       "15:30"
+      ],
+      "wed": [
+       "08:30",
+       "15:30"
+      ],
+      "thu": [
+       "08:30",
+       "15:30"
+      ]
+     },
+     "wheelchair_accessible": true
+    }
+   ],
+   "online_enabled": true,
+   "online_only": false,
+   "mobile_units": [],
+   "appointment_required": false,
+   "fee_jd": 2.0,
+   "visits_required": 1
+  }
+ }
+}

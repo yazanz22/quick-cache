@@ -1,38 +1,212 @@
 {
  "id": "online_only",
  "order": 3,
- "name_ar": "أونلاين فقط",
+ "name_ar": "عبر الإنترنت فقط",
  "name_en": "Online only",
- "description_ar": "تجديد الهوية أونلاين فقط، بدون مكاتب.",
- "description_en": "ID renewal is online-only; offices are closed.",
+ "description_ar": "تجديد الهوية عبر الإنترنت فقط.",
+ "description_en": "ID renewal is online-only.",
  "policy": {
   "service": "id_renewal",
   "offices": [
    {
-    "id": "office_main",
-    "name_ar": "مكتب الأحوال المدنية - وسط البلد",
-    "name_en": "Civil Status office - Downtown",
-    "site_id": "site_downtown",
+    "id": "office_tabarbour",
+    "name_ar": "مكتب الأحوال المدنية - طبربور (المكتب الرئيسي)",
+    "name_en": "CSPD office - Tabarbour (head office)",
+    "site_id": "cspd_tabarbour",
     "schedule": {
      "sun": [
-      "08:00",
-      "15:00"
+      "08:30",
+      "15:30"
      ],
      "mon": [
-      "08:00",
-      "15:00"
+      "08:30",
+      "15:30"
      ],
      "tue": [
-      "08:00",
-      "15:00"
+      "08:30",
+      "15:30"
      ],
      "wed": [
-      "08:00",
-      "15:00"
+      "08:30",
+      "15:30"
      ],
      "thu": [
-      "08:00",
-      "15:00"
+      "08:30",
+      "15:30"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "office_jabal_amman",
+    "name_ar": "مكتب الأحوال المدنية - جبل عمان",
+    "name_en": "CSPD office - Jabal Amman",
+    "site_id": "cspd_jabal_amman",
+    "schedule": {
+     "sun": [
+      "08:30",
+      "15:30"
+     ],
+     "mon": [
+      "08:30",
+      "15:30"
+     ],
+     "tue": [
+      "08:30",
+      "15:30"
+     ],
+     "wed": [
+      "08:30",
+      "15:30"
+     ],
+     "thu": [
+      "08:30",
+      "15:30"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "office_marka",
+    "name_ar": "مكتب الأحوال المدنية - ماركا",
+    "name_en": "CSPD office - Marka",
+    "site_id": "cspd_marka",
+    "schedule": {
+     "sun": [
+      "08:30",
+      "15:30"
+     ],
+     "mon": [
+      "08:30",
+      "15:30"
+     ],
+     "tue": [
+      "08:30",
+      "15:30"
+     ],
+     "wed": [
+      "08:30",
+      "15:30"
+     ],
+     "thu": [
+      "08:30",
+      "15:30"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "office_sweileh",
+    "name_ar": "مكتب الأحوال المدنية - صويلح",
+    "name_en": "CSPD office - Sweileh",
+    "site_id": "cspd_sweileh",
+    "schedule": {
+     "sun": [
+      "08:30",
+      "15:30"
+     ],
+     "mon": [
+      "08:30",
+      "15:30"
+     ],
+     "tue": [
+      "08:30",
+      "15:30"
+     ],
+     "wed": [
+      "08:30",
+      "15:30"
+     ],
+     "thu": [
+      "08:30",
+      "15:30"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "office_jabal_al_hussein",
+    "name_ar": "مكتب الأحوال المدنية - جبل الحسين",
+    "name_en": "CSPD office - Jabal Al-Hussein",
+    "site_id": "cspd_jabal_al_hussein",
+    "schedule": {
+     "sun": [
+      "08:30",
+      "15:30"
+     ],
+     "mon": [
+      "08:30",
+      "15:30"
+     ],
+     "tue": [
+      "08:30",
+      "15:30"
+     ],
+     "wed": [
+      "08:30",
+      "15:30"
+     ],
+     "thu": [
+      "08:30",
+      "15:30"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "office_tla_al_ali",
+    "name_ar": "مكتب الأحوال المدنية - تلاع العلي",
+    "name_en": "CSPD office - Tla' Al-Ali",
+    "site_id": "cspd_tla_al_ali",
+    "schedule": {
+     "sun": [
+      "08:30",
+      "15:30"
+     ],
+     "mon": [
+      "08:30",
+      "15:30"
+     ],
+     "tue": [
+      "08:30",
+      "15:30"
+     ],
+     "wed": [
+      "08:30",
+      "15:30"
+     ],
+     "thu": [
+      "08:30",
+      "15:30"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "office_wadi_al_seer",
+    "name_ar": "مكتب الأحوال المدنية - وادي السير",
+    "name_en": "CSPD office - Wadi Al-Seer",
+    "site_id": "cspd_wadi_al_seer",
+    "schedule": {
+     "sun": [
+      "08:30",
+      "15:30"
+     ],
+     "mon": [
+      "08:30",
+      "15:30"
+     ],
+     "tue": [
+      "08:30",
+      "15:30"
+     ],
+     "wed": [
+      "08:30",
+      "15:30"
+     ],
+     "thu": [
+      "08:30",
+      "15:30"
      ]
     },
     "wheelchair_accessible": true
@@ -45,5 +219,5 @@
   "fee_jd": 2.0,
   "visits_required": 1
  },
- "_note": "fee_jd 2.0 is a placeholder pending the CSPD fee from the anchor research"
+ "_note": "Offices: the 7 real CSPD offices in Amman (sites.json). Hours: 08:30-15:30 Sun-Thu as published by CSPD (the page lists these as general hours; a Fri/Sat 10:00-14:00 line is not modelled because it may be contact-centre hours). Wheelchair access: assumed. fee_jd 2.0: placeholder, the ID-renewal fee was not found."
 }

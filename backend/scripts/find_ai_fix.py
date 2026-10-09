@@ -23,7 +23,8 @@ HINTS = [
 ]
 
 
-def main(scenario_id: str = "abdali_digital_first") -> None:
+def main(scenario_id: str | None = None) -> None:
+    scenario_id = scenario_id or world.demo_scenario_id()
     base, scen = world.scenario_policy("baseline"), world.scenario_policy(scenario_id)
     for i, hint in enumerate(HINTS):
         r = tasks.explain_and_propose_fixes(base, scen, hint=hint, use_cache=False)

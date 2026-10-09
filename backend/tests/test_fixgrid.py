@@ -5,7 +5,7 @@ from app.sim.validate import count_changes
 
 
 def test_fixgrid_top3_ranked_safe_and_fast():
-    scen = world.scenario_policy("abdali_digital_first")
+    scen = world.scenario_policy(world.demo_scenario_id())
     t = time.perf_counter()
     allc = fixgrid.build(scen)
     assert time.perf_counter() - t < 3.0
@@ -26,7 +26,7 @@ def test_fixgrid_skips_toggles_that_change_nothing():
 
 
 def test_sensitivity_runs_six_times():
-    base, scen = world.scenario_policy("baseline"), world.scenario_policy("abdali_digital_first")
+    base, scen = world.scenario_policy("baseline"), world.scenario_policy(world.demo_scenario_id())
     fix = fixgrid.top_fixes(scen)[0].policy
     s = sensitivity.check(base, scen, fix)
     assert s.runs == 6 and len(s.details) == 7
@@ -34,7 +34,7 @@ def test_sensitivity_runs_six_times():
 
 
 def test_count_changes():
-    scen = world.scenario_policy("abdali_digital_first")
+    scen = world.scenario_policy(world.demo_scenario_id())
     pair = fixgrid.build(scen)[0]["policy"]
     assert count_changes(scen, scen) == 0
     assert count_changes(scen, pair) == 2

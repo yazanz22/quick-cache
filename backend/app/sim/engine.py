@@ -45,7 +45,9 @@ def _channels(policy: Policy) -> list[dict]:
             "kind": "office", "id": o.id, "dest": o.site_id, "lat": s["lat"], "lng": s["lng"], "area": s["area"],
             "accessible": o.wheelchair_accessible, "appointment": policy.appointment_required,
             "schedule": tuple(sorted((d, to_min(h[0]), to_min(h[1])) for d, h in o.schedule.items())),
-            "name_ar": f"مكتب الأحوال المدنية في {ar['name_ar']}", "name_en": f"Civil Status office in {ar['name_en']}",
+            # Real CSPD offices carry their own name; generic sites are named after their area.
+            "name_ar": s["name_ar"] if s.get("real") else f"مكتب الأحوال المدنية في {ar['name_ar']}",
+            "name_en": s["name_en"] if s.get("real") else f"Civil Status office in {ar['name_en']}",
         })
     for m in policy.mobile_units:
         ar = areas[m.area]

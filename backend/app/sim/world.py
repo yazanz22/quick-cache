@@ -59,5 +59,10 @@ def scenarios() -> dict[str, dict]:
     return out
 
 
+def demo_scenario_id() -> str:
+    """The demo path: the scenario marked "demo": true (CLAUDE.md §10)."""
+    return next(s["id"] for s in scenarios().values() if s.get("demo"))
+
+
 def scenario_policy(scenario_id: str) -> Policy:
     return Policy.model_validate(scenarios()[scenario_id]["policy"])

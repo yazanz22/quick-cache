@@ -42,7 +42,8 @@ def profile(c: dict) -> str:
     return ", ".join(bits)
 
 
-def main(scenario_id: str = "abdali_digital_first") -> None:
+def main(scenario_id: str | None = None) -> None:
+    scenario_id = scenario_id or world.demo_scenario_id()
     pop = world.population()
     base = engine.run(world.scenario_policy("baseline"))
     scen = engine.run(world.scenario_policy(scenario_id))

@@ -79,6 +79,8 @@ def has_arabic(text: str) -> bool:
 
 
 WRONG_CURRENCY = re.compile(r"ليرة|ليره|ليرات")
+# Misspellings the models produced in testing.
+KNOWN_MISSPELLINGS = {"استقلبت": "استقللت", "وكلفشنا": "وكلّفنا"}
 
 
 def voice_style_problems(text: str, helper_relation_ar: str | None) -> list[str]:
@@ -87,6 +89,9 @@ def voice_style_problems(text: str, helper_relation_ar: str | None) -> list[str]
     problems = []
     if WRONG_CURRENCY.search(text or ""):
         problems.append("say دينار/دنانير, not ليرة")
+    for wrong, right in KNOWN_MISSPELLINGS.items():
+        if wrong in (text or ""):
+            problems.append(f"misspelling {wrong!r}: write {right!r}")
     if helper_relation_ar and helper_relation_ar.endswith("ي") and len(helper_relation_ar) > 2:
         stem = helper_relation_ar[:-1]
         if re.search(rf"(?<![ء-ي]){stem}(?![ء-ي])", text or ""):

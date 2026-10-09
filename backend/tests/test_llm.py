@@ -25,7 +25,7 @@ def test_every_reason_has_voice_text():
 
 def test_offline_tasks_fall_back_never_blank():
     pop = world.population()
-    outs = engine.run(world.scenario_policy("abdali_digital_first"))
+    outs = engine.run(world.scenario_policy(world.demo_scenario_id()))
     for st in ["served", "hardship", "left_out"]:
         i = next(k for k, o in enumerate(outs) if o["status"] == st)
         v = tasks.voice_citizen(pop[i], outs[i])

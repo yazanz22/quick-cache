@@ -1,11 +1,11 @@
 {
  "task": "voice",
- "output": "جددت بطاقتي الشخصية في مكتب الأحوال المدنية في وسط البلد يوم الأحد. ذهبت باستخدام سيارة الأجرة وتكلفت الرحلة 4.3 دينار، واستغرقت العملية كاملة ساعة ونصف.",
+ "output": "جددت بطاقتي عن طريق مكتب الأحوال المدنية في جبل عمان يوم الأحد. ذهبتُ بواسطة سيارة الأجرة وتكلفت الرحلة 4 دنانير. استغرقت العملية كاملة حوالي ساعة ونصف.",
  "meta": {
   "provider": "gemini",
   "model": "gemini-3.6-flash",
-  "seconds": 1.77,
-  "ts": "2026-10-09T17:17:46"
+  "seconds": 2.99,
+  "ts": "2026-10-09T17:27:19"
  },
  "inputs": {
   "register": "msa",
@@ -26,13 +26,13 @@
   "outcome": {
    "status": "served",
    "reasons": [],
-   "channel_name_ar": "مكتب الأحوال المدنية في وسط البلد",
+   "channel_name_ar": "مكتب الأحوال المدنية - جبل عمان",
    "mode": "taxi",
    "bus_transfers": 0,
    "visit_day_ar": "الأحد",
-   "travel_minutes_one_way": 14,
-   "total_cost_jd": 4.3,
-   "total_hours_lost_incl_waiting": 1.5,
+   "travel_minutes_one_way": 11,
+   "total_cost_jd": 4.0,
+   "total_hours_lost_incl_waiting": 1.4,
    "work_hours_missed": 0.0
   }
  }

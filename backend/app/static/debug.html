@@ -189,8 +189,9 @@ async function init() {
   [POP, SITES, AREAS, LABELS] = await Promise.all([api("/population"), api("/sites"), api("/areas"), api("/labels")]);
   const sc = await api("/scenarios"); sc.forEach(s => SCEN[s.id] = s);
   for (const sel of ["baseSel", "scenSel"]) $(sel).innerHTML = sc.map(s => `<option value="${s.id}">${esc(s.name_en)}</option>`).join("");
-  $("baseSel").value = "baseline"; $("scenSel").value = "abdali_digital_first";
-  $("policyJson").value = JSON.stringify(SCEN.abdali_digital_first.policy, null, 1);
+  const demo = (sc.find(s => s.demo) || sc[sc.length - 1]).id;
+  $("baseSel").value = "baseline"; $("scenSel").value = demo;
+  $("policyJson").value = JSON.stringify(SCEN[demo].policy, null, 1);
   $("scenSel").onchange = () => { $("policyJson").value = JSON.stringify(SCEN[$("scenSel").value].policy, null, 1); runCompare(); };
   $("baseSel").onchange = runCompare;
   const A = await api("/assumptions");
