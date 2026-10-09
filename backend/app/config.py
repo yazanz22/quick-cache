@@ -20,4 +20,5 @@ def env(name: str, default: str = "") -> str:
 LLM_PROVIDER = env("LLM_PROVIDER", "gemini")
 LLM_FALLBACK_PROVIDER = env("LLM_FALLBACK_PROVIDER")
 LLM_TIMEOUT_S = float(env("LLM_TIMEOUT_S", "15"))
+LLM_TOTAL_BUDGET_S = float(env("LLM_TOTAL_BUDGET_S", "17"))  # all retries/fallbacks of one call; < frontend TIMEOUT_MS
 DEMO_OFFLINE = env("DEMO_OFFLINE", "0") == "1"

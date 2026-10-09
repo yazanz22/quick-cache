@@ -1,6 +1,7 @@
 """All Pydantic schemas. This file is the API contract (CLAUDE.md §5).
 
-If you change anything here, update frontend/lib/types.ts in the same commit.
+The frontend reads these shapes only through nas-frontend/api.js (its normalisers).
+If you change anything here, check api.js in the same commit.
 """
 from __future__ import annotations
 
@@ -9,7 +10,6 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 Day = Literal["sat", "sun", "mon", "tue", "wed", "thu", "fri"]
-DAYS: list[str] = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"]
 
 Status = Literal["served", "hardship", "left_out"]
 
@@ -23,9 +23,6 @@ ReasonCode = Literal[
     "TOO_EXPENSIVE",
     "OFFICE_CLOSED_ON_AVAILABLE_DAYS",
 ]
-
-Tag = Literal["elderly", "disabled", "low_income", "no_car", "offline", "worker", "student"]
-
 
 # ---------------------------------------------------------------- population
 
@@ -56,6 +53,13 @@ class Citizen(BaseModel):
     neighbourhood_ar: str | None = None
 
 
+class Hero(BaseModel):
+    id: str
+    note_ar: str | None = None
+    note_en: str | None = None
+    profile: str | None = None
+
+
 class Area(BaseModel):
     id: str
     name_ar: str
@@ -63,7 +67,6 @@ class Area(BaseModel):
     lat: float
     lng: float
     side: Literal["east", "west"]
-    weight: float
 
 
 class Site(BaseModel):
@@ -178,6 +181,7 @@ class ParseResult(BaseModel):
 class SensitivityResult(BaseModel):
     runs: int
     ranking_held: int
+    fix_checked: bool = True               # False when no fix was sent (ranking-only check)
     fix_still_helps: int
     stable_top_group: str | None = None
     stable_top2: list[str] | None = None   # the top-2 groups as a set, if the same in every run (order may flip)
@@ -199,7 +203,7 @@ class CompareRequest(BaseModel):
 class SensitivityRequest(BaseModel):
     baseline: Policy
     scenario: Policy
-    fix: Policy
+    fix: Policy | None = None   # optional: without a fix only the ranking is checked
 
 
 class ParseRequest(BaseModel):

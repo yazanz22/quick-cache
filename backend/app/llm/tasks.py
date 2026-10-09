@@ -9,6 +9,7 @@ import hashlib
 import json
 import logging
 import re
+import time
 from collections import Counter
 from typing import Callable
 
@@ -54,9 +55,13 @@ def _ai(task: str, inputs, system: str, user: str, check: Callable[[str, bool], 
     if config.DEMO_OFFLINE:
         return None
     msg = user
+    deadline = time.monotonic() + config.LLM_TOTAL_BUDGET_S  # both attempts share one request's budget
     for attempt in range(2):
+        left = deadline - time.monotonic()
+        if attempt and left < 3.0:
+            break  # no time for a retry; the caller uses the template
         try:
-            raw = complete(task, system, msg, json_schema={} if want_json else None, smart=smart)
+            raw = complete(task, system, msg, json_schema={} if want_json else None, smart=smart, budget_s=left)
         except LLMUnavailable as e:
             log.warning("%s: AI unavailable, using fallback (%s)", task, e)
             return None
@@ -184,8 +189,10 @@ def report_summary(cr: CompareResult, sens: SensitivityResult | None) -> dict:
         "people_newly_worse": len(cr.flipped_worse),
         "top_reasons_not_served": dict(reasons.most_common(4)),
         "sensitivity": None if sens is None else {
-            "runs": sens.runs, "ranking_held": sens.ranking_held, "fix_still_helps": sens.fix_still_helps,
-            "stable_top_group": sens.stable_top_group, "stable_top2": sens.stable_top2, "passed": sens.passed},
+            "runs": sens.runs, "ranking_held": sens.ranking_held,
+            # Only report the fix check if a fix was actually tested.
+            **({"fix_still_helps": sens.fix_still_helps, "passed": sens.passed} if sens.fix_checked else {}),
+            "stable_top_group": sens.stable_top_group, "stable_top2": sens.stable_top2},
     }
 
 

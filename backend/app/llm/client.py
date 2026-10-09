@@ -2,6 +2,9 @@
 
 complete(task, system, user, json_schema=None, smart=False) -> str
 
+The whole chain shares LLM_TOTAL_BUDGET_S (default 17 s), so an answer, or the task's template,
+always arrives before the frontend's 20 s request timeout.
+
 Free tiers limit requests PER MODEL (e.g. 20/day for a Gemini Flash model), so each slot is a
 comma-separated CHAIN of models in .env (MODEL_FAST, MODEL_SMART, GROQ_MODEL_FAST, GROQ_MODEL_SMART).
 A call tries the primary provider's chain, then LLM_FALLBACK_PROVIDER's chain, then raises
@@ -44,11 +47,10 @@ def _chain(provider: str, smart: bool) -> list[str]:
 
 # ------------------------------------------------------------------ adapters
 
-def _gemini(model: str, system: str, user: str, want_json: bool) -> str:
+def _gemini(model: str, system: str, user: str, want_json: bool, timeout: float) -> str:
     from google import genai
     from google.genai import types
-    client = genai.Client(api_key=config.env("GEMINI_API_KEY"),
-                          http_options=types.HttpOptions(timeout=int(config.LLM_TIMEOUT_S * 1000)))
+    client = genai.Client(api_key=config.env("GEMINI_API_KEY"), http_options=types.HttpOptions(timeout=int(timeout * 1000)))
     kw = {"thinking_config": types.ThinkingConfig(thinking_level="low")} if "lite" not in model else {}
     cfg = types.GenerateContentConfig(system_instruction=system, temperature=0.4,
                                       response_mime_type="application/json" if want_json else None, **kw)
@@ -56,10 +58,10 @@ def _gemini(model: str, system: str, user: str, want_json: bool) -> str:
     return r.text or ""
 
 
-def _groq(model: str, system: str, user: str, want_json: bool) -> str:
+def _groq(model: str, system: str, user: str, want_json: bool, timeout: float) -> str:
     from openai import OpenAI
     client = OpenAI(api_key=config.env("GROQ_API_KEY"), base_url="https://api.groq.com/openai/v1",
-                    timeout=config.LLM_TIMEOUT_S, max_retries=0)
+                    timeout=timeout, max_retries=0)
     kw = {"response_format": {"type": "json_object"}} if want_json else {}
     r = client.chat.completions.create(model=model, temperature=0.4,
                                        messages=[{"role": "system", "content": system},
@@ -67,9 +69,9 @@ def _groq(model: str, system: str, user: str, want_json: bool) -> str:
     return r.choices[0].message.content or ""
 
 
-def _openai(model: str, system: str, user: str, want_json: bool) -> str:
+def _openai(model: str, system: str, user: str, want_json: bool, timeout: float) -> str:
     from openai import OpenAI
-    client = OpenAI(api_key=config.env("OPENAI_API_KEY"), timeout=config.LLM_TIMEOUT_S, max_retries=0)
+    client = OpenAI(api_key=config.env("OPENAI_API_KEY"), timeout=timeout, max_retries=0)
     kw = {"response_format": {"type": "json_object"}} if want_json else {}
     # No temperature: some current OpenAI models only accept the default.
     r = client.chat.completions.create(model=model, messages=[{"role": "system", "content": system},
@@ -77,9 +79,9 @@ def _openai(model: str, system: str, user: str, want_json: bool) -> str:
     return r.choices[0].message.content or ""
 
 
-def _anthropic(model: str, system: str, user: str, want_json: bool) -> str:
+def _anthropic(model: str, system: str, user: str, want_json: bool, timeout: float) -> str:
     import anthropic
-    client = anthropic.Anthropic(api_key=config.env("ANTHROPIC_API_KEY"), timeout=config.LLM_TIMEOUT_S, max_retries=0)
+    client = anthropic.Anthropic(api_key=config.env("ANTHROPIC_API_KEY"), timeout=timeout, max_retries=0)
     r = client.messages.create(model=model, max_tokens=4000, system=system,
                                messages=[{"role": "user", "content": user}])
     return "".join(b.text for b in r.content if getattr(b, "type", "") == "text")
@@ -124,21 +126,28 @@ def _providers() -> list[str]:
     return out
 
 
-def complete(task: str, system: str, user: str, json_schema: dict | None = None, smart: bool = False) -> str:
-    """Return the model's text. json_schema (or any non-None value) asks for JSON output."""
+def complete(task: str, system: str, user: str, json_schema: dict | None = None, smart: bool = False,
+             budget_s: float | None = None) -> str:
+    """Return the model's text. json_schema (or any non-None value) asks for JSON output.
+    budget_s overrides LLM_TOTAL_BUDGET_S (used when a task retries within one request)."""
     if config.DEMO_OFFLINE:
         raise LLMUnavailable("DEMO_OFFLINE=1")
     want_json = json_schema is not None
     errors = []
+    deadline = time.monotonic() + (config.LLM_TOTAL_BUDGET_S if budget_s is None else budget_s)
     for provider in _providers():
         for model in _chain(provider, smart):
             until, why = _cooldown.get((provider, model), (0.0, ""))
             if until > time.time():
                 errors.append(f"{provider}/{model}: skipped ({why})")
                 continue
+            left = deadline - time.monotonic()
+            if left < 2.0:  # not worth starting another call; the task's template answers instead
+                errors.append("time budget used up")
+                raise LLMUnavailable("; ".join(errors))
             t0 = time.perf_counter()
             try:
-                text = ADAPTERS[provider](model, system, user, want_json)
+                text = ADAPTERS[provider](model, system, user, want_json, min(config.LLM_TIMEOUT_S, left))
             except Exception as e:  # noqa: BLE001 - any failure moves on to the next model
                 cd = _classify(e)
                 if cd:

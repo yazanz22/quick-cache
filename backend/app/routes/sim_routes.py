@@ -7,14 +7,13 @@ import json
 from fastapi import APIRouter, HTTPException
 
 from ..config import SCENARIOS_DIR
-from ..models import (CompareRequest, CompareResult, FixCandidate, Policy, SensitivityRequest, SensitivityResult,
-                      SimResult, SimulateRequest)
+from ..models import (Area, Citizen, CompareRequest, CompareResult, FixCandidate, Hero, Policy, Scenario,
+                      SensitivityRequest, SensitivityResult, SimResult, SimulateRequest, Site)
 from ..sim import assumptions as A
 from ..sim.assumption_labels import label_rows
 from ..sim import fixgrid, sensitivity, world
 from ..sim.compare import compare
 from ..sim.engine import simulate
-from ..sim.travel import haversine_km
 from ..sim.validate import policy_errors
 
 router = APIRouter(tags=["engine"])
@@ -28,28 +27,22 @@ def validate_policy(p: Policy) -> None:
         raise HTTPException(422, "; ".join(errs))
 
 
-@router.get("/population")
+@router.get("/population", response_model=list[Citizen])
 def get_population():
     return world.population()
 
 
-@router.get("/scenarios")
+@router.get("/scenarios", response_model=list[Scenario])
 def get_scenarios():
     return sorted(world.scenarios().values(), key=lambda s: s.get("order", 99))
 
 
-@router.get("/sites")
+@router.get("/sites", response_model=list[Site])
 def get_sites():
     return list(world.sites().values())
 
 
-@router.get("/sites/nearest")
-def nearest_site(lat: float, lng: float):
-    """Snap a dragged office pin to the nearest candidate site."""
-    return min(world.sites().values(), key=lambda s: haversine_km(lat, lng, s["lat"], s["lng"]))
-
-
-@router.get("/heroes")
+@router.get("/heroes", response_model=list[Hero])
 def get_heroes():
     """Hero citizens for the demo path (scenarios/heroes.json, made by scripts/pick_heroes.py)."""
     p = SCENARIOS_DIR / "heroes.json"
@@ -60,7 +53,7 @@ def get_heroes():
              "profile": x.get("profile")} for x in h.get("heroes", [])]
 
 
-@router.get("/areas")
+@router.get("/areas", response_model=list[Area])
 def get_areas():
     return list(world.areas().values())
 
@@ -92,7 +85,8 @@ def post_fixgrid(req: CompareRequest):
 @router.post("/sensitivity", response_model=SensitivityResult)
 def post_sensitivity(req: SensitivityRequest):
     for p in (req.baseline, req.scenario, req.fix):
-        validate_policy(p)
+        if p is not None:
+            validate_policy(p)
     key = hashlib.sha256(json.dumps(req.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
     if key not in _SENS_CACHE:
         _SENS_CACHE[key] = sensitivity.check(req.baseline, req.scenario, req.fix)

@@ -38,3 +38,10 @@ def test_count_changes():
     pair = fixgrid.build(scen)[0]["policy"]
     assert count_changes(scen, scen) == 0
     assert count_changes(scen, pair) == 2
+
+
+def test_sensitivity_without_a_fix_checks_the_ranking_only():
+    base, scen = world.scenario_policy("baseline"), world.scenario_policy(world.demo_scenario_id())
+    s = sensitivity.check(base, scen, None)
+    assert s.runs == 6 and not s.fix_checked and not s.passed and s.fix_still_helps == 0
+    assert all("fix_still_helps" not in d for d in s.details)
