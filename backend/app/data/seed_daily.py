@@ -8,8 +8,8 @@ Rules (all ASSUMPTION, synthetic):
 - Students (18-24, not working) go to a university Sun-Thu, drawn the same way with UNI_DECAY_KM.
 - Adults 25+ who don't work make a weekly round trip to their nearest public hospital (straight-line).
 - 16-17-year-olds go to a local school on foot: no road trip.
-How they travel (car, bus, taxi, a helper's car) is decided by the engine from the citizen's profile (sim/daily.py).
-Re-run after the population or hubs change, then rebuild the road data (fetch_roads.py hubs + build).
+How they travel (car, bus, taxi, a helper's car) is decided by the engine from the citizen's profile (sim/travel_service.py).
+Re-run after the population or hubs change, then re-fetch the hub road times (fetch_map_data.py).
 """
 from __future__ import annotations
 

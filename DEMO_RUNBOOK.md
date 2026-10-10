@@ -6,19 +6,28 @@ Everything below was verified on the 2026-10-10 build. Numbers are exact engine 
 1. **Deploy Render by hand** (dashboard → Manual Deploy → latest commit). Auto-deploy does not fire. Then open
    https://nas-rbo5.onrender.com/health and check it says `"warm": true` (new build) — the old build has no `warm` field.
    First visit after sleep takes 30–60 s; press Retry if the UI says it can't reach the engine.
-2. **After 10:00 Amman (Gemini reset)**, from `backend/`:
-   `.venv/Scripts/python -m scripts.warm_cache` (fills Amina's voice after the AI fix; 1 call), then
-   `DEMO_OFFLINE=1 .venv/Scripts/python -m scripts.warm_cache` must end with **"No misses"**, then `pytest -q`, then
-   `git add backend/cache && git commit -m "Cache: Amina's post-fix voice" && git push`, then redeploy Render.
-3. Open the production URL in Arabic on the laptop you'll present with, run the script below once, and **record a backup
-   screen video** of that run.
+2. **Warm the AI cache, after 10:00 Amman (Gemini reset), on a phone hotspot.** The venue network has a **FortiGate TLS
+   interception on googleapis / groq**: AI calls fail there with certificate errors, so don't warm on the venue wifi.
+   From `backend/`:
+   1. `.venv/Scripts/python -m scripts.warm_cache --service everyday_travel --parse-only` (the 12 rehearsed fuel requests; 12 calls)
+   2. `.venv/Scripts/python -m scripts.warm_cache --service everyday_travel` (~12 calls: fixes 1, hero voices 9, reports 2)
+   3. optional: `.venv/Scripts/python -m scripts.find_ai_fix --service everyday_travel`, then step 2 again (the AI-fix voices and report)
+   4. `.venv/Scripts/python -m scripts.warm_cache --service id_renewal` (Amina's voice after the AI fix; 1 call)
+   5. `DEMO_OFFLINE=1 .venv/Scripts/python -m scripts.warm_cache` must end with **"No misses"** (or only what you chose to skip)
+   6. `.venv/Scripts/python -m pytest -q`; warmed entries show as XPASS: drop the travel xfail marks in `tests/test_cache_hits.py`
+      and Amina from `PENDING_VOICES`
+   7. `git add backend/cache backend/tests/test_cache_hits.py && git commit -m "Cache: travel sector + Amina's post-fix voice" && git push`, then redeploy Render.
+   Until this runs, the fuel sector shows template voices, explanations and reports (labelled "template", never blank).
+3. Open **https://nas-rbo5.onrender.com/?sector=id_renewal** in Arabic on the laptop you'll present with (`?sector=` skips the
+   sector list), run the script below once, and **record a backup screen video** of that run. Then open `?sector=everyday_travel`
+   once and click through the fuel section below.
 4. Decide the connectivity mode (see "If the wifi is bad").
 
 ## The script (clicks in order)
 
 | Time | Do | Say (the numbers on screen) |
 |---|---|---|
-| 0:00 | Baseline map on screen, Arabic UI | Every new policy in Jordan is tested on real people after launch. Nas reaches the people who fall through the cracks *before* the policy does. |
+| 0:00 | Baseline map on screen, Arabic UI (opened with `?sector=id_renewal`; without it the app shows the sector list first: click **تجديد الهوية**) | Every new policy in Jordan is tested on real people after launch. Nas reaches the people who fall through the cracks *before* the policy does. |
 | 0:45 | Point at the synthetic badge; click **English** then back to **عربي** | 1,000 synthetic citizens of Amman, **AI-voiced**, anchored to published figures where we found them. Today: 88.4% served, 11.5% with hardship, 1 person left out. |
 | 1:15 | Click preset **دمج المكاتب** (consolidate) | Keep only Tabarbour and Jabal Amman: served 85.0%, 36 people worse off. |
 | 1:45 | Click the first example chip **خلّوا الكاونترات تسكر الساعة 1 الظهر، وما حدا يراجع المكتب إلا بموعد مسبق أونلاين** → "understood as" list → **حلّل / Apply** | The AI turned my sentence into a testable policy; the engine ran all 1,000 people. **79.6 / 19.5 / 0.9**: 93 people worse off, 9 left out, 195 in hardship. (If the parse fails: click preset **الدمج + التحول الرقمي**, same result.) |
@@ -46,6 +55,33 @@ Type them on the demo path (**الدمج + التحول الرقمي** selected)
 - **Unsupported, answered honestly:** Add more staff at the Marka office · زيدوا الباصات / Add more buses · Make it free for pregnant women · سكّروا شارع زهران.
 Anything else is parsed live (3–8 s). If the header chip says **AI resting**, say "the AI is rate-limited, so I'll build it by hand" and use the panel.
 
+## Fuel sector (optional, Q&A)
+Use it when a judge says "name a policy" and there's time, or asks "only services?". The 7-minute script stays on ID renewal.
+Numbers are engine output (`compare(travel_today, preset)`); statuses read **بخير / مضغوطون / عاجزون عن التنقل** (fine / squeezed / priced out).
+
+| Do | Say (the numbers on screen) |
+|---|---|
+| Open `?sector=everyday_travel` (or the back button → **أسعار المحروقات**) | Same 1,000 synthetic citizens, each with one regular trip: work, university or a public hospital. Today: 72.2% fine, 17.8% squeezed, 10.0% priced out. Low-income daily bus commuters already spend about 30% of their income on the trip. |
+| (optional) Preset **رفع الوقود 5%** | This month's real rise, +5 piasters a litre (≈ +5%): 7 people worse off, all drivers: fares are regulated and lag fuel. |
+| Preset **رفع الوقود 25% مع رفع الأجور** (`fuel_plus_25_fares`) | Fuel +25% and bus and taxi fares +25%, as after 2012: **70.2 / 14.6 / 15.2**, 72 people worse off, 4.54 JD a month extra on average. Hit hardest: workers, offline, low income. |
+| Click **مصطفى** (Mustafa) | 23, low income, two buses to Wehdat every workday: 39 → 48.7 JD a month, 30% → 37.5% of his income. He was priced out before the rise. |
+| Click **عيسى** (Issa) | 29, middle income, drives 44 minutes to King Hussein Business Park: 61.5 → 70.7 JD, 17.6% → 20.2%: squeezed → priced out. |
+| **اقترح حلول** (Suggest fixes) | Engine fix, verified: **14 JD a month for people without a car + freeze bus fares**: priced out 152 → 80 people (−7.2 points). The fix never touches the fuel price: that's the decision being tested. |
+| Robustness badge | Ranking held **5 of 6**: workers are first in every run; second place changes when "squeezed" starts at 12% instead of 10% (no_car instead of offline). We show it, we don't retune it. |
+| **طبّق الحل** on the top fix | Mustafa recovers to squeezed (25 JD, 19.2%). **Click Issa: still priced out.** Say it: "Cash for riders doesn't reach a middle-income driver. Nas shows you who the fix still misses." |
+| (if asked) Policy panel: cash support for **workers** 14 JD, or the third fix card | Freeze bus fares + 14 JD for workers brings Issa back to squeezed (56.7 JD, 16.2%), at −6.8 points instead of −7.2. |
+
+**Rehearsed fuel requests** (`demo_requests.json`; instant and offline **only once the morning warm run is done**, step 2;
+before that they parse live in 3-8 s): ارفعوا سعر البنزين 10% / Raise petrol prices by 10% (on today's prices) ·
+ارفعوا الوقود 25% وأعطوا الأسر ذات الدخل المحدود 14 ديناراً شهرياً / Raise fuel by 25% but give low-income families 14 dinars a month ·
+on the demo preset: جمّدوا أجور الباصات / Freeze bus fares · ادفعوا أجرة الباص للطلاب / Pay the bus fare for students · Give every worker 20 dinars a month ·
+**unsupported, answered honestly:** خفّضوا سعر الكهرباء / Lower electricity prices · Raise diesel only (one fuel price change only).
+
+Fuel answers: **"Why are the first people hurt all drivers?"** Fares are regulated and follow fuel only partly, and the riders
+were already squeezed (≈30% of income). **"Are the prices real?"** October 2026's prices (90-octane 1.050 JD/L, +0.05) and the
+National Aid Fund's 8-14 JD fuel support are from press reports (CITED); the 7 travel constants are labelled assumptions,
+committed before any travel scenario ran. **"Do people switch to the bus?"** Not modelled yet: the next module.
+
 ## Answers to have ready
 - **Real people?** No. A labelled synthetic population; anchored where we could (MoDEE 2024: 95.6% internet use, 99% smartphone households, 38.1% e-gov use; the 7 real CSPD offices; OSRM road times). Everything else is a labelled assumption. README has the full "what is real, what is assumed" list.
 - **Did you tune it?** Assumptions were frozen before any scenario ran, all 26 are labelled, and the ranking holds 6/6 at ±20%. When a story didn't appear we changed the scenario, never the constants.
@@ -62,5 +98,7 @@ Anything else is parsed live (3–8 s). If the header chip says **AI resting**, 
 
 ## Known and accepted
 - Amina's voice after the **AI fix** is a template until the morning warm run (step 2). The demo reads Dana's.
+- The fuel sector's voices, fix explanations and reports are templates until the travel warm run (step 2); its robustness is 5/6, not 6/6 (say why).
+- The fuel map shows citizens only: no pins for workplaces, universities or hospitals.
 - Fix titles show Arabic-Indic digits (٩–٢); changing them would invalidate the cached AI fix.
 - Three engine refinements are on hold so the rehearsed numbers stay exact (HANDOFF §14).

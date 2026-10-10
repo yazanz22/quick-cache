@@ -120,7 +120,7 @@ def test_report_from_policies_hits(fix):
 
 
 # ------------------------------------------------------------------ everyday_travel (pending: not warmed yet)
-# Same checks for the travel demo path (travel_today -> fuel_plus_25). All xfail(strict=False) until
+# Same checks for the travel demo path (travel_today -> fuel_plus_25_fares). All xfail(strict=False) until
 # `python -m scripts.warm_cache --service everyday_travel` has run online; then drop the marks.
 
 travel_pending = pytest.mark.xfail(strict=False, reason=TRAVEL_PENDING)

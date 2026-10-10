@@ -26,6 +26,8 @@ Click any citizen and they explain their outcome **in clear Modern Standard Arab
 
 Nas then **finds fixes**. The engine searches a grid of candidate fixes and verifies each one; the AI explains them and proposes one more that nobody listed, which the engine also verifies.
 
+**A second sector: everyday travel under fuel prices** (`service: "everyday_travel"`, added 2026-10-10; UI name "أسعار المحروقات / Fuel prices"). The same 1,000 synthetic citizens each make one regular trip (to work, university or a public hospital); an official tests a fuel price change, bus and taxi fare changes, cash support per group and transport vouchers, and the map shows who stays **fine**, who is **squeezed** and who is **priced out** (the trip's monthly cost as a share of income). Same principle: the engine decides and searches fixes (cash support, fare freezes, vouchers; never the fuel price itself), the AI parses, voices and proposes, the engine verifies (§6.6). The app opens on a **sector list** (§9.3).
+
 **The one-line pitch:** *Every policy leaves someone out. Nas shows you who, why, and how to fix it before you launch.*
 
 **Wording rule:** say "synthetic citizens, AI-voiced", never "1,000 AI citizens". The citizens are rule-based; the AI gives them a voice. Overclaiming loses the AI judge.
@@ -106,13 +108,14 @@ nas/
 │   │   ├── config.py           # loads the repo-root .env
 │   │   ├── models.py           # ALL Pydantic schemas (source of truth for the API contract)
 │   │   ├── routes/
-│   │   │   ├── sim_routes.py   # /population, /scenarios, /sites, /areas, /heroes, /assumptions, /simulate, /compare, /fixgrid, /sensitivity
+│   │   │   ├── sim_routes.py   # /services, /population, /scenarios, /sites, /areas, /heroes?service=, /assumptions, /simulate, /compare, /fixgrid, /sensitivity
 │   │   │   └── llm_routes.py   # /policy/parse, /citizen/voice, /report, /fixes, /llm/status
 │   │   ├── sim/
 │   │   │   ├── assumptions.py  # every tunable constant, each with a comment, a rationale, a tag (all 26 are ASSUMPTION) and an optional context source
 │   │   │   ├── assumption_labels.py # Arabic/English labels for the assumptions table (text only, no values)
 │   │   │   ├── travel.py       # OSRM road distances/times, mode times and costs, bus transfers
-│   │   │   ├── engine.py       # simulate(policy, population, assumptions=None) -> SimResult
+│   │   │   ├── travel_service.py # the everyday_travel engine (§6.6): regular trips, monthly cost, share of income
+│   │   │   ├── engine.py       # simulate(policy, population, assumptions=None) -> SimResult (dispatches by policy.service)
 │   │   │   ├── compare.py      # baseline vs scenario diff + equity breakdown
 │   │   │   ├── fixgrid.py      # build + score the candidate-fix grid (§6.4)
 │   │   │   ├── sensitivity.py  # ±20% robustness check (§6.5)
@@ -136,10 +139,12 @@ nas/
 │   │       ├── sites.json      # 15 office sites: the 7 real CSPD offices + 8 generic snap sites
 │   │       ├── population.json # 1,000 synthetic citizens, committed so everyone has the same people
 │   │       ├── travel_matrix.json, home_points.json  # fetched once (OSRM / OpenStreetMap)
-│   │       └── scenarios/      # baseline + presets (demo one flagged "demo": true), heroes.json, demo_requests.json
+│   │       ├── services.json   # the 2 sectors (id, names, levers, baseline/demo scenario), served by GET /services
+│   │       ├── hubs.json, daily_trips.json, hub_matrix.json, seed_daily.py  # everyday_travel: 25 destinations, one trip per citizen (seed 42), OSRM times
+│   │       └── scenarios/      # presets per service (one "demo": true per service), heroes.json, demo_requests.json
 │   ├── scripts/                # pick_heroes.py, find_ai_fix.py, warm_cache.py
 │   ├── cache/                  # AI cache files (committed for offline mode)
-│   └── tests/                  # test_engine.py, test_fixgrid.py, test_llm.py, test_levers.py, test_demo.py (offline, no AI calls)
+│   └── tests/                  # test_engine.py, test_fixgrid.py, test_llm.py, test_levers.py, test_demo.py, test_travel.py, test_cache_hits.py, test_api.py (offline, no AI calls)
 └── nas-frontend/               # static UI, no build step (see its README)
     ├── index.html              # layout + all CSS (light/dark, RTL, responsive)
     ├── config.js               # backend URL, timeouts, offline map switch, fallback areas/heroes
@@ -217,8 +222,15 @@ class TransportVoucher(BaseModel):
     groups: list[Group]
     amount_jd: float                              # bus or taxi fares paid up to this per round trip
 
+Service = Literal["id_renewal", "everyday_travel"]   # the sectors; GET /services lists them (data/services.json)
+
+class CashSupport(BaseModel):                     # everyday_travel only
+    groups: list[Group]
+    amount_jd_month: float                        # monthly cash, offsets the trip cost; a citizen gets their largest amount
+
 class Policy(BaseModel):
-    service: str = "id_renewal"   # only one service for the MVP
+    service: Service = "id_renewal"
+    # --- id_renewal levers (ignored by everyday_travel) ---
     offices: list[Office]
     online_enabled: bool = True
     online_only: bool = False     # if True, offices and mobile units are ignored entirely
@@ -232,15 +244,24 @@ class Policy(BaseModel):
     home_visits: HomeVisits | None = None         # {groups, slots}: slots go to the worst-off eligible first
     transport_vouchers: list[TransportVoucher] = []  # {groups, amount_jd}: bus/taxi fares paid up to amount per round trip
     hybrid_pickup: bool = False                   # apply online (self or helper), then a PICKUP_MINUTES visit to collect
+    # --- everyday_travel levers (no-ops at their defaults, so id_renewal results and cache keys are unchanged) ---
+    fuel_price_change_pct: float = 0.0            # the government fuel price change, e.g. +25 (90-octane was 1.050 JD/L in Oct 2026)
+    bus_fare_change_pct: float | None = None      # None = follow fuel via BUS_FARE_FUEL_PASS_THROUGH; 0 = freeze; N = that change
+    taxi_fare_change_pct: float | None = None     # same for the taxi per-km tariff (TAXI_FARE_FUEL_PASS_THROUGH)
+    cash_support: list[CashSupport] = []          # {groups, amount_jd_month}
+    # transport_vouchers (above) apply to both services: in everyday_travel they cut the bus/taxi round-trip fare
 ```
 
-**What Nas can model** is exactly what this schema expresses: where offices are (any of the 15 sites), their hours per day, wheelchair access, online on/off/only, appointments at offices, mobile units (area, day, hours), the fee, the number of visits, and the group protections (walk-in exemption, fee discounts, capped home visits, transport vouchers, hybrid apply-online-then-collect). Offices can be opened or closed at any of the 15 sites. Anything else is "not supported yet" (§8.5). The protections are manual/free-text levers only: they are not in the fix grid (§6.4), so the demo path's fixes are unchanged.
+Scenarios carry `service` too, and each service has one baseline and one `"demo": true` preset (`services.json`). Offices and fee stay required fields, so a travel policy sends `offices: []` and `fee_jd: 2.0` (ignored).
+
+**What Nas can model** (ID renewal) is exactly what this schema expresses: where offices are (any of the 15 sites), their hours per day, wheelchair access, online on/off/only, appointments at offices, mobile units (area, day, hours), the fee, the number of visits, and the group protections (walk-in exemption, fee discounts, capped home visits, transport vouchers, hybrid apply-online-then-collect). Offices can be opened or closed at any of the 15 sites. Anything else is "not supported yet" (§8.5). The protections are manual/free-text levers only: they are not in the fix grid (§6.4), so the demo path's fixes are unchanged. **Everyday travel** models one fuel price change (%), bus and taxi fare changes (follow fuel / freeze / a set %), cash support per group (JD/month) and transport vouchers; anything else (a separate diesel or petrol price, electricity or other prices, more buses or new routes, people switching modes) is "not supported yet".
 
 ### Simulation output
 ```python
 ReasonCode = Literal[
     "TOO_FAR", "NO_TRANSPORT", "HOURS_CONFLICT_WORK", "NO_SMARTPHONE",
     "LOW_DIGITAL_LITERACY", "NOT_WHEELCHAIR_ACCESSIBLE", "TOO_EXPENSIVE", "OFFICE_CLOSED_ON_AVAILABLE_DAYS",
+    "TRANSPORT_OVER_BUDGET", "FUEL_COST", "FARE_COST",   # everyday_travel: over the income share; from car fuel / from fares
 ]
 
 class CitizenOutcome(BaseModel):
@@ -257,10 +278,18 @@ class CitizenOutcome(BaseModel):
     hours_lost: float             # total time away incl. waiting, × visits
     work_hours_missed: float
     reasons: list[ReasonCode]     # why NOT served (or why hardship)
+    # everyday_travel only (None for id_renewal); channel = the destination hub, or "no_regular_trip"; cost_jd = monthly cost after the policy
+    purpose: Literal["work", "university", "hospital"] | None = None
+    days_per_week: int | None = None
+    monthly_cost_before_jd: float | None = None   # at today's prices (every travel lever at its default)
+    extra_jd_month: float | None = None           # cost_jd - monthly_cost_before_jd (negative when support exceeds the rise)
+    income_share_pct: float | None = None         # cost_jd / INCOME_JD_MONTH[band] * 100
+    cash_support_jd_month: float | None = None
 
 class SimResult(BaseModel):
     outcomes: list[CitizenOutcome]
     kpis: dict                    # pct_served, pct_hardship, pct_left_out, avg_hours_lost, avg_cost_jd, n_*, n_home_visits
+                                  # (travel adds avg_monthly_cost_jd, avg_extra_jd_month, total_extra_jd_month, avg_income_share_pct, n_cash_support, by_purpose, by_mode)
     by_group: dict                # tag -> {served, hardship, left_out} percentages
 
 class CompareResult(BaseModel):
@@ -346,11 +375,11 @@ Every constant lives in `sim/assumptions.py` with a comment, a one-line rational
 - `# ANCHORED: <source>` if it comes from a public figure in `anchors.json`.
 - `# ASSUMPTION` otherwise (round, plausible values).
 
-**Today all 26 constants are `ASSUMPTION`.** Where our desk research gives context for one (bus fare range, a peak
+**Today all 33 constants are `ASSUMPTION`** (26 for ID renewal and the shared travel model, 7 for everyday travel, §6.6). Where our desk research gives context for one (bus fare range, a peak
 bus-wait study, the OSRM road ratio), the assumptions table shows it in a `source` note (`META` in `assumptions.py`,
 Arabic in `assumption_labels.SOURCE_AR`); that note never upgrades the tag.
 
-Constants include `SERVICE_MINUTES`, `BUS_SPEED_KMH`, `BUS_WAIT_PLUS_TRANSFER_MIN` (per transfer), `CAR_SPEED_KMH`, taxi base fare and per-km rate, `MAX_TRAVEL_MINUTES`, `TAXI_MAX_JD[band]`, `MAX_WORK_HOURS_MISSED[band]`, `HELPER_FREE_FROM`, `HARDSHIP_THRESHOLD`, `COST_WEIGHT`, `WORK_WEIGHT`. Two were added later, with the group protections, and committed (`0387862`) before any code used them: `HOME_VISIT_MINUTES` (120: a 2-hour visit window) and `PICKUP_MINUTES` (15: collecting a card applied for online).
+Constants include `SERVICE_MINUTES`, `BUS_SPEED_KMH`, `BUS_WAIT_PLUS_TRANSFER_MIN` (per transfer), `CAR_SPEED_KMH`, taxi base fare and per-km rate, `MAX_TRAVEL_MINUTES`, `TAXI_MAX_JD[band]`, `MAX_WORK_HOURS_MISSED[band]`, `HELPER_FREE_FROM`, `HARDSHIP_THRESHOLD`, `COST_WEIGHT`, `WORK_WEIGHT`. Two were added later, with the group protections, and committed (`0387862`) before any code used them: `HOME_VISIT_MINUTES` (120: a 2-hour visit window) and `PICKUP_MINUTES` (15: collecting a card applied for online). Seven more, for everyday travel, were committed in `3b1cde0` **before any travel scenario ran**: `WEEKS_PER_MONTH` (4.33), `INCOME_JD_MONTH` (130 / 350 / 950 JD by band), `TRANSPORT_SHARE_SQUEEZED` (0.10), `TRANSPORT_SHARE_PRICED_OUT` (0.20), `FUEL_SHARE_OF_CAR_COST` (0.6), `BUS_FARE_FUEL_PASS_THROUGH` (0.3), `TAXI_FARE_FUEL_PASS_THROUGH` (0.5).
 
 **Freeze rule (do not break this):** *Set assumptions once to round, plausible values with a stated rationale. Freeze them before running any scenario. If a scenario's story doesn't appear, change the scenario, not the assumptions.* Never present any of these values as official statistics.
 
@@ -384,6 +413,15 @@ Perturb `SERVICE_MINUTES`, `BUS_WAIT_PLUS_TRANSFER_MIN` and `HARDSHIP_THRESHOLD`
 
 If the ranking flips: **don't retune and don't hide it.** Show it ("the order of elderly vs offline depends on bus wait") and only claim the `stable_top_group`.
 
+### 6.6 Everyday travel (`sim/travel_service.py`, service `everyday_travel`)
+Deterministic, no AI; `engine.simulate`, compare, the fix grid and the robustness check dispatch on `policy.service`.
+1. **One regular trip per citizen** (`daily_trips.json`, made by `seed_daily.py` with seed 42; destinations in `hubs.json`, OSRM times in `hub_matrix.json`): 948 of 1,000 have one: 320 workers to a work hub and 164 students to a university, 5 days a week; 464 other adults 25+ to their nearest public hospital, once a week. The 52 aged 16-17 have none and count as fine at zero cost.
+2. **Mode by profile:** own car if they have one; a wheelchair user goes in a helper's car (if they have a helper) or by taxi; everyone else by bus (`bus_transfers` as in `travel.py`). **No mode switching with price** (next module).
+3. **Monthly cost** = round-trip cost × days per week × `WEEKS_PER_MONTH`. A fuel change of X% scales the car's per-km cost by X × `FUEL_SHARE_OF_CAR_COST`; bus fares follow by `BUS_FARE_FUEL_PASS_THROUGH` and the taxi per-km tariff by `TAXI_FARE_FUEL_PASS_THROUGH`, **unless** the policy sets `bus_fare_change_pct` / `taxi_fare_change_pct` (0 = a freeze). Transport vouchers cut the bus/taxi round-trip fare (never car costs); `cash_support` comes off the monthly cost (a citizen gets their largest amount; floor 0).
+4. **Status** by the share of the band's `INCOME_JD_MONTH` the trip takes each month: **fine** (`served`) below `TRANSPORT_SHARE_SQUEEZED` (10%), **squeezed** (`hardship`) from it, **priced out** (`left_out`) from `TRANSPORT_SHARE_PRICED_OUT` (20%). Reasons: `TRANSPORT_OVER_BUDGET` plus `FUEL_COST` (car, helper's car) or `FARE_COST` (bus, taxi).
+5. **Fix grid:** cash support per group (low_income 8 / 14 / 20 JD, no_car / worker / student 14 JD a month), freeze bus fares, freeze taxi fares, 0.5 JD vouchers for low_income / no_car, plus pairs; same scoring and ranking as §6.4. **A fix never changes the fuel price**: it is the decision being tested (the AI's proposal is rejected if it does).
+6. **Robustness** perturbs `FUEL_SHARE_OF_CAR_COST`, `BUS_FARE_FUEL_PASS_THROUGH` and `TRANSPORT_SHARE_SQUEEZED` by ±20% (6 runs), same pass rule as §6.5.
+
 ### Areas (approximate centroids, verify on the map first)
 Downtown/Al-Balad (31.951, 35.934) · Abdali (31.962, 35.910) · Jabal Al-Hussein (31.968, 35.920) · Marka (31.975, 35.985) · Wehdat (31.935, 35.940) · Tabarbour (32.000, 35.940) · Sweileh (32.020, 35.840) · Khalda (31.995, 35.835).
 
@@ -394,8 +432,10 @@ Downtown/Al-Balad (31.951, 35.934) · Abdali (31.962, 35.910) · Jabal Al-Hussei
 
 | Method | Path | Purpose |
 |---|---|---|
+| GET | `/services` | The sectors (`id_renewal`, `everyday_travel`): names, descriptions, `levers`, `baseline_scenario`, `demo_scenario` (from `services.json`) |
 | GET | `/population` | All citizens (for drawing dots) |
-| GET | `/scenarios` | Preset scenarios (baseline + demo presets) |
+| GET | `/scenarios` | Preset scenarios for every service; each carries `service` (baseline + presets, one `demo: true` per service) |
+| GET | `/heroes?service=` | Hero citizens for that service's demo path (default `id_renewal`), with notes and a factual profile |
 | GET | `/sites` | Candidate office sites |
 | GET | `/assumptions` | All constants with value, rationale, tag and source (for `AssumptionsTable`) |
 | POST | `/simulate` | `{policy}` → `SimResult` |
@@ -436,7 +476,7 @@ Extract every number from AI text (Arabic-Indic and Western digits). Each must m
 ### 8.5 Policy parse
 - The prompt includes the current policy JSON, the list of areas, sites and offices, the schema, and the explicit **"what Nas can model" list** (§5).
 - Output is a `ParseResult`: either a full Policy plus a bilingual "understood as" change list, or `unsupported` with a short message saying what can't be modeled and what the closest supported change would be.
-- Examples of unsupported requests: a group that isn't one of the 7 tags (e.g. pregnant women), an age threshold other than 65, extra staff or queues, an office outside the 15 sites, a second service, road closures or changes to bus routes.
+- Examples of unsupported requests: a group that isn't one of the 7 tags (e.g. pregnant women), an age threshold other than 65, extra staff or queues, an office outside the 15 sites, a service other than the two sectors, road closures or changes to bus routes; for everyday travel, a separate diesel or petrol price, electricity or other prices, more buses, or people switching modes.
 - The UI shows the change list in `ParsePreview` and only applies the policy after **Apply**. A wrong parse is visible and harmless.
 - Any policy a parse could produce can also be built with the manual controls, so if parsing fails on stage, build it by hand.
 
@@ -486,6 +526,12 @@ Policy Panel · Map · Impact Panel. The Citizen Card opens as a drawer over the
 - `SyntheticBadge` always visible: "Synthetic population — demo data, not real people" / "سكان افتراضيون — بيانات تجريبية وليسوا أشخاصاً حقيقيين".
 - Map and KPIs never wait on the AI.
 
+### 9.3 Sector list (start state)
+- The app opens on a **sector list** in the left panel: one card per service from `GET /services` ("تجديد الهوية / ID renewal", "أسعار المحروقات / Fuel prices"). The map shows every citizen as a neutral **blue** dot (no pins, rings or heroes), the right panel waits until a sector is chosen, and no `/compare` is sent. The sector is not remembered.
+- Choosing a card loads that sector's presets (`/scenarios` filtered by `service`), heroes (`/heroes?service=`) and policy-panel sections (`levers`). A back button in the panel head returns to the list and resets everything.
+- **`?sector=id_renewal` or `?sector=everyday_travel` skips the list: use it on stage.**
+- The fuel panel: fuel price % (with "90-octane 1.050 JD/L → X", display only), bus and taxi fares (follow fuel / freeze / custom %), cash support (groups + JD/month), transport vouchers. The status words become fine / squeezed / priced out (بخير / مضغوطون / عاجزون عن التنقل); the citizen card shows the trip (purpose, destination, mode, transfers), the monthly cost before → after, the extra JD and the share of income. The travel map has no hub pins.
+
 ## 10. Demo scenarios (preset JSON in `data/scenarios/`)
 
 1. **`baseline`:** today's network: the **7 real CSPD offices in Amman** (Tabarbour head office, Jabal Amman, Marka, Sweileh, Jabal Al-Hussein, Tla' Al-Ali, Wadi Al-Seer; addresses from CSPD's own office list, located with OpenStreetMap, real: true in `sites.json`), 08:30–15:30 Sun–Thu as CSPD publishes, walk-in, online enabled. Wheelchair access is assumed; the fee is JD 2 (the ID-renewal fee, confirmed by the team).
@@ -513,6 +559,15 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 - "Require two visits"
 - Protections: "Make it free for people over 65" / "خلّوها مجانية لكبار السن", "خلّوا كبار السن وذوي الإعاقة يراجعوا بدون موعد", "Home visits for wheelchair users, 30 visits", "ادفعوا أجرة التكسي لذوي الدخل المحدود لحد 3 دنانير", "Let people apply online and just pick up the card", "افتحوا مكتب جديد في ماركا"
 - One unsupported one, "Add more staff at the Marka office", to rehearse the honest "not supported yet" answer.
+
+### Everyday-travel presets and heroes (service `everyday_travel`, compared against `travel_today`)
+- **`travel_today`:** today's fuel and fares, no support: 72.2 fine / 17.8 squeezed / 10.0 priced out. Low-income daily bus commuters already spend a median 30% of income on the trip.
+- **`fuel_plus_5`:** the October 2026 rise (+0.05 JD/L on 90-octane, about +5%), fares follow by pass-through: 71.6 / 18.3 / 10.1, 7 worse, all car drivers.
+- **`fuel_plus_25`:** fuel +25%, regulated fares mostly held: 70.6 / 18.6 / 10.8, 24 worse, all car drivers.
+- **`fuel_plus_25_fares`:** the **travel demo path** (`"demo": true`): fuel +25% and bus/taxi fares +25%, as after the 2012 hike: **70.2 / 14.6 / 15.2, 72 worse**, worst groups worker, offline, low_income; average extra 4.54 JD/month per person with a trip. Top grid fix: "14 JD/month cash support for people without a car + freeze bus fares" (priced out −7.2 pts). Robustness: ranking held **5/6** (at `TRANSPORT_SHARE_SQUEEZED` × 1.2 the second group becomes no_car), fix helps 6/6, stable top group worker: show it honestly.
+- **`fuel_plus_25_support`:** the same + 14 JD/month for low_income (NAF's fuel support is 8-14 JD): 73.8 / 11.7 / 14.5. 14 JD does not undo a 25% fare rise for a daily commuter.
+- **Heroes:** c_0627 Mustafa (23, low income, bus with 1 transfer to Wehdat; priced out before and after, squeezed with the fix), c_0883 Rana (18, student, bus with 2 transfers to Applied Science University; squeezed → priced out → squeezed), c_0982 Issa (29, middle income, drives 44 min to King Hussein Business Park; squeezed → priced out, and the top fix does **not** reach him: kept on purpose).
+- Rehearsed travel requests are in `demo_requests.json` with `service: "everyday_travel"` (raise petrol 10%, fuel +25% with 14 JD for low-income families, freeze bus fares, pay the bus fare for students, give every worker 20 JD a month; unsupported: electricity prices, diesel only).
 
 ## 11. Team split (3 people)
 
@@ -555,10 +610,12 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 6. **5:45–6:30 Impact & business.** Who pays: municipalities, ministries, digital transformation programs. Next steps: calibrate with more public data, add more services and cities. One slide with the relatives' real answers next to the simulated voices.
 7. **6:30–7:00** Close with the pitch line. Invite a judge to name a policy during Q&A.
 
+**Optional, Q&A only: the fuel sector.** If a judge says "name a policy" and there is time, open `?sector=everyday_travel`, pick `fuel_plus_25_fares` (fuel +25% with fares raised to match), click Issa and Mustafa, "Suggest fixes", apply the top fix, and say out loud that Issa is still priced out. The 7-minute script stays on ID renewal. Runbook: `DEMO_RUNBOOK.md`, "Fuel sector".
+
 ## 14. Judge Q&A prep
 
 - **"Are these real people?"** No. A clearly labelled synthetic population, anchored to published figures where we found them (only the three MoDEE 2024 figures and the CSPD office list are verified by us; the other research figures are labelled CITED). The engine is data-agnostic; better data drops in. Slide-ready list: README, "What is real and what is assumed".
-- **"Didn't you tune it to get this result?"** The population is anchored to published figures where we found them; the engine constants are labelled assumptions (all 26), frozen before any scenario ran and tested at ±20%: the ranking holds 6/6 (badge). If a story didn't show up, we changed the scenario, never the assumptions.
+- **"Didn't you tune it to get this result?"** The population is anchored to published figures where we found them; the engine constants are labelled assumptions (all 33: 26 for ID renewal, 7 added for fuel and committed before any travel scenario ran), frozen before any scenario ran and tested at ±20%: the ranking holds 6/6 on the ID-renewal demo (badge) and 5/6 on the fuel demo, shown honestly. If a story didn't show up, we changed the scenario, never the assumptions.
 - **"Is the AI making things up?"** No. The engine computes every outcome and number. A grounding check rejects any AI text with a number the engine didn't produce, and every AI fix is re-verified by the engine before it's shown.
 - **"What does the AI do that a spreadsheet couldn't?"** See §1.
 - **"Does it reach the people left out?"** See §1. Plus: the relatives' answers slide.
@@ -566,7 +623,10 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 - **"Show us another policy."** Type it live. If it's outside what Nas models, it says so and suggests the closest supported change.
 - **"Why doesn't closing Thursdays change anything?"** Nas doesn't model office capacity or queues yet, so the open days are interchangeable: anyone who went on Thursday goes on another workday instead (on the demo path nobody changes status). Capacity and queues are the next module. "Add more staff" is unsupported for the same reason.
 - **"Business model?"** SaaS per service/municipality plus a setup engagement to calibrate data. Cheap to run: the engine is CPU-only and AI calls are cached.
-- **"Scalability?"** A new service is a policy template + channel rules; a new city is areas + sites + anchors.
+- **"Scalability?"** A new service is a policy template + channel rules; a new city is areas + sites + anchors. Proof: the fuel-price sector was added in one day on the same engine, population and UI.
+- **(Fuel) "Why are the people hurt by a fuel rise all drivers?"** On `fuel_plus_5` and `fuel_plus_25`, bus and taxi fares are regulated and lag fuel (only a pass-through share follows), so the first hit lands on car owners. And the riders were already squeezed: low-income daily bus commuters spend a median 30% of income on the trip today. When fares rise with fuel (`fuel_plus_25_fares`), 48 of the 72 people worse off are bus riders.
+- **(Fuel) "Your fix misses Issa."** Yes, and we show it: the engine's best fix is cash for people without a car plus a bus-fare freeze, which doesn't reach a middle-income driver. Try cash support for workers live: the grid's third fix (freeze bus fares + 14 JD/month for workers) brings Issa back to squeezed, at a slightly smaller drop overall (−6.8 vs −7.2 pts priced out).
+- **(Fuel) "Are the fuel prices real?"** The October 2026 prices (90-octane 1.050 JD/L, +0.05) and NAF's 8-14 JD/month fuel support are from press reports (CITED in `anchors.json`); the engine works in % changes, and its 7 travel constants are labelled assumptions frozen before any travel scenario ran.
 
 ## 15. Commands
 

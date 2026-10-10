@@ -1,16 +1,19 @@
 # HANDOFF: Nas (ناس), state of the project
 
 Read this first in a new context window, then `CLAUDE.md` (the full spec). **For the stage: `DEMO_RUNBOOK.md`** (clicks,
-numbers, cached judge requests, fallbacks, morning checklist). Last updated 2026-10-10 (early morning, Amman),
-after a full review pass: 42 issues fixed and 26 improvements added by four parallel agents (engine, AI layer, frontend, docs);
-see §14 for what is deliberately on hold.
+numbers, cached judge requests, fallbacks, morning checklist). Last updated 2026-10-10 (midday, Amman), after the
+second sector, **everyday travel (fuel prices)**, was added (§15) and the health-insurance anchors for a planned third sector
+were verified (§5). Earlier that morning: a full review pass (42 issues fixed, 26 improvements); see §14 for what is on hold.
 
 ## 1. What Nas is (one paragraph)
-A "wind tunnel" for public services in Amman, built for AI Quest @ Al Hussein Technical University.
-1,000 **synthetic citizens, AI-voiced** (never say "1,000 AI citizens") go through **ID renewal** under any policy.
-The **deterministic engine** decides every outcome and number, searches a grid of fixes, and runs a ±20%
-robustness check. The **AI** only translates (free text → policy), voices citizens (in فصحى), writes the report,
-and explains/proposes fixes. **The engine verifies everything the AI proposes.** Every AI task has a template fallback.
+A "wind tunnel" for public policy in Amman, built for AI Quest @ Al Hussein Technical University.
+1,000 **synthetic citizens, AI-voiced** (never say "1,000 AI citizens") go through a policy in one of **two sectors**:
+**ID renewal** (offices, online, appointments, vans, protections: served / hardship / left out) and, since 2026-10-10,
+**everyday travel under fuel prices** (each citizen's regular trip to work, university or hospital under fuel and fare
+changes and cash support: fine / squeezed / priced out, §15). The app opens on a sector list. The **deterministic engine**
+decides every outcome and number, searches a grid of fixes, and runs a ±20% robustness check. The **AI** only translates
+(free text → policy), voices citizens (in فصحى), writes the report, and explains/proposes fixes. **The engine verifies
+everything the AI proposes.** Every AI task has a template fallback.
 
 ## 2. Where things run
 | What | Where |
@@ -18,7 +21,7 @@ and explains/proposes fixes. **The engine verifies everything the AI proposes.**
 | Repo | https://github.com/yazanz22/quick-cache (branch `main`; push directly to main) |
 | Local app (UI + API, one server) | from `backend/`: `.venv/Scripts/python -m uvicorn app.main:app --port 8000` → **http://localhost:8000** (API docs at `/docs`) |
 | Production | **https://nas-rbo5.onrender.com** (Render free web service from `render.yaml`). **Auto-deploy did not fire on push on 2026-10-09: the user deploys by hand** in the Render dashboard (Manual Deploy → latest commit). After a deploy the old build keeps serving for ~1 min. |
-| Tests | from `backend/`: `.venv/Scripts/python -m pytest -q` → **132 passed, 20 xfailed** (2026-10-10), all offline (no AI calls). `test_demo.py` guards the demo numbers; `test_cache_hits.py` guards every cached AI answer (the xfails are entries that still need one online `warm_cache` run, see §10.1); `test_api.py` covers the HTTP 422 paths and gzip |
+| Tests | from `backend/`: `.venv/Scripts/python -m pytest -q` → **237 passed, 29 xfailed** (2026-10-10 midday), all offline (no AI calls). `test_demo.py` guards the ID-renewal demo numbers; `test_travel.py` guards the travel sector (numbers, heroes, robustness, and that ID-renewal outcomes stay byte-identical); `test_cache_hits.py` guards every cached AI answer (the 29 xfails = 28 travel entries not warmed yet + Amina's post-AI-fix voice, see §10.1); `test_api.py` covers the HTTP 422 paths and gzip |
 | Dev server for agents/browser checks | `.claude/launch.json` has `nas` (port 8000) and `nas-dev` (port 8010, `--reload`); use `nas-dev` when another session already holds 8000 |
 | Python | local venv is Python 3.14 (`backend/.venv`); Render uses 3.12.7 |
 
@@ -31,7 +34,8 @@ so the first real request is fast. Secrets (GEMINI/GROQ/OPENAI keys) are set in 
 - **Never add a co-author / "Co-Authored-By" line** to commits or PRs. Small, focused commits pushed to `main`.
 - **Freeze rule:** never change values in `backend/app/sim/assumptions.py` to make a story appear. Change scenarios instead.
   (Assumptions were committed as frozen in `6feaa3c` *before* any scenario ran; the two constants added later for new
-  levers, `HOME_VISIT_MINUTES` and `PICKUP_MINUTES`, were committed in `0387862` before any code used them.)
+  levers, `HOME_VISIT_MINUTES` and `PICKUP_MINUTES`, were committed in `0387862` before any code used them; the 7 travel
+  constants were committed in `3b1cde0` before any travel scenario ran, §15.)
 - **Frontend computes nothing.** Backend shapes are adapted only in `nas-frontend/api.js`; UI strings live in `nas-frontend/i18n.js`.
 - **`backend/app/models.py` is the API contract.** If you change it, check `nas-frontend/api.js` in the same commit.
 - Every AI call goes through `llm/client.py` + `llm/cache.py` + `llm/checks.py`, with a template in `llm/fallbacks.py`.
@@ -45,22 +49,30 @@ so the first real request is fast. Secrets (GEMINI/GROQ/OPENAI keys) are set in 
 ```
 CLAUDE.md, README.md, HANDOFF.md, render.yaml, .env.example, .gitignore (also ignores .claude/, the desktop app's local config)
 "Amman in a Box_ A Verified Statistical Blueprint for Policy Simulation.md"   # teammate's AI-assisted desk research (Qwen; source for seed_census); unverified unless ANCHORED in anchors.json
+"Estimating Amman's Uninsured Rate_ ....md"   # research doc for the planned medical-exemption sector (46aa477); checked figures are in anchors.json (§5)
 backend/
   app/main.py            # FastAPI: routers, CORS (only for :3000), serves nas-frontend/ at /, start-up warm-up
   app/config.py          # loads repo-root .env (LLM_*, MODEL_*, DEMO_OFFLINE ...)
-  app/models.py          # all Pydantic schemas (contract), incl. the group protections (HomeVisits, TransportVoucher)
-  app/routes/sim_routes.py  # /population /scenarios /sites /areas /heroes /assumptions /simulate /compare /fixgrid /sensitivity
+  app/models.py          # all Pydantic schemas (contract), incl. the group protections (HomeVisits, TransportVoucher),
+                         # Service literal, ServiceInfo, CashSupport, the travel levers and travel outcome fields (§15)
+  app/routes/sim_routes.py  # /services /population /scenarios /sites /areas /heroes?service= /assumptions /simulate /compare /fixgrid /sensitivity
   app/routes/llm_routes.py  # /policy/parse /citizen/voice /report /fixes /llm/status
   app/sim/   assumptions.py (frozen), assumption_labels.py (ar/en text only), travel.py, engine.py, compare.py,
-             fixgrid.py, sensitivity.py, validate.py, warmup.py, world.py
-  app/llm/   client.py, prompts.py, cache.py, fallbacks.py, checks.py, tasks.py
+             fixgrid.py, sensitivity.py, validate.py, warmup.py, world.py,
+             travel_service.py (the everyday_travel engine: regular trips, monthly cost, share of income; engine.py dispatches by policy.service)
+  app/llm/   client.py, prompts.py, cache.py, fallbacks.py, checks.py, tasks.py   (all service-aware since e70cd11)
   app/data/  population.json (1,000), travel_matrix.json (OSRM), home_points.json (OSM streets), sites.json (15),
              areas.json (8), anchors.json, seed_census.py (+ census/ outputs), seed.py (shared helpers),
-             fetch_map_data.py, scenarios/*.json (+ heroes.json, demo_requests.json)
-  scripts/   pick_heroes.py, find_ai_fix.py, warm_cache.py
-  cache/     committed AI cache: parse 17, voice 10, report 4, fixes 1
+             fetch_map_data.py, scenarios/*.json (+ heroes.json, demo_requests.json),
+             services.json (the 2 sectors: id, names, levers, baseline/demo scenario; served by GET /services),
+             hubs.json (25 trip destinations: 14 work, 7 university, 4 public hospitals; OSM Nominatim, weights ASSUMPTION),
+             daily_trips.json (one regular trip per citizen, made by seed_daily.py, seed 42),
+             hub_matrix.json (OSRM citizen → hub times/distances, fetched 2026-10-09), seed_daily.py
+  scripts/   pick_heroes.py, find_ai_fix.py, warm_cache.py   (find_ai_fix and warm_cache take --service id_renewal|everyday_travel)
+  cache/     committed AI cache: parse 61, voice 12, report 6, fixes 1 (all ID renewal; travel not warmed yet, §10.1)
   tests/     test_engine.py, test_fixgrid.py, test_levers.py, test_api.py (HTTP 422s, gzip, warm-up), test_llm.py (AI checks,
-             fixes flow, templates), test_cache_hits.py (every cached answer still hits), test_demo.py (pinned numbers, heroes, 6/6)
+             fixes flow, templates), test_cache_hits.py (every cached answer still hits), test_demo.py (pinned numbers, heroes, 6/6),
+             test_travel.py (travel numbers, heroes, fix grid, 5/6 robustness, id_renewal outcomes byte-identical)
 nas-frontend/  index.html, config.js, api.js, i18n.js, app.js, README.md   # static, no build step
   vendor/      Leaflet, Phosphor icons, IBM Plex fonts (local copies of the old CDN files; see vendor/README.md)
 ```
@@ -83,7 +95,20 @@ nas-frontend/  index.html, config.js, api.js, i18n.js, app.js, README.md   # sta
   08:30-15:30 hours (page URL not recorded); everything else from the research is CITED_UNVERIFIED (called **CITED** in
   `VALIDATION.md` and `seed_census.py`, renamed from "ANCHORED" on 2026-10-10). Bus fare 0.34-0.55 JD and the 25.4-min peak bus
   wait are CITED context for `BUS_FARE_JD` / `BUS_FIRST_WAIT_MIN`, shown as `source` notes in the assumptions table.
-- **Engine constants: all 26 are ASSUMPTION.** On stage: *"The population is anchored to published figures where we found them;
+- **Fuel sector anchors (added 2026-10-10, CITED_UNVERIFIED = press reports):** the Fuel Pricing Committee's October 2026
+  prices (90-octane 1.050 JD/L, +0.05; 95-octane 1.360, +0.05; diesel 0.900, +0.05; kerosene 0.550, unchanged; Jordan News,
+  2026-10-01) and the National Aid Fund's fuel support of 8-14 JD/month per beneficiary family (Ammon News). The 2012 subsidy
+  removal is context only, no figure anchored. None of them sets an engine constant.
+- **Health-insurance anchors for the planned third sector** (Royal Court medical exemption; nothing reads them yet), checked
+  2026-10-10: DoS "Health Insurance in Jordan" (Census 2015 paper, ANCHORED): 68.7% of Jordanians and ~56% of the total
+  population insured; under-6s all insured by MoH; **Amman: 55.2% of Jordanians insured (44.8% not), 41.2% of the total
+  population (58.8% not)**, Amman and Zarqa the lowest (41%); non-Jordanians 25.3% nationally, 16.4-16.8% in Amman; lowest
+  coverage at ages 15-34. JPFHS 2023 (ANCHORED): 69% of ever-married women and 59% of men aged 15-49 insured. **Do not reuse**
+  the research doc's "76.8% of Jordanians insured" (BMC 2024 article whose breakdown sums to 84.9 and that cites DoS 2015 anyway)
+  or its "38% of non-Jordanians insured" (conflates 25.3% insured with "38% of the insured are under special arrangements");
+  both are `research_doc_*` entries marked DO NOT USE. Recommended engine input: Amman Jordanians 16+ uninsured ≈ 45-50%
+  (44.8% is all ages incl. the fully insured under-6s, so adults are higher; the range itself is our assumption).
+- **Engine constants: all 33 are ASSUMPTION** (26 for ID renewal + shared travel model, 7 for everyday travel). On stage: *"The population is anchored to published figures where we found them;
   the engine constants are labelled assumptions, frozen before any scenario ran and tested at ±20%."* Never "verified official statistics".
   Slide-ready list: README, **"What is real and what is assumed"** (incl. what each group means).
 - **Groups** (tags): elderly = 65+ (65 people); disabled = limited mobility or wheelchair (69: mobility only, not the 10.4% WG rate);
@@ -122,12 +147,31 @@ walk-in for elderly + disabled → served 81.6; + 20 home visits → 83.6 served
 c_0028 Dana (71f, no car/smartphone, son helps), c_0031 Mohammad (67m, wheelchair, son helps),
 c_0837 Bilal (38m, 07:00-16:00 shift, no helper), c_0020 Amina (63f, low digital literacy, no helper).
 
+**Everyday-travel presets** (`service: "everyday_travel"`, compared against `travel_today`; statuses read fine / squeezed /
+priced out; full rules in §15):
+| id | policy | fine / squeezed / priced out | worse off |
+|---|---|---|---|
+| `travel_today` | today's fuel and fares, no support | 72.2 / 17.8 / 10.0 | – |
+| `fuel_plus_5` | Oct 2026 rise (+0.05 JD/L on 90-octane ≈ +5%), fares follow by pass-through | 71.6 / 18.3 / 10.1 | 7 (all car drivers) |
+| `fuel_plus_25` | fuel +25%, regulated fares mostly held (pass-through) | 70.6 / 18.6 / 10.8 | 24 (all car drivers) |
+| **`fuel_plus_25_fares`** (travel demo) | fuel +25% and bus/taxi fares +25% (as after the 2012 hike) | **70.2 / 14.6 / 15.2** | **72** (48 bus, 24 car) |
+| `fuel_plus_25_support` | the same + 14 JD/month cash for low_income | 73.8 / 11.7 / 14.5 | 66 (37 better) |
+
+Travel demo facts: worst groups **worker, offline, low_income**; average extra cost 4.54 JD/month. Engine top fix: **"14 JD/month
+cash support for people without a car + freeze bus fares"**: priced out 15.2 → 8.0 (−7.2 pts; squeezed 14.6 → 15.5, since people
+lifted out of "priced out" land in "squeezed"). Robustness **5/6** (§15), fix helps 6/6. Heroes: c_0627 Mustafa, c_0883 Rana,
+c_0982 Issa (the top fix does not reach him, on purpose).
+
 **Rehearsed requests** (`demo_requests.json`, all cached; check with `scripts.warm_cache --parse-only`): the on-stage sentence
 "خلّوا الكاونترات تسكر الساعة 1 الظهر، وما حدا يراجع المكتب إلا بموعد مسبق أونلاين" applied to `consolidate` parses to exactly
 `consolidate_digital_first`; plus close offices on Thursday (ar/en), close/reopen Marka, online-only + Saturday van in Wehdat,
 double the fee, two visits, free for over-65s (ar/en, now supported), walk-in for elderly + disabled, 30 home visits for
 wheelchair users, a 3 JD taxi voucher for low income, apply online and pick up, open a new office in Marka. The **unsupported**
 rehearsal is "Add more staff at the Marka office" (and any road closure, e.g. "سكّروا شارع زهران", is answered "not supported").
+"All cached" is true for the ID-renewal requests only. The **12 travel requests** (`service: "everyday_travel"`, on `travel_today`
+or `fuel_plus_25_fares`) are **not cached yet** (§10.1): raise petrol 10% (ar/en), fuel +25% with 14 JD/month for low-income
+families (ar/en), freeze bus fares (ar/en), pay the bus fare for students (ar/en), give every worker 20 JD a month, and three
+unsupported ones: lower electricity prices (ar/en) and "raise diesel only" (one fuel price change only).
 
 ## 7. Engine decisions worth knowing (deviations from CLAUDE.md, all deliberate)
 - Option choice ranks **best status first** (served > hardship), then burden. Otherwise a citizen with a car would be pushed
@@ -180,6 +224,15 @@ rehearsal is "Add more staff at the Marka office" (and any road closure, e.g. "�
 - Gemini daily quota resets ~10:00 Amman time. Don't burn it in loops.
 
 ## 9. Frontend ↔ backend
+- **Start state (2026-10-10, `b5b6d45` + `9237f55`):** the app opens on a **sector list** in the left panel (two cards from
+  `GET /services`: "تجديد الهوية / ID renewal" and "أسعار المحروقات / Fuel prices"); the map shows every citizen as a neutral
+  **blue** dot (accent colour, no pins, rings or heroes), the right panel waits until a sector is chosen, and no `/compare` is
+  sent. Choosing a card loads that sector's presets (`/scenarios` items carry `service`), heroes (`GET /heroes?service=<id>`)
+  and policy-panel levers (`ServiceInfo.levers`). A back button in the panel head returns to the list and resets everything.
+  The sector is not remembered; **`?sector=id_renewal` or `?sector=everyday_travel` skips the list: use it on stage.**
+  Per-sector strings are `<key>_<service>` overrides in `i18n.js` (e.g. "Fine" for served). The fuel panel: fuel % stepper
+  (with "90-octane 1.050 JD/L → X", display only, from `config.js`), bus and taxi fares (follow fuel / freeze / custom %),
+  cash support (group chips + JD/month), transport vouchers. The travel map has no hub pins (§14).
 - FastAPI serves `nas-frontend/` at `/` (mounted after the API routes; a test checks routes still win). `config.js` uses the page's
   own origin as the API (falls back to http://localhost:8000 when opened on :3000). `?api=<url>` and `?offline=1` (no map tiles) work.
 - `api.js` adaptations: `/sensitivity` sends the fix's `policy`; backend `details[]` → UI `detail[]` rows.
@@ -203,12 +256,25 @@ rehearsal is "Add more staff at the Marka office" (and any road closure, e.g. "�
   backend-down error screen + Retry, `?offline=1`, dragging an office pin, every protection, opening/closing an office.
 
 ## 10. Open items / known caveats
-1. **One cache entry still needs an online warm run**: Amina (c_0020)'s voice after the **AI fix** (every Gemini voice model
-   hit its daily limit on the night of 10-10; voices never go to Groq). Everything else is cached: all 61 rehearsed requests
-   (every UI example chip from every preset, 15 extra judge requests on the demo path), all other hero voices, the reports
-   with and without a fix. **After the Gemini reset (~10:00 Amman), from `backend/`:** `.venv/Scripts/python -m scripts.warm_cache`
-   (1 call), then `DEMO_OFFLINE=1 ... -m scripts.warm_cache` must end with "No misses", then `pytest -q` (the xfail becomes XPASS;
-   then delete it from `PENDING_VOICES` in `tests/test_cache_hits.py`), then commit `backend/cache/` and redeploy Render.
+1. **Pending online warm runs (29 xfails in `pytest -q`):**
+   - **ID renewal, 1 call:** Amina (c_0020)'s voice after the **AI fix** (every Gemini voice model hit its daily limit on the night
+     of 10-10; voices never go to Groq). Everything else for ID renewal is cached: all 61 rehearsed requests, all other hero
+     voices, the reports with and without a fix.
+   - **Everyday travel, nothing warmed yet (28 xfails):** 12 rehearsed parses, the `/fixes` answer on `fuel_plus_25_fares`
+     (explanations + an AI-proposed fix), 12 hero voices (Mustafa, Rana, Issa × today / demo / top fix / AI fix) and 3 reports
+     (no fix / top fix / AI fix). Until then the travel sector shows templates (honest, never blank).
+   - **Network:** the venue network has a **FortiGate TLS interception on googleapis / groq** (AI calls fail with certificate
+     errors). Run the warm steps on a **phone hotspot**.
+   - **Steps, from `backend/`, after the Gemini reset (~10:00 Amman):**
+     1. `.venv/Scripts/python -m scripts.warm_cache --service everyday_travel --parse-only` (12 calls; Groq can do these)
+     2. `.venv/Scripts/python -m scripts.warm_cache --service everyday_travel` (~12 calls: fixes 1, voices 9, reports 2)
+     3. optional: `.venv/Scripts/python -m scripts.find_ai_fix --service everyday_travel` (if step 2 shows no verified AI fix),
+        then step 2 again for the 3 AI-fix voices and the AI-fix report
+     4. `.venv/Scripts/python -m scripts.warm_cache --service id_renewal` (Amina, 1 call)
+     5. `DEMO_OFFLINE=1 .venv/Scripts/python -m scripts.warm_cache` must end with "No misses" (or list only what you chose to skip)
+     6. `pytest -q`: the warmed entries become XPASS; then drop the travel xfail marks in `tests/test_cache_hits.py`
+        (`travel_pending`, the `TRAVEL_PENDING` mark on travel requests) and Amina from `PENDING_VOICES`
+     7. commit `backend/cache/`, push, redeploy Render by hand.
    Voices for citizens served by home visits are generated on click (AI or template); none are pre-cached.
 2. **Fully offline demo: DONE.** Leaflet 1.9.4, Phosphor icons (regular + fill) and IBM Plex (arabic/latin subsets) are vendored in
    `nas-frontend/vendor/` (~1 MB). Verified: with `?offline=1` the page makes no request outside the server, in Arabic and English.
@@ -250,6 +316,9 @@ If it's ever revived, real congestion data is the blocker (Google Maps has Amman
   changing it would lose the cached AI fix. Change only together with a re-warm.
 - **Area mapping** (`jabal_al_hussein` holds Basman residents; `wehdat` spans 14 km, so 23 citizens near the real Jabal Al-Hussein
   office are charged 2 bus transfers): a labelled limitation. Fixing it changes every outcome, the heroes and the whole AI cache.
+- **Everyday travel (2026-10-10):** nothing new on hold except two known limits, both "next module" on stage:
+  (a) **no mode switching with price**: a driver who would take the bus at +50% still drives, and a rider never buys a car;
+  (b) **no hub pins on the travel map**: the backend sends no hub coordinates to the UI, so the map shows citizens only.
 
 ## 12. Useful commands (from `backend/`)
 ```bash
@@ -261,14 +330,92 @@ If it's ever revived, real congestion data is the blocker (Google Maps has Amman
 .venv/Scripts/python -m scripts.find_ai_fix                      # search for a verified AI fix (uses AI quota)
 .venv/Scripts/python -m scripts.warm_cache                       # warm the AI cache (uses AI quota; only misses are requested)
 .venv/Scripts/python -m scripts.warm_cache --parse-only          # just the rehearsed free-text requests (Groq can do these)
+.venv/Scripts/python -m scripts.warm_cache --service everyday_travel [--parse-only]   # one sector only (also: find_ai_fix --service ...)
+.venv/Scripts/python -m app.data.seed_daily                      # regenerate daily_trips.json (seed 42; only after a population/hub change)
 ```
 On Windows/Git Bash, set `PYTHONIOENCODING=utf-8` when printing Arabic to the console. With `DEMO_OFFLINE=1` in front,
 `warm_cache` only reads the cache and ends with a MISSES list: a quick way to check that every rehearsed answer is still cached.
 
 ## 13. Timeline (git, newest first, abridged)
-`dd16cc3`/`6d6c76f`/`8b99eff` road closures removed · `5ab38d2` protections panel + open/close offices in the UI ·
+**2026-10-10 (everyday travel):** `9237f55` start state: neutral citizen dots in the accent blue · `46aa477` research doc on the
+Amman uninsured rate (checked figures now in anchors.json) · `b5b6d45` frontend: sector list start state, fuel-price panel
+(fuel, fares, cash support), trip card, travel KPIs, `?sector=` · `e70cd11` travel AI layer: service-aware prompts, voice facts
+and templates, proposal limits, per-service `warm_cache`, rehearsed fuel requests · `415ceba` travel engine: regular trips under
+fuel and fare prices, cash support, fix grid, robustness, presets, heroes · `3b1cde0` travel contract: **7 constants frozen before
+use**, Policy/outcome schema, services registry, trips data restored from `3a4e645`.
+**2026-10-10 (review pass):** `c3b95f0` review fixes · `1cc23da` pitch outline · `9b344df` demo runbook · `35a0edf`/`f10992e`
+rehearsals and warmed cache · `a31557d` honest anchoring wording · `c0e364a`/`2d91d90` frontend and AI-layer fixes.
+**Before:** `dd16cc3`/`6d6c76f`/`8b99eff` road closures removed · `5ab38d2` protections panel + open/close offices in the UI ·
 `f292274` five group protections in engine + AI · `0387862` HOME_VISIT_MINUTES / PICKUP_MINUTES set before use ·
 `315ba11`..`3a4e645` road closures + everyday trips (since removed) · `4528c27` first HANDOFF ·
 `a0a1745` start-up warm-up · `865f005` Render blueprint · `7913c13` one server for UI + API · `70c33b9`/`d289820`/`238bec0` clean-up,
 seamless connection, docs · `5a946fc`/`979e22b` frontend connected and fixed · `5234425` real 7-office baseline + consolidation demo ·
 `c635152` فصحى voices · `a34adff` model chains · `75d42cb` census population · `923ee74` engine API + AI layer · `6feaa3c` assumptions frozen.
+
+## 15. Everyday travel (fuel prices) sector (DONE, 2026-10-10)
+The second sector, `service: "everyday_travel"` (UI name "أسعار المحروقات / Fuel prices"). Same core principle: the engine
+(`sim/travel_service.py`, deterministic, no AI) decides every number; the AI parses, voices, reports and proposes; the engine
+verifies. **Fixes never change the fuel price**: it is the government decision being tested.
+
+**The model**
+- **One regular trip per citizen**: 948 of 1,000 have one (320 to work and 164 to university, 5 days a week; 464 to their
+  nearest public hospital, once a week); the other 52 (16-17-year-olds) have none and count as fine at zero cost. From
+  `daily_trips.json` (made by `seed_daily.py`, seed 42), `hubs.json` (25 destinations) and `hub_matrix.json` (OSRM), restored
+  from the removed everyday-trips module (`3a4e645`) in `3b1cde0`.
+- **Mode by profile**: own car if they have one; wheelchair users go in a helper's car (if they have a helper) or by taxi;
+  everyone else by bus (with `bus_transfers` as in ID renewal). **No mode switching with price** (next module).
+- **Monthly cost** = round-trip cost × days per week × `WEEKS_PER_MONTH` (4.33). A fuel change of X% scales the car's per-km
+  cost by X × `FUEL_SHARE_OF_CAR_COST` (0.6); bus fares follow by `BUS_FARE_FUEL_PASS_THROUGH` (0.3) and the taxi per-km tariff
+  by `TAXI_FARE_FUEL_PASS_THROUGH` (0.5), **unless** the policy sets `bus_fare_change_pct` / `taxi_fare_change_pct` explicitly
+  (`null` = follow fuel, `0` = freeze, N = that change). `cash_support` (`[{groups, amount_jd_month}]`, a citizen gets their
+  largest amount) comes off the monthly cost; `transport_vouchers` cut the bus/taxi round-trip fare, never car costs (floor 0).
+- **Status** by the share of per-capita income the trip takes each month (`INCOME_JD_MONTH` 130 / 350 / 950 JD by band = the
+  medians of the generator's own synthetic incomes, rounded; not a statistic): **fine** < 10% (`TRANSPORT_SHARE_SQUEEZED`),
+  **squeezed** 10-20%, **priced out** ≥ 20% (`TRANSPORT_SHARE_PRICED_OUT`). Internally these are served / hardship / left_out,
+  so compare, equity bars, worst groups and the fix grid work unchanged. Reasons: `TRANSPORT_OVER_BUDGET` plus `FUEL_COST`
+  (car / helper_car) or `FARE_COST` (bus / taxi).
+- **Outcome fields** (`CitizenOutcome`, null for ID renewal): `purpose`, `days_per_week`, `monthly_cost_before_jd` (today's
+  prices), `cost_jd` (after the policy), `extra_jd_month`, `income_share_pct`, `cash_support_jd_month`. KPIs add
+  `avg_monthly_cost_jd`, `avg_extra_jd_month`, `total_extra_jd_month`, `avg_income_share_pct`, `n_cash_support`, `by_purpose`, `by_mode`.
+- **Freeze rule kept**: all 7 new constants (`WEEKS_PER_MONTH`, `INCOME_JD_MONTH`, `TRANSPORT_SHARE_SQUEEZED`,
+  `TRANSPORT_SHARE_PRICED_OUT`, `FUEL_SHARE_OF_CAR_COST`, `BUS_FARE_FUEL_PASS_THROUGH`, `TAXI_FARE_FUEL_PASS_THROUGH`) are
+  ASSUMPTION and were committed in **`3b1cde0` before any travel scenario ran**. ID-renewal outcomes are byte-identical
+  (sha pinned in `tests/test_travel.py`), and the travel levers are no-ops at their defaults, so ID-renewal cache keys didn't move.
+- **Fix grid** (travel): cash support (low_income 8 / 14 / 20 JD, no_car / worker / student 14 JD), freeze bus fares, freeze taxi
+  fares, vouchers 0.5 JD for low_income / no_car, plus pairs of the top singles. **Robustness** perturbs
+  `FUEL_SHARE_OF_CAR_COST`, `BUS_FARE_FUEL_PASS_THROUGH` and `TRANSPORT_SHARE_SQUEEZED` by ±20% (6 runs).
+
+**The numbers** (engine output, re-checked with `DEMO_OFFLINE=1`, `compare(travel_today, preset)`; table in §6)
+- Today (`travel_today`): 72.2 fine / 17.8 squeezed / 10.0 priced out. Low-income daily bus commuters (work or university)
+  already spend a median **30%** of income on the trip today: they were priced out before any fuel rise.
+- `fuel_plus_5` (October 2026: +0.05 JD/L on 90-octane ≈ +5%): 71.6 / 18.3 / 10.1, 7 people worse, **all car drivers**.
+- `fuel_plus_25` (fares mostly held): 70.6 / 18.6 / 10.8, 24 worse, **all car drivers** (regulated fares lag fuel).
+- **`fuel_plus_25_fares` (travel demo: fuel +25% and bus/taxi fares +25%, as after the 2012 hike): 70.2 / 14.6 / 15.2, 72 worse
+  (48 bus riders, 24 drivers), worst groups worker, offline, low_income; average extra 4.54 JD/month.**
+- `fuel_plus_25_support` (the same + 14 JD/month for low_income, the top of NAF's 8-14 JD range): 73.8 / 11.7 / 14.5:
+  14 JD does not undo a 25% fare rise for a daily commuter.
+- **Top grid fix** on the demo: "14 JD/month cash support for people without a car + freeze bus fares": priced out 15.2 → 8.0
+  (**−7.2 pts**; squeezed rises 0.9 pts as people move up out of priced out). Runner-up ties it with a 0.5 JD voucher instead of
+  the freeze; third: freeze bus fares + 14 JD for workers (−6.8).
+- **Robustness: ranking held 5/6, fix helps 6/6, stable top group `worker`.** At `TRANSPORT_SHARE_SQUEEZED` × 1.2 (0.12) the
+  second-worst group becomes **no_car** instead of offline. Show it honestly ("worker is first in every run; second place
+  depends on where 'squeezed' starts") and claim only `worker`.
+
+**Heroes** (`heroes.json`, `service: "everyday_travel"`, scenario `fuel_plus_25_fares`)
+- **c_0627 Mustafa** (23m, low income, bus to Wehdat with 1 transfer, work, 5 days): 38.97 → 48.71 JD/month, 30.0% → 37.5% of
+  income: priced out before and after; with the top fix 24.97 JD, 19.2%: **squeezed**.
+- **c_0883 Rana** (18f student, middle income, bus with 2 transfers to Applied Science University): 58.45 → 73.07 JD, 16.7% → 20.9%:
+  squeezed → **priced out** → squeezed with the fix (44.45 JD, 12.7%).
+- **c_0982 Issa** (29m, middle income, drives 44 min each way to King Hussein Business Park): 61.5 → 70.72 JD, 17.6% → 20.2%:
+  squeezed → priced out, and **the top fix does not reach him** (cash for people without a car + a bus-fare freeze does nothing
+  for a middle-income driver). Kept on purpose as the "who does the fix still miss?" moment; a judge can try cash support for
+  workers live: the third grid fix (freeze bus fares + 14 JD/month for workers) brings Issa back to squeezed (56.72 JD, 16.2%),
+  at −6.8 pts priced out overall instead of −7.2.
+
+**AI layer** (`e70cd11`): travel prompts (parse knows the fuel/fare/cash levers and that electricity, diesel-only or mode
+changes are unsupported), voice facts (trip, mode, transfers, JD before/after, share of income) and templates, proposal limits
+(an AI fix may not change the fuel price), per-service `warm_cache` / `find_ai_fix`. **The travel cache is not warmed yet**:
+steps and the hotspot note in §10.1.
+
+**Real figures for this sector** (anchors.json, §5): October 2026 fuel prices (Jordan News, CITED) and NAF fuel support 8-14
+JD/month (Ammon News, CITED). They give context to the presets; no constant comes from them.

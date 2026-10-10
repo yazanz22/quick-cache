@@ -1,5 +1,5 @@
 {
-  "_note": "Documentation only: no code reads this file at runtime. It records the public figures behind Nas, with the status of each, for the team and for the assumptions table. Status: ANCHORED = the team opened the source URL and checked the figure (MoDEE figures on 2026-10-09; 'retrieved' where recorded); TEAM_CONFIRMED = confirmed by the team, no source link recorded yet; CITED_UNVERIFIED = quoted by our AI-assisted desk research (Qwen, 'Amman in a Box') with a source we could not open or confirm (VALIDATION.md and seed_census.py call these CITED). The 26 engine constants in sim/assumptions.py are all ASSUMPTION; entries here only give context for them. Never present a CITED_UNVERIFIED figure as an official statistic. Last checked 2026-10-10.",
+  "_note": "Documentation only: no code reads this file at runtime. It records the public figures behind Nas, with the status of each, for the team and for the assumptions table. Status: ANCHORED = the team opened the source URL and checked the figure (MoDEE figures on 2026-10-09; 'retrieved' where recorded); TEAM_CONFIRMED = confirmed by the team, no source link recorded yet; CITED_UNVERIFIED = quoted by our AI-assisted desk research (Qwen, 'Amman in a Box') with a source we could not open or confirm (VALIDATION.md and seed_census.py call these CITED). The 33 engine constants in sim/assumptions.py (26 for ID renewal and shared travel, 7 for everyday_travel) are all ASSUMPTION; entries here only give context for them. The fuel entries (fuel_prices_oct_2026, naf_fuel_support_jd_month) give context for the everyday_travel presets; the health_insurance_* and jpfhs_* entries are for a planned third sector (Royal Court medical exemption) and are not used yet. Entries whose id starts with research_doc_ are figures from the team's research doc that must NOT be reused (see their notes). Never present a CITED_UNVERIFIED figure as an official statistic. Last checked 2026-10-10.",
   "anchors": {
     "internet_use_individuals_jordan": {
       "value": 0.956,
@@ -158,6 +158,108 @@
       "source_name": "CSPD's published office hours (cspd.gov.jo), read by the team on 2026-10-09",
       "url": null,
       "notes": "Used as the baseline hours of all 7 offices. The exact page URL was not recorded, so this stays TEAM_CONFIRMED; add the URL here (and 'retrieved') to make it ANCHORED. A Fri/Sat 10:00-14:00 line on CSPD's site is not modelled: it may be contact-centre hours."
+    },
+    "fuel_prices_oct_2026": {
+      "value": {
+        "gasoline_90_jd_per_litre": 1.05,
+        "gasoline_95_jd_per_litre": 1.36,
+        "diesel_jd_per_litre": 0.9,
+        "kerosene_jd_per_litre": 0.55,
+        "change_jd_per_litre": {
+          "gasoline_90": 0.05,
+          "gasoline_95": 0.05,
+          "diesel": 0.05,
+          "kerosene": 0.0
+        }
+      },
+      "status": "CITED_UNVERIFIED",
+      "year": 2026,
+      "scope": "Jordan national, retail fuel prices for October 2026",
+      "source_name": "Fuel Pricing Committee decision for October 2026, as reported by Jordan News (2026-10-01)",
+      "url": "https://www.jordannews.jo/Section-112/Economy/Jordan-Raises-Gasoline-and-Diesel-Prices-for-October-56784",
+      "retrieved": "2026-10-10",
+      "notes": "CITED: a press report of the committee's decision, read by the team on 2026-10-10; the committee's own statement was not opened. Context for the everyday_travel sector: the fuel_plus_5 preset is this rise (+0.05 JD/L on 90-octane, about +5%), and the frontend shows '90-octane 1.050 JD/L' next to the fuel stepper (config.js FUEL_PRICE_90_JD, display only). The engine works in % changes, not JD/L, so no engine constant comes from this figure. The fuel_plus_25_fares preset is modelled on the 2012 subsidy removal (fuel and fares raised together); 2012 is referenced as context only, no 2012 figure is anchored."
+    },
+    "naf_fuel_support_jd_month": {
+      "value": [
+        8,
+        14
+      ],
+      "status": "CITED_UNVERIFIED",
+      "year": null,
+      "scope": "National Aid Fund beneficiary families, JD per month",
+      "source_name": "Ammon News report on the National Aid Fund's fuel support",
+      "url": "https://www.ammonnews.net/article/697007",
+      "notes": "CITED (press report): 8-14 JD a month per beneficiary family. Context for the cash_support lever only: the fuel_plus_25_support preset gives 14 JD/month to the low_income group, and the travel fix grid tries 8 / 14 / 20 JD. Our cash support is per synthetic resident, not per family, and low_income is the bottom 30% of synthetic income, not the NAF caseload."
+    },
+    "health_insurance_jordan_2015": {
+      "value": {
+        "jordanians_insured": 0.687,
+        "total_population_insured": 0.56,
+        "total_population_uninsured": 0.44,
+        "non_jordanians_insured": 0.253,
+        "children_under_6_insured": 1.0
+      },
+      "status": "ANCHORED",
+      "year": 2015,
+      "scope": "Jordan national, all ages (2015 General Population and Housing Census)",
+      "source_name": "Department of Statistics, 'Health Insurance in Jordan: analytical paper prepared according to the results of the General Population and Housing Census 2015'",
+      "url": "https://dosweb.dos.gov.jo/DataBank/Analytical_Reports/Health_Insurance_in_Jordan.pdf",
+      "retrieved": "2026-10-10",
+      "notes": "Opened by the team on 2026-10-10 (the official DoS PDF). For the planned 'Royal Court medical exemption' sector; nothing reads it yet. The ~56% total-population figure is the paper's rounded national rate. All children under 6 are insured by the Ministry of Health, so all-ages rates understate adult uninsurance. The lowest-covered age group is 15-34. The paper also says 38% of the INSURED non-Jordanians are under special arrangements: that is not an insurance rate (see research_doc_non_jordanians_insured_38)."
+    },
+    "health_insurance_amman_2015": {
+      "value": {
+        "jordanians_insured": 0.552,
+        "jordanians_uninsured": 0.448,
+        "total_population_insured": 0.412,
+        "total_population_uninsured": 0.588,
+        "non_jordanians_insured_range": [
+          0.164,
+          0.168
+        ]
+      },
+      "status": "ANCHORED",
+      "year": 2015,
+      "scope": "Amman governorate, all ages (2015 Census)",
+      "source_name": "Department of Statistics, 'Health Insurance in Jordan' (Census 2015 analytical paper)",
+      "url": "https://dosweb.dos.gov.jo/DataBank/Analytical_Reports/Health_Insurance_in_Jordan.pdf",
+      "retrieved": "2026-10-10",
+      "recommended_for_engine": "Amman Jordanians aged 16+ uninsured: about 45-50%. The ANCHORED figure is 44.8% (all ages); it includes children under 6, who are all insured, so adults are higher. The 45-50% adult range is our ASSUMPTION built on that anchor, not a published figure.",
+      "notes": "Amman and Zarqa are the lowest-covered governorates (about 41% of their total population insured). Our synthetic population is Jordanian nationals 16+, so the Jordanians figure (55.2% insured / 44.8% not) is the relevant one, not the 41.2% total-population figure (which mixes in non-Jordanians at 16.4-16.8% insured). Say '2015 census' on stage: it is a 2015 figure, not today's."
+    },
+    "jpfhs_2023_health_insurance": {
+      "value": {
+        "women_15_49_ever_married_any_insurance": 0.69,
+        "men_15_49_any_insurance": 0.59,
+        "women_15_49_ever_married_uninsured": 0.31,
+        "men_15_49_uninsured": 0.41
+      },
+      "status": "ANCHORED",
+      "year": 2023,
+      "scope": "Jordan national; ever-married women 15-49 and men 15-49",
+      "source_name": "Jordan Population and Family Health Survey 2023, summary report (DoS / DHS Program)",
+      "url": "https://dosweb.dos.gov.jo/DataBank/Population/Health/JPFHS_Summary_Report__2023_en.pdf",
+      "retrieved": "2026-10-10",
+      "notes": "A more recent national cross-check of the 2015 census rates, for adults of working age. No Amman breakdown is used from it."
+    },
+    "research_doc_jordanians_insured_76_8": {
+      "value": 0.768,
+      "status": "CITED_UNVERIFIED",
+      "year": null,
+      "scope": "Jordanians, national (as quoted in the team's research doc on the Amman uninsured rate)",
+      "source_name": "BMC Health Services Research article (2024), PMC11378627, as quoted in the team's research doc",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11378627/",
+      "notes": "DO NOT USE. The breakdown the article gives does not add up (65.6 + 6.8 + 12.5 = 84.9, not 76.8), the figure carries no year, and the article itself cites the DoS 2015 paper for most of its numbers. Use health_insurance_jordan_2015 (68.7% of Jordanians insured) and health_insurance_amman_2015 instead."
+    },
+    "research_doc_non_jordanians_insured_38": {
+      "value": 0.38,
+      "status": "CITED_UNVERIFIED",
+      "year": 2015,
+      "scope": "Non-Jordanians (as quoted in the team's research doc)",
+      "source_name": "Team research doc, misreading the DoS 2015 Health Insurance paper",
+      "url": "https://dosweb.dos.gov.jo/DataBank/Analytical_Reports/Health_Insurance_in_Jordan.pdf",
+      "notes": "DO NOT USE. The research doc's '38% of non-Jordanians insured' conflates two different DoS statements: 25.3% of non-Jordanians are insured (16.4-16.8% in Amman), and 38% of the INSURED non-Jordanians are covered under special arrangements."
     }
   }
 }
