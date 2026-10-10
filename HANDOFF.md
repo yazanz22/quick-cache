@@ -6,6 +6,19 @@ third sector, **medical exemptions (Royal Court, for uninsured citizens)**, was 
 sector, **everyday travel (fuel prices)** (§15), the verified health-insurance anchors (§5), and a full review pass
 (42 issues fixed, 26 improvements); see §14 for what is on hold.
 
+### Pick up here (written 2026-10-10 ~15:00 Amman, at the context-window switch)
+- **Code:** everything is on `main` (last commit `e7f9fe8`), working tree clean, `pytest -q` = 285 passed, 57 xfailed
+  (the xfails are AI cache entries not warmed yet: id_renewal 1, everyday_travel 28, medical_exemption 28).
+- **Three user actions remain, none of which Claude can do:** (1) deploy Render by hand (production is still on the
+  2026-10-09 build; check `/health` shows `warm`); (2) warm the AI cache on a **phone hotspot** (the venue network's
+  FortiGate blocks the AI APIs: §10.1 has the commands, ~60 calls in total); (3) the pitch deck from `GAMMA_PROMPT.md`
+  (9-slide version, also in §17).
+- **Dev server for browser checks:** `.claude/launch.json` → `nas-dev` on port 8010 (`--reload`); port 8000 belongs to
+  another desktop session running old code. Use `?offline=1`; `?sector=id_renewal|everyday_travel|medical_exemption`
+  skips the sector list.
+- **Don't:** change any value in `assumptions.py` (35 constants, all frozen); change fix titles or anything in a cache key
+  for id_renewal (§8); re-run the population generator before the demo.
+
 ## 1. What Nas is (one paragraph)
 A "wind tunnel" for public policy in Amman, built for AI Quest @ Al Hussein Technical University.
 1,000 **synthetic citizens, AI-voiced** (never say "1,000 AI citizens") go through a policy in one of **three sectors**:
