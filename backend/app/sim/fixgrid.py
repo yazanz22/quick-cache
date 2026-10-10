@@ -7,10 +7,10 @@ from __future__ import annotations
 
 from itertools import combinations
 
-from ..models import CashSupport, FixCandidate, MobileUnit, Policy, TransportVoucher
+from ..models import CashSupport, FixCandidate, MobileUnit, Office, Policy, TransportVoucher
 from . import world
 from .assumptions import Assumptions
-from .engine import run, summarize
+from .engine import proxy_allowed, run, summarize
 
 VAN_DAYS = ["sat", "thu"]
 VAN_HOURS = ("09:00", "14:00")
@@ -127,6 +127,111 @@ def _travel_singles(scenario: Policy) -> list[dict]:
     return out
 
 
+# ----------------------------------------------- medical_exemption changes
+# The id_renewal grid with exemption wording (titles in Western digits, CLAUDE.md §9.1) plus three toggles: hybrid
+# (apply on Sanad, collect the letter in person), regional intake (intake at the 7 real CSPD offices with the unit's
+# hours) and proxy (a relative may make the visits). A fix never changes the service.
+#
+# Under an online-only scenario (offices ignored), an in-person fix first lifts online_only: Sanad stays on and the
+# scenario's offices stay closed (offices = []), then the change adds its channel (a mobile intake day, the CSPD
+# intake points). Hybrid is the one fix that reopens the scenario's own offices (for the short collection visit;
+# they then also take full applications). Each change is a closure over the scenario, so pairs are order-independent.
+EXEMPTION_UNIT_SITE = "royal_court_csu"
+DEFAULT_INTAKE_SCHEDULE = {d: ("08:00", "15:00") for d in ("sun", "mon", "tue", "wed", "thu")}
+
+
+def _lift(p: Policy) -> Policy:
+    """A copy of p with in-person channels possible: online_only off (Sanad stays on, the closed offices stay
+    closed). A copy of p unchanged when it isn't online-only."""
+    q = p.model_copy(deep=True)
+    if q.online_only:
+        q.online_only, q.online_enabled, q.offices = False, True, []
+    return q
+
+
+def _exemption_van(area: str, day: str):
+    a = world.areas()[area]
+    def apply(p: Policy) -> Policy:
+        q = _lift(p)
+        q.mobile_units.append(MobileUnit(area=area, day=day, open=VAN_HOURS[0], close=VAN_HOURS[1]))
+        return q
+    return {"id": f"van:{area}:{day}", "kind": "van", "area": area, "apply": apply,
+            "title_ar": f"يوم استقبال متنقل في {a['name_ar']} يوم {world.DAY_AR[day]} (9:00–14:00، بدون موعد)",
+            "title_en": f"Mobile intake day in {a['name_en']} on {world.DAY_EN[day]} (09:00–14:00, walk-in)"}
+
+
+def _cspd_sites() -> list[str]:
+    return sorted(s for s in world.sites() if s.startswith("cspd_"))
+
+
+def _regional_intake(scenario: Policy):
+    """Add an exemption intake office at every real CSPD site that has no office yet, with the hours of the Royal
+    Court unit in the scenario (or of its first office; Sun-Thu 08:00-15:00 if it has none)."""
+    src = next((o for o in scenario.offices if o.site_id == EXEMPTION_UNIT_SITE),
+               scenario.offices[0] if scenario.offices else None)
+    schedule = dict(src.schedule) if src else dict(DEFAULT_INTAKE_SCHEDULE)
+    def apply(p: Policy) -> Policy:
+        q = _lift(p)
+        have, sites = {o.site_id for o in q.offices}, world.sites()
+        for sid in _cspd_sites():
+            if sid not in have:
+                s = sites[sid]
+                q.offices.append(Office(id=f"intake_{sid.removeprefix('cspd_')}", site_id=sid, schedule=dict(schedule),
+                                        name_ar=f"استقبال طلبات الإعفاء في {s['name_ar']}",
+                                        name_en=f"Exemption intake at {s['name_en']}", wheelchair_accessible=True))
+        return q
+    return {"id": "regional_intake", "kind": "toggle", "apply": apply,
+            "title_ar": "استقبال طلبات الإعفاء في مكاتب الأحوال المدنية السبعة بساعات الدائرة نفسها",
+            "title_en": "Exemption intake at the 7 Civil Status offices, same hours as the unit"}
+
+
+def _hybrid(scenario: Policy):
+    reopen = list(scenario.offices) if scenario.online_only else []
+    def apply(p: Policy) -> Policy:
+        q = _lift(p)
+        q.hybrid_pickup, q.online_enabled = True, True
+        ids = {o.id for o in q.offices}
+        q.offices += [o.model_copy(deep=True) for o in reopen if o.id not in ids]
+        return q
+    if reopen:
+        title_ar = "إبقاء منصة سند وإعادة فتح المكتب: التقديم عبر سند ثم زيارة واحدة قصيرة لاستلام الكتاب"
+        title_en = "Keep Sanad and reopen the office: apply online, then one short visit to collect the letter"
+    else:
+        title_ar = "التقديم عبر منصة سند ثم زيارة واحدة قصيرة لاستلام الكتاب"
+        title_en = "Apply online via Sanad, then one short visit to collect the letter"
+    return {"id": "hybrid", "kind": "toggle", "apply": apply, "title_ar": title_ar, "title_en": title_en}
+
+
+def _proxy(p: Policy) -> Policy:
+    return p.model_copy(update={"proxy_allowed": True}, deep=True)
+
+
+EXEMPTION_OFFICE_TOGGLES = [  # meaningful only with offices in play (skipped under online_only)
+    {"id": "late_thu", "kind": "toggle", "apply": _late_thu,
+     "title_ar": "دوام مسائي يوم الخميس حتى الساعة 19:00 في كل المكاتب", "title_en": "Late Thursday until 19:00 at every office"},
+    {"id": "no_appointments", "kind": "toggle", "apply": _no_appointments,
+     "title_ar": "إلغاء شرط الموعد المسبق", "title_en": "Remove the appointment requirement"},
+    {"id": "accessible", "kind": "toggle", "apply": _accessible,
+     "title_ar": "تجهيز كل المكاتب لذوي الإعاقة الحركية", "title_en": "Make every office wheelchair accessible"},
+    {"id": "proxy", "kind": "toggle", "apply": _proxy,
+     "title_ar": "السماح لقريب من الدرجة الأولى بالمراجعة نيابة عن المريض",
+     "title_en": "Let a first-degree relative make the visits on the patient's behalf"},
+]
+
+
+def _exemption_singles(scenario: Policy) -> list[dict]:
+    """Mobile intake days (8 areas x Sat/Thu), then hybrid, regional intake and, with offices in play, late Thursday,
+    no appointments, accessible and proxy. A change that leaves the policy as it is, is skipped; so is proxy when the
+    scenario already allows it (explicitly or by the service default)."""
+    existing = {(m.area, m.day) for m in scenario.mobile_units}
+    out = [_exemption_van(area, day) for area in world.areas() for day in VAN_DAYS if (area, day) not in existing]
+    toggles = [_hybrid(scenario), _regional_intake(scenario)]
+    if not scenario.online_only:
+        toggles += [t for t in EXEMPTION_OFFICE_TOGGLES if not (t["id"] == "proxy" and proxy_allowed(scenario))]
+    out += [t for t in toggles if t["apply"](scenario).model_dump() != scenario.model_dump()]
+    return out
+
+
 def _same_slot(a: dict, b: dict) -> bool:
     """Two singles that can't be paired: two vans in the same area, or two cash supports for the same group."""
     return a["kind"] == b["kind"] and (
@@ -136,6 +241,8 @@ def _same_slot(a: dict, b: dict) -> bool:
 def singles(scenario: Policy) -> list[dict]:
     if scenario.service == "everyday_travel":
         return _travel_singles(scenario)
+    if scenario.service == "medical_exemption":
+        return _exemption_singles(scenario)
     out = []
     existing = {(m.area, m.day) for m in scenario.mobile_units}
     if not scenario.online_only:  # online_only ignores vans and offices entirely

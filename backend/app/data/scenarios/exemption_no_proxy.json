@@ -1,0 +1,51 @@
+{
+ "id": "exemption_no_proxy",
+ "order": 24,
+ "service": "medical_exemption",
+ "name_ar": "الحضور الشخصي للمريض",
+ "name_en": "Patient must come in person",
+ "description_ar": "الوضع الحالي لكن دون مراجعة بالنيابة: يجب أن يحضر المريض بنفسه في الزيارتين.",
+ "description_en": "Today, but no proxy: the patient must come in person for both visits.",
+ "policy": {
+  "service": "medical_exemption",
+  "offices": [
+   {
+    "id": "royal_court_unit",
+    "name_ar": "دائرة خدمة الجمهور – الديوان الملكي الهاشمي",
+    "name_en": "Royal Court Citizen Services Unit",
+    "site_id": "royal_court_csu",
+    "schedule": {
+     "sun": [
+      "08:00",
+      "15:00"
+     ],
+     "mon": [
+      "08:00",
+      "15:00"
+     ],
+     "tue": [
+      "08:00",
+      "15:00"
+     ],
+     "wed": [
+      "08:00",
+      "15:00"
+     ],
+     "thu": [
+      "08:00",
+      "15:00"
+     ]
+    },
+    "wheelchair_accessible": true
+   }
+  ],
+  "online_enabled": false,
+  "online_only": false,
+  "mobile_units": [],
+  "appointment_required": false,
+  "fee_jd": 0.0,
+  "visits_required": 2,
+  "proxy_allowed": false
+ },
+ "_note": "Medical exemption (Royal Court) for uninsured citizens only (tag uninsured, data/seed_insurance.py). The unit: site royal_court_csu, approximate coordinates (sites.json). Hours 08:00-15:00 Sun-Thu are ASSUMED (no published hours found). Two visits (apply with the medical report, return for the letter) and no fee, as press reports describe the process. proxy_allowed null = the service default (a first-degree relative may apply on the patient's behalf)."
+}

@@ -39,13 +39,20 @@ def test_committed_population_is_valid_and_tags_are_derived():
     assert len({c["id"] for c in committed}) == len(committed) > 0
     for c in committed:
         Citizen.model_validate(c)
-        assert c["tags"] == seed.derive_tags(c)
+        # derive_tags + "uninsured" last (data/seed_insurance.py sets has_health_insurance for everyone)
+        assert c["has_health_insurance"] in (True, False)
+        assert c["tags"] == seed.derive_tags(c) + ([] if c["has_health_insurance"] else ["uninsured"])
         assert c["area"] in world.areas()
+
+
+# Sites added after the OSRM matrix was fetched: travel.road() falls back to straight-line km x ROAD_FACTOR at
+# CAR_SPEED_KMH for them (documented in the site's geocode note in sites.json).
+NO_OSRM_SITES = {"royal_court_csu"}
 
 
 def test_every_citizen_has_osrm_travel_times():
     matrix = world.travel_matrix()
-    dests = set(world.sites()) | {f"area:{a}" for a in world.areas()}
+    dests = (set(world.sites()) - NO_OSRM_SITES) | {f"area:{a}" for a in world.areas()}
     assert all(c["id"] in matrix and dests <= set(matrix[c["id"]]) for c in world.population())
 
 

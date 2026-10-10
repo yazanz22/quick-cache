@@ -1,0 +1,52 @@
+{
+ "id": "exemption_hybrid",
+ "order": 22,
+ "service": "medical_exemption",
+ "name_ar": "التقديم عبر سند والاستلام من المكتب",
+ "name_en": "Apply on Sanad, collect in person",
+ "description_ar": "المكتب كما هو اليوم، ويمكن أيضاً التقديم عبر منصة سند ثم زيارة واحدة قصيرة لاستلام الكتاب.",
+ "description_en": "Today's office, plus the option to apply on Sanad and make one short visit to collect the letter.",
+ "policy": {
+  "service": "medical_exemption",
+  "offices": [
+   {
+    "id": "royal_court_unit",
+    "name_ar": "دائرة خدمة الجمهور – الديوان الملكي الهاشمي",
+    "name_en": "Royal Court Citizen Services Unit",
+    "site_id": "royal_court_csu",
+    "schedule": {
+     "sun": [
+      "08:00",
+      "15:00"
+     ],
+     "mon": [
+      "08:00",
+      "15:00"
+     ],
+     "tue": [
+      "08:00",
+      "15:00"
+     ],
+     "wed": [
+      "08:00",
+      "15:00"
+     ],
+     "thu": [
+      "08:00",
+      "15:00"
+     ]
+    },
+    "wheelchair_accessible": true
+   }
+  ],
+  "online_enabled": true,
+  "online_only": false,
+  "mobile_units": [],
+  "appointment_required": false,
+  "fee_jd": 0.0,
+  "visits_required": 2,
+  "proxy_allowed": null,
+  "hybrid_pickup": true
+ },
+ "_note": "Medical exemption (Royal Court) for uninsured citizens only (tag uninsured, data/seed_insurance.py). The unit: site royal_court_csu, approximate coordinates (sites.json). Hours 08:00-15:00 Sun-Thu are ASSUMED (no published hours found). Two visits (apply with the medical report, return for the letter) and no fee, as press reports describe the process. proxy_allowed null = the service default (a first-degree relative may apply on the patient's behalf)."
+}

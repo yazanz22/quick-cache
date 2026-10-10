@@ -138,7 +138,9 @@ def warm_up() -> float:
         _store_warm(w)
         t = warmup.warm_travel()
         _store_warm(t)
-        return round(w["seconds"] + t["seconds"], 1)
+        e = warmup.warm_exemption()
+        _store_warm(e)
+        return round(w["seconds"] + t["seconds"] + e["seconds"], 1)
     finally:
         WARM_DONE.set()
 

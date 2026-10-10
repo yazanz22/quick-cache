@@ -1,0 +1,254 @@
+{
+ "id": "exemption_regional",
+ "order": 23,
+ "service": "medical_exemption",
+ "name_ar": "استقبال الطلبات في مكاتب الأحوال المدنية",
+ "name_en": "Intake at the Civil Status offices",
+ "description_ar": "دائرة خدمة الجمهور ونقاط استقبال لطلبات الإعفاء في مكاتب الأحوال المدنية السبعة في عمّان، بالساعات نفسها.",
+ "description_en": "The Citizen Services Unit plus exemption intake at the 7 Civil Status offices in Amman, same hours.",
+ "policy": {
+  "service": "medical_exemption",
+  "offices": [
+   {
+    "id": "royal_court_unit",
+    "name_ar": "دائرة خدمة الجمهور – الديوان الملكي الهاشمي",
+    "name_en": "Royal Court Citizen Services Unit",
+    "site_id": "royal_court_csu",
+    "schedule": {
+     "sun": [
+      "08:00",
+      "15:00"
+     ],
+     "mon": [
+      "08:00",
+      "15:00"
+     ],
+     "tue": [
+      "08:00",
+      "15:00"
+     ],
+     "wed": [
+      "08:00",
+      "15:00"
+     ],
+     "thu": [
+      "08:00",
+      "15:00"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "intake_tabarbour",
+    "name_ar": "استقبال طلبات الإعفاء في مكتب الأحوال المدنية - طبربور (المكتب الرئيسي)",
+    "name_en": "Exemption intake at CSPD office - Tabarbour (head office)",
+    "site_id": "cspd_tabarbour",
+    "schedule": {
+     "sun": [
+      "08:00",
+      "15:00"
+     ],
+     "mon": [
+      "08:00",
+      "15:00"
+     ],
+     "tue": [
+      "08:00",
+      "15:00"
+     ],
+     "wed": [
+      "08:00",
+      "15:00"
+     ],
+     "thu": [
+      "08:00",
+      "15:00"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "intake_jabal_amman",
+    "name_ar": "استقبال طلبات الإعفاء في مكتب الأحوال المدنية - جبل عمان",
+    "name_en": "Exemption intake at CSPD office - Jabal Amman",
+    "site_id": "cspd_jabal_amman",
+    "schedule": {
+     "sun": [
+      "08:00",
+      "15:00"
+     ],
+     "mon": [
+      "08:00",
+      "15:00"
+     ],
+     "tue": [
+      "08:00",
+      "15:00"
+     ],
+     "wed": [
+      "08:00",
+      "15:00"
+     ],
+     "thu": [
+      "08:00",
+      "15:00"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "intake_marka",
+    "name_ar": "استقبال طلبات الإعفاء في مكتب الأحوال المدنية - ماركا",
+    "name_en": "Exemption intake at CSPD office - Marka",
+    "site_id": "cspd_marka",
+    "schedule": {
+     "sun": [
+      "08:00",
+      "15:00"
+     ],
+     "mon": [
+      "08:00",
+      "15:00"
+     ],
+     "tue": [
+      "08:00",
+      "15:00"
+     ],
+     "wed": [
+      "08:00",
+      "15:00"
+     ],
+     "thu": [
+      "08:00",
+      "15:00"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "intake_sweileh",
+    "name_ar": "استقبال طلبات الإعفاء في مكتب الأحوال المدنية - صويلح",
+    "name_en": "Exemption intake at CSPD office - Sweileh",
+    "site_id": "cspd_sweileh",
+    "schedule": {
+     "sun": [
+      "08:00",
+      "15:00"
+     ],
+     "mon": [
+      "08:00",
+      "15:00"
+     ],
+     "tue": [
+      "08:00",
+      "15:00"
+     ],
+     "wed": [
+      "08:00",
+      "15:00"
+     ],
+     "thu": [
+      "08:00",
+      "15:00"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "intake_jabal_al_hussein",
+    "name_ar": "استقبال طلبات الإعفاء في مكتب الأحوال المدنية - جبل الحسين",
+    "name_en": "Exemption intake at CSPD office - Jabal Al-Hussein",
+    "site_id": "cspd_jabal_al_hussein",
+    "schedule": {
+     "sun": [
+      "08:00",
+      "15:00"
+     ],
+     "mon": [
+      "08:00",
+      "15:00"
+     ],
+     "tue": [
+      "08:00",
+      "15:00"
+     ],
+     "wed": [
+      "08:00",
+      "15:00"
+     ],
+     "thu": [
+      "08:00",
+      "15:00"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "intake_tla_al_ali",
+    "name_ar": "استقبال طلبات الإعفاء في مكتب الأحوال المدنية - تلاع العلي",
+    "name_en": "Exemption intake at CSPD office - Tla' Al-Ali",
+    "site_id": "cspd_tla_al_ali",
+    "schedule": {
+     "sun": [
+      "08:00",
+      "15:00"
+     ],
+     "mon": [
+      "08:00",
+      "15:00"
+     ],
+     "tue": [
+      "08:00",
+      "15:00"
+     ],
+     "wed": [
+      "08:00",
+      "15:00"
+     ],
+     "thu": [
+      "08:00",
+      "15:00"
+     ]
+    },
+    "wheelchair_accessible": true
+   },
+   {
+    "id": "intake_wadi_al_seer",
+    "name_ar": "استقبال طلبات الإعفاء في مكتب الأحوال المدنية - وادي السير",
+    "name_en": "Exemption intake at CSPD office - Wadi Al-Seer",
+    "site_id": "cspd_wadi_al_seer",
+    "schedule": {
+     "sun": [
+      "08:00",
+      "15:00"
+     ],
+     "mon": [
+      "08:00",
+      "15:00"
+     ],
+     "tue": [
+      "08:00",
+      "15:00"
+     ],
+     "wed": [
+      "08:00",
+      "15:00"
+     ],
+     "thu": [
+      "08:00",
+      "15:00"
+     ]
+    },
+    "wheelchair_accessible": true
+   }
+  ],
+  "online_enabled": false,
+  "online_only": false,
+  "mobile_units": [],
+  "appointment_required": false,
+  "fee_jd": 0.0,
+  "visits_required": 2,
+  "proxy_allowed": null
+ },
+ "_note": "Medical exemption (Royal Court) for uninsured citizens only (tag uninsured, data/seed_insurance.py). The unit: site royal_court_csu, approximate coordinates (sites.json). Hours 08:00-15:00 Sun-Thu are ASSUMED (no published hours found). Two visits (apply with the medical report, return for the letter) and no fee, as press reports describe the process. proxy_allowed null = the service default (a first-degree relative may apply on the patient's behalf)."
+}

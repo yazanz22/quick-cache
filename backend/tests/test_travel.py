@@ -273,7 +273,7 @@ def test_services_endpoint():
     r = client.get("/services")
     assert r.status_code == 200
     by_id = {s["id"]: s for s in r.json()}
-    assert set(by_id) == {"id_renewal", SERVICE}
+    assert set(by_id) == {"id_renewal", SERVICE, "medical_exemption"}
     assert by_id[SERVICE]["demo_scenario"] == DEMO and by_id[SERVICE]["baseline_scenario"] == TODAY
     assert by_id["id_renewal"]["demo_scenario"] == world.demo_scenario_id()
     for s in by_id.values():
@@ -283,11 +283,12 @@ def test_services_endpoint():
 def test_scenarios_carry_their_service_and_travel_comes_after_id_renewal():
     rows = client.get("/scenarios").json()
     services = [s["service"] for s in rows]
-    assert set(services) == {"id_renewal", SERVICE}
-    assert services == sorted(services, key=lambda x: x != "id_renewal")
+    assert set(services) == {"id_renewal", SERVICE, "medical_exemption"}
+    rank = {"id_renewal": 0, SERVICE: 1, "medical_exemption": 2}  # id_renewal, then travel, then exemptions
+    assert services == sorted(services, key=rank.get)
     travel = {s["id"] for s in rows if s["service"] == SERVICE}
     assert travel == {TODAY, "fuel_plus_5", "fuel_plus_25", DEMO, "fuel_plus_25_support"}
-    assert [s["id"] for s in rows if s["demo"]] == ["consolidate_digital_first", DEMO]
+    assert [s["id"] for s in rows if s["demo"]] == ["consolidate_digital_first", DEMO, "exemption_online_only"]
 
 
 def test_heroes_by_service():

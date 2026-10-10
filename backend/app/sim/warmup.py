@@ -51,12 +51,12 @@ def warm() -> dict:
     return {"seconds": secs, "base": base, "demo": demo, "top": top, "ai_fix": ai_fix, "sensitivity": results}
 
 
-def warm_travel() -> dict:
-    """The everyday_travel demo path: its fix grid, the ranking-only and top-fix robustness checks, and every
-    travel preset compared with its baseline. Same shape as warm() (ai_fix is always None: no AI fix here yet).
-    The travel engine has its own memo (travel_service), so this never evicts the ID-renewal entries."""
+def warm_service(service: str) -> dict:
+    """A non-id_renewal service's demo path: its fix grid, the ranking-only and top-fix robustness checks, and every
+    preset of the service compared with its baseline. Same shape as warm() (ai_fix is always None here).
+    everyday_travel has its own memo (travel_service) and medical_exemption its own engine memo (engine._MEMOS),
+    so this never evicts the ID-renewal entries."""
     t0 = time.perf_counter()
-    service = "everyday_travel"
     base = world.scenario_policy(world.baseline_scenario_id(service))
     demo = world.scenario_policy(world.demo_scenario_id(service))
     top = fixgrid.build(demo)[:3]
@@ -67,5 +67,15 @@ def warm_travel() -> dict:
         if sc["service"] == service:
             compare(base, world.scenario_policy(sid))
     secs = round(time.perf_counter() - t0, 1)
-    log.info("travel warm-up done in %.1fs", secs)
+    log.info("%s warm-up done in %.1fs", service, secs)
     return {"seconds": secs, "base": base, "demo": demo, "top": top, "ai_fix": None, "sensitivity": results}
+
+
+def warm_travel() -> dict:
+    """The everyday_travel demo path (warm_service)."""
+    return warm_service("everyday_travel")
+
+
+def warm_exemption() -> dict:
+    """The medical_exemption demo path (warm_service)."""
+    return warm_service("medical_exemption")

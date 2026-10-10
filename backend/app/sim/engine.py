@@ -9,6 +9,13 @@ The memo never changes a result; it only skips repeated work. It is a small LRU
 (_MEMO_MAX entries) of compact per-citizen tuples, so memory stays bounded on a
 512 MB host however many policies are tried; outcome dicts are built only for the
 winning option of each citizen, in run().
+
+The same machinery runs two in-person services, set by SERVICE_RULES: "id_renewal" and "medical_exemption"
+(a Royal Court medical exemption for uninsured citizens). Per service: the minutes of one visit (an assumption
+name, so the robustness check can perturb it), who is eligible (everyone, or citizens with a tag) and whether a
+relative may make the visits by default (the proxy rule, `_eval_proxy`). Ineligible citizens are "not applicable":
+served at zero cost on channel "not_applicable", and left out of every percentage in summarize(). Each service has
+its own memo, so warming one never evicts the other. "everyday_travel" is priced by travel_service.
 """
 from __future__ import annotations
 
@@ -28,9 +35,41 @@ STATUS_RANK = {"served": 0, "hardship": 1, "left_out": 2}
 
 # LRU memo: key -> (pop, opts, fails). One entry = one channel evaluated for the whole population.
 # The warm-up (demo path + fix grid + robustness runs) needs ~110 entries; one policy edit adds ~20.
+# _MEMO is the id_renewal memo; medical_exemption has its own (_MEMOS), so its warm-up never evicts id_renewal.
 _MEMO: OrderedDict = OrderedDict()
 _MEMO_MAX = 150
+_MEMOS: dict[str, OrderedDict] = {"id_renewal": _MEMO, "medical_exemption": OrderedDict()}
+_MEMO_MAXES = {"id_renewal": _MEMO_MAX, "medical_exemption": 120}
 _MEMO_LOCK = threading.Lock()  # the warm-up thread and request threads share the memo
+
+# Per-service rules of the in-person engine. visit_minutes names the Assumptions field for one visit at the counter
+# (read from the assumptions object, so sensitivity.py can perturb it). eligible_tag: None = everyone; otherwise only
+# citizens with that tag apply, everyone else is "not applicable". proxy_default: Policy.proxy_allowed when None.
+SERVICE_RULES = {
+    "id_renewal": {"visit_minutes": "SERVICE_MINUTES", "eligible_tag": None, "proxy_default": False},
+    "medical_exemption": {"visit_minutes": "EXEMPTION_VISIT_MINUTES", "eligible_tag": "uninsured",
+                          "proxy_default": True},
+}
+NOT_APPLICABLE = {"id": "not_applicable", "name_ar": "مؤمَّن صحياً: لا يحتاج الإعفاء",
+                  "name_en": "Insured: no exemption needed"}
+PROXY_MODE = "helper_visit"  # the helper (a first-degree relative) makes the visits instead of the citizen
+
+
+def visit_minutes(policy: Policy, a: Assumptions) -> float:
+    """Minutes of one visit at the counter for this policy's service."""
+    return getattr(a, SERVICE_RULES[policy.service]["visit_minutes"])
+
+
+def proxy_allowed(policy: Policy) -> bool:
+    """Policy.proxy_allowed, resolved to the service default when None."""
+    p = policy.proxy_allowed
+    return SERVICE_RULES[policy.service]["proxy_default"] if p is None else bool(p)
+
+
+def eligible_mask(policy: Policy, pop: list[dict]) -> list[bool] | None:
+    """Who applies for this service (index-aligned with pop), or None when everyone does."""
+    tag = SERVICE_RULES[policy.service]["eligible_tag"]
+    return None if tag is None else [tag in c["tags"] for c in pop]
 
 # A feasible option is a compact tuple (built once per citizen and channel, kept in the memo):
 #   (key, served, mode, bus_transfers, visit_day, travel_minutes, cost_jd, hours_lost, work_hours_missed, reasons)
@@ -54,24 +93,42 @@ def _fails(rs) -> frozenset:
 
 # ------------------------------------------------------------------ channels
 
+EXEMPTION_UNIT_SITE = "royal_court_csu"  # the Royal Court's Citizen Services Unit (sites.json)
+
+
+def _office_names(s: dict, ar: dict, service: str) -> tuple[str, str]:
+    """Display names of an office channel. ID renewal: real CSPD offices carry their own name, generic sites are
+    named after their area. Medical exemption: the Royal Court unit carries its own name, an office at a CSPD site
+    is an exemption intake point there, a generic site an intake office in its area."""
+    if service == "medical_exemption":
+        if s["id"] == EXEMPTION_UNIT_SITE:
+            return s["name_ar"], s["name_en"]
+        if s.get("real"):
+            return f"استقبال طلبات الإعفاء في {s['name_ar']}", f"Exemption intake at {s['name_en']}"
+        return f"مكتب استقبال طلبات الإعفاء في {ar['name_ar']}", f"Exemption intake office in {ar['name_en']}"
+    return (s["name_ar"] if s.get("real") else f"مكتب الأحوال المدنية في {ar['name_ar']}",
+            s["name_en"] if s.get("real") else f"Civil Status office in {ar['name_en']}")
+
+
 def _channels(policy: Policy) -> list[dict]:
     """Normalise the policy into channel dicts. online_only => online is the only channel."""
     areas, sites = world.areas(), world.sites()
+    exemption = policy.service == "medical_exemption"
     chans = []
     if policy.online_enabled or policy.online_only:
-        chans.append({"kind": "online", "id": "online", "name_ar": "أونلاين", "name_en": "Online"})
+        chans.append({"kind": "online", "id": "online", "name_ar": "عبر منصة سند" if exemption else "أونلاين",
+                      "name_en": "Online (Sanad)" if exemption else "Online"})
     if policy.online_only:
         return chans
     for o in policy.offices:
         s = sites[o.site_id]
         ar = areas[s["area"]]
+        name_ar, name_en = _office_names(s, ar, policy.service)
         chans.append({
             "kind": "office", "id": o.id, "dest": o.site_id, "lat": s["lat"], "lng": s["lng"], "area": s["area"],
             "accessible": o.wheelchair_accessible, "appointment": policy.appointment_required,
             "schedule": tuple(sorted((d, to_min(h[0]), to_min(h[1])) for d, h in o.schedule.items())),
-            # Real CSPD offices carry their own name; generic sites are named after their area.
-            "name_ar": s["name_ar"] if s.get("real") else f"مكتب الأحوال المدنية في {ar['name_ar']}",
-            "name_en": s["name_en"] if s.get("real") else f"Civil Status office in {ar['name_en']}",
+            "name_ar": name_ar, "name_en": name_en,
         })
     for m in policy.mobile_units:
         ar = areas[m.area]
@@ -79,8 +136,10 @@ def _channels(policy: Policy) -> list[dict]:
             "kind": "van", "id": f"mobile:{m.area}:{m.day}", "dest": f"area:{m.area}", "lat": ar["lat"], "lng": ar["lng"],
             "area": m.area, "accessible": True, "appointment": False,
             "schedule": ((m.day, to_min(m.open), to_min(m.close)),),
-            "name_ar": f"الوحدة المتنقلة في {ar['name_ar']} يوم {world.DAY_AR[m.day]}",
-            "name_en": f"Mobile unit in {ar['name_en']} on {world.DAY_EN[m.day]}",
+            "name_ar": (f"يوم استقبال متنقل في {ar['name_ar']} يوم {world.DAY_AR[m.day]}" if exemption
+                        else f"الوحدة المتنقلة في {ar['name_ar']} يوم {world.DAY_AR[m.day]}"),
+            "name_en": (f"Mobile intake day in {ar['name_en']} on {world.DAY_EN[m.day]}" if exemption
+                        else f"Mobile unit in {ar['name_en']} on {world.DAY_EN[m.day]}"),
         })
     return chans
 
@@ -186,7 +245,8 @@ def _modes(c: dict, ch: dict, a: Assumptions, matrix: dict, sides: dict, voucher
     return modes, fails
 
 
-def _eval_in_person(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: dict, sides: dict):
+def _eval_self(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: dict, sides: dict, S0: float):
+    """The citizen makes the visits themselves. S0 = minutes of one visit at the counter (the service's)."""
     if c["mobility"] == "wheelchair" and not ch["accessible"]:
         return None, _fails({"NOT_WHEELCHAIR_ACCESSIBLE"})
     modes, fails = _modes(c, ch, a, matrix, sides, _voucher(c, policy))
@@ -202,13 +262,13 @@ def _eval_in_person(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: d
     if appointment:
         ok, rs = _online_ability(c)
         if ok:
-            variants.append((a.SERVICE_MINUTES, visits, a.ONLINE_MINUTES, 0, []))
+            variants.append((S0, visits, a.ONLINE_MINUTES, 0, []))
         elif c["has_helper"]:
-            variants.append((a.SERVICE_MINUTES, visits, a.ONLINE_MINUTES, 1, rs))
+            variants.append((S0, visits, a.ONLINE_MINUTES, 1, rs))
         else:
-            variants.append((a.SERVICE_MINUTES, visits + 1, 0.0, 1, rs))
+            variants.append((S0, visits + 1, 0.0, 1, rs))
     else:
-        variants.append((a.SERVICE_MINUTES, visits, 0.0, 0, []))
+        variants.append((S0, visits, 0.0, 0, []))
     if policy.hybrid_pickup:
         # Also possible: apply online (yourself, or a helper does it: hardship), then one short visit to collect the
         # card. The online application replaces any appointment. The citizen takes whichever option is better.
@@ -263,42 +323,107 @@ def _eval_in_person(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: d
     return _option(ch, a=a, key=best_key, **best_args), _EMPTY
 
 
+def _eval_proxy(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: dict, sides: dict, S0: float):
+    """The proxy rule: the citizen's helper (a first-degree relative) makes the in-person visits instead of them.
+    The helper travels by the household's mode (the car if the citizen has one, else the bus; the citizen's
+    wheelchair or limited mobility does not apply to the helper), only in the helper's free time (Fri/Sat any time,
+    Sun-Thu from HELPER_FREE_FROM). The citizen misses no work. Always a hardship (someone else loses the time):
+    hours_lost is the helper's time. With an appointment the helper books it online; with hybrid_pickup the helper
+    may also apply online and make one short collection visit. Returns the best option tuple or None (no reasons:
+    this is an extra option, the citizen's own failure reasons stay what they are)."""
+    if not c["has_helper"]:
+        return None
+    km, drive_min = road(c, ch["dest"], ch["lat"], ch["lng"], matrix, a)
+    if c["has_car"]:
+        t, rt_cost = car(km, drive_min, a)
+        transfers = 0
+    else:
+        transfers = bus_transfers(c["area"], ch["area"], sides)
+        t, rt_cost = bus(km, transfers, False, a)
+        rt_cost = max(0.0, rt_cost - _voucher(c, policy))
+    if t > a.MAX_TRAVEL_MINUTES:
+        return None
+    appointment = ch["appointment"] and not (set(c["tags"]) & set(policy.appointment_exempt_groups))
+    variants = [(S0, policy.visits_required, a.ONLINE_MINUTES if appointment else 0.0)]
+    if policy.hybrid_pickup:
+        variants.append((a.PICKUP_MINUTES, 1, a.ONLINE_MINUTES))
+    helper_from = to_min(a.HELPER_FREE_FROM)
+    fee = _fee(c, policy)
+    best_key, best_args = None, None
+    for S, n_visits, book_min in variants:
+        for day, op, cl in ch["schedule"]:
+            h_free = 0 if day in WEEKEND else helper_from
+            if max(op, h_free + t) + S > cl:
+                continue
+            hours = (2 * t + S) / 60 * n_visits + book_min / 60
+            cost = fee + rt_cost * n_visits
+            burden = hours + a.COST_WEIGHT * cost
+            k = _key(ch, burden, 1, day, PROXY_MODE, a)
+            if best_key is None or k < best_key:
+                best_key = k
+                best_args = dict(burden=burden, flags=1, hours=hours, cost=cost, work=0.0, mode=PROXY_MODE,
+                                 transfers=transfers, day=day, travel=t, reasons=[])
+    return None if best_key is None else _option(ch, a=a, key=best_key, **best_args)
+
+
+def _eval_in_person(c: dict, ch: dict, policy: Policy, a: Assumptions, matrix: dict, sides: dict):
+    """The citizen's best option on an office or mobile unit: going themselves or, when the proxy rule applies,
+    their helper going for them; whichever ranks better (served first, then the lower burden)."""
+    S0 = visit_minutes(policy, a)
+    own, fails = _eval_self(c, ch, policy, a, matrix, sides, S0)
+    if not proxy_allowed(policy):
+        return own, fails
+    proxy = _eval_proxy(c, ch, policy, a, matrix, sides, S0)
+    if proxy is not None and (own is None or proxy[K] < own[K]):
+        return proxy, _EMPTY
+    return own, fails
+
+
 def _channel_results(ch: dict, policy: Policy, pop: list[dict], a: Assumptions) -> tuple[list, list]:
     """(opts, fails), index-aligned with pop: the citizen's best option on this channel (or None) and, when
-    infeasible, the reasons why. Memoised in a bounded LRU."""
+    infeasible, the reasons why. Memoised in a bounded LRU per service; the key carries the service and the
+    resolved proxy flag (the id_renewal key keeps its old shape unless proxy_allowed is set)."""
+    service = policy.service
+    memo, memo_max = _MEMOS[service], _MEMO_MAXES[service]
     key = (id(pop), _channel_key(ch, policy), a.key())
+    if service != "id_renewal" or policy.proxy_allowed is not None:
+        key = (service, proxy_allowed(policy)) + key
     with _MEMO_LOCK:
-        hit = _MEMO.get(key)
+        hit = memo.get(key)
         if hit is not None:
-            _MEMO.move_to_end(key)
+            memo.move_to_end(key)
             return hit[1], hit[2]
     matrix, sides = world.travel_matrix(), world.sides()
+    elig = eligible_mask(policy, pop)  # None (id_renewal): everyone. Others are never evaluated (run() marks n/a).
     if ch["kind"] == "online":
-        res = [_eval_online(c, ch, policy, a) for c in pop]
+        ev = lambda c: _eval_online(c, ch, policy, a)  # noqa: E731
     else:
-        res = [_eval_in_person(c, ch, policy, a, matrix, sides) for c in pop]
+        ev = lambda c: _eval_in_person(c, ch, policy, a, matrix, sides)  # noqa: E731
+    res = [ev(c) for c in pop] if elig is None else [ev(c) if e else (None, _EMPTY) for c, e in zip(pop, elig)]
     opts, fails = [r[0] for r in res], [r[1] for r in res]
     with _MEMO_LOCK:
-        _MEMO[key] = (pop, opts, fails)  # keep a reference to pop so id(pop) stays unique while cached
-        _MEMO.move_to_end(key)
-        while len(_MEMO) > _MEMO_MAX:
-            _MEMO.popitem(last=False)
+        memo[key] = (pop, opts, fails)  # keep a reference to pop so id(pop) stays unique while cached
+        memo.move_to_end(key)
+        while len(memo) > memo_max:
+            memo.popitem(last=False)
     return opts, fails
 
 
 HOME = {"kind": "home", "id": "home_visit", "name_ar": "زيارة منزلية", "name_en": "Home visit"}
 
 
-def _allocate_home_visits(policy: Policy, pop: list[dict], bests: list, best_ch: list, a: Assumptions) -> None:
+def _allocate_home_visits(policy: Policy, pop: list[dict], bests: list, best_ch: list, a: Assumptions,
+                          elig: list[bool] | None = None) -> None:
     """Home-visit slots go to eligible citizens who are worst off without one: left out first, then the heaviest
-    hardship (ties by id). A slot is used only if the home visit is better for that citizen. Deterministic."""
+    hardship (ties by id). A slot is used only if the home visit is better for that citizen. Deterministic.
+    `elig` (medical_exemption): citizens outside the service never get a slot."""
     hv = policy.home_visits
     if not hv or hv.slots <= 0 or policy.online_only:
         return
     groups = set(hv.groups)
     queue = sorted((0 if b is None else 1, -(b[K][1] if b else 0.0), c["id"], i)
                    for i, (c, b) in enumerate(zip(pop, bests))
-                   if groups & set(c["tags"]) and (b is None or not b[SERVED]))
+                   if groups & set(c["tags"]) and (b is None or not b[SERVED]) and (elig is None or elig[i]))
     for *_, i in queue[:hv.slots]:
         c = pop[i]
         hours = a.HOME_VISIT_MINUTES / 60 * policy.visits_required
@@ -313,11 +438,14 @@ def _allocate_home_visits(policy: Policy, pop: list[dict], bests: list, best_ch:
 
 def run(policy: Policy, population: list[dict] | None = None, assumptions: Assumptions | None = None) -> list[dict]:
     """Fast path: list of outcome dicts, index-aligned with the population. Dispatches on policy.service:
-    "everyday_travel" is priced by travel_service.run; everything below is the id_renewal engine."""
+    "everyday_travel" is priced by travel_service.run; everything below is the in-person engine (id_renewal and
+    medical_exemption, SERVICE_RULES). medical_exemption outcome dicts also carry "eligible" (internal: summarize()
+    counts only eligible citizens; CitizenOutcome drops the key); ineligible citizens are NOT_APPLICABLE."""
     if policy.service == "everyday_travel":
         return travel_service.run(policy, population, assumptions)
     pop = population if population is not None else world.population()
     a = assumptions or DEFAULT
+    elig = eligible_mask(policy, pop)
     per_channel = [(ch, *_channel_results(ch, policy, pop, a)) for ch in _channels(policy)]
     bests, best_ch, fails_by = [], [], []
     for i in range(len(pop)):
@@ -331,9 +459,15 @@ def run(policy: Policy, population: list[dict] | None = None, assumptions: Assum
         bests.append(best)
         best_ch.append(bch)
         fails_by.append(reasons)
-    _allocate_home_visits(policy, pop, bests, best_ch, a)
+    _allocate_home_visits(policy, pop, bests, best_ch, a, elig)
     out = []
-    for c, best, ch, reasons in zip(pop, bests, best_ch, fails_by):
+    for i, (c, best, ch, reasons) in enumerate(zip(pop, bests, best_ch, fails_by)):
+        if elig is not None and not elig[i]:
+            out.append({"citizen_id": c["id"], "status": "served", "channel": NOT_APPLICABLE["id"],
+                        "channel_name_ar": NOT_APPLICABLE["name_ar"], "channel_name_en": NOT_APPLICABLE["name_en"],
+                        "mode": None, "bus_transfers": 0, "visit_day": None, "travel_minutes": 0.0, "cost_jd": 0.0,
+                        "hours_lost": 0.0, "work_hours_missed": 0.0, "reasons": [], "eligible": False})
+            continue
         if best is None:
             out.append({"citizen_id": c["id"], "status": "left_out", "channel": None, "channel_name_ar": None,
                         "channel_name_en": None, "mode": None, "bus_transfers": 0, "visit_day": None,
@@ -346,6 +480,8 @@ def run(policy: Policy, population: list[dict] | None = None, assumptions: Assum
                         "cost_jd": best[COST], "hours_lost": best[HOURS], "work_hours_missed": best[WORK],
                         "reasons": list(best[REASONS]),  # a fresh list: callers may mutate it
                         "citizen_id": c["id"]})
+        if elig is not None:
+            out[-1]["eligible"] = True
     return out
 
 
@@ -354,14 +490,32 @@ def _count_reasons(outcomes) -> dict[str, int]:
     return dict(sorted(n.items(), key=lambda kv: (-kv[1], kv[0])))
 
 
+def is_exemption(outcomes: list[dict]) -> bool:
+    """medical_exemption outcomes: run() dicts carry "eligible"; dumped CitizenOutcomes are recognised by an
+    insured citizen's "not_applicable" channel."""
+    return bool(outcomes) and ("eligible" in outcomes[0] or any(o.get("channel") == NOT_APPLICABLE["id"]
+                                                                  for o in outcomes))
+
+
+def _is_eligible(o: dict) -> bool:
+    return o.get("eligible", o.get("channel") != NOT_APPLICABLE["id"])
+
+
 def summarize(outcomes: list[dict], pop: list[dict] | None = None) -> tuple[dict, dict]:
+    """KPIs and by-group shares. medical_exemption: every percentage, count and average is over ELIGIBLE citizens
+    only (n = n_eligible), plus n_eligible and n_not_applicable."""
     pop = pop if pop is not None else world.population()
+    exemption = is_exemption(outcomes)
+    rows = zip(pop, outcomes)
+    if exemption:
+        rows = [(c, o) for c, o in rows if _is_eligible(o)]
+        n_all, outcomes = len(outcomes), [o for _, o in rows]
     n = len(outcomes)
     counts = {"served": 0, "hardship": 0, "left_out": 0}
     groups = {g: {"served": 0, "hardship": 0, "left_out": 0, "n": 0} for g in ["all"] + world.ALL_GROUPS}
     hours = cost = 0.0
     reached = 0
-    for c, o in zip(pop, outcomes):
+    for c, o in rows:
         st = o["status"]
         counts[st] += 1
         if st != "left_out":
@@ -385,6 +539,8 @@ def summarize(outcomes: list[dict], pop: list[dict] | None = None) -> tuple[dict
     }
     if travel_service.is_travel(outcomes):  # everyday_travel outcomes carry the travel fields
         kpis.update(travel_service.kpis(outcomes))
+    if exemption:
+        kpis.update(n_eligible=n, n_not_applicable=n_all - n)
     by_group = {g: {"served": pct(v["served"], v["n"]), "hardship": pct(v["hardship"], v["n"]),
                     "left_out": pct(v["left_out"], v["n"]), "n": v["n"]} for g, v in groups.items()}
     return kpis, by_group

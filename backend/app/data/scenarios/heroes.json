@@ -135,6 +135,79 @@
    "worse_status": true,
    "recovers_with_fix": false,
    "_why": "Kept on purpose: the engine's best grid fix targets riders (cash for no-car people + a bus-fare freeze); it does not reach middle-income drivers. On stage this is the honest 'who does the fix still miss?' moment."
+  },
+  {
+   "citizen_id": "c_0931",
+   "service": "medical_exemption",
+   "scenario_id": "exemption_online_only",
+   "wanted": "Older uninsured woman in east Amman with no car",
+   "note_en": "72-year-old uninsured woman in Wehdat, no car; she can't use the app alone (low digital literacy), and nobody can apply on Sanad for her",
+   "note_ar": "سيدة غير مؤمَّنة صحياً عمرها 72 عاماً في الوحدات، بلا سيارة؛ لا تستطيع استخدام التطبيق وحدها، ولا أحد يقدّم الطلب عنها عبر سند",
+   "profile": "72f, Jabal Al-Rawda, mobility none, no car, smartphone, digital literacy low, not working, no helper, income low, uninsured",
+   "name_en": "Salma",
+   "area": "wehdat",
+   "baseline": "hardship",
+   "scenario": "left_out",
+   "with_top_fix": "hardship",
+   "top_fix": "pair:regional_intake+van:downtown:sat",
+   "channel": {
+    "baseline": "royal_court_unit",
+    "scenario": null,
+    "with_top_fix": "mobile:downtown:sat"
+   },
+   "reasons_in_scenario": [
+    "LOW_DIGITAL_LITERACY"
+   ],
+   "recovers_with_fix": true
+  },
+  {
+   "citizen_id": "c_0497",
+   "service": "medical_exemption",
+   "scenario_id": "exemption_online_only",
+   "wanted": "Uninsured shift worker",
+   "note_en": "Uninsured man working 07:00-16:00 Sun-Thu in Wehdat; he can't use the app alone (low digital literacy), and nobody can apply on Sanad for him",
+   "note_ar": "عامل غير مؤمَّن صحياً، دوامه من 07:00 إلى 16:00 من الأحد إلى الخميس في الوحدات؛ لا يستطيع استخدام التطبيق وحده، ولا أحد يقدّم الطلب عنه عبر سند",
+   "profile": "42m, Jabal Al-Hadid, mobility none, car, smartphone, digital literacy low, works 07:00-16:00, no helper, income middle, uninsured",
+   "name_en": "Abdullah",
+   "area": "wehdat",
+   "baseline": "hardship",
+   "scenario": "left_out",
+   "with_top_fix": "hardship",
+   "top_fix": "pair:regional_intake+van:downtown:sat",
+   "channel": {
+    "baseline": "royal_court_unit",
+    "scenario": null,
+    "with_top_fix": "mobile:downtown:sat"
+   },
+   "reasons_in_scenario": [
+    "LOW_DIGITAL_LITERACY"
+   ],
+   "recovers_with_fix": true
+  },
+  {
+   "citizen_id": "c_0188",
+   "service": "medical_exemption",
+   "scenario_id": "exemption_online_only",
+   "wanted": "Uninsured resident who uses a wheelchair or has limited mobility",
+   "note_en": "77-year-old uninsured man in Marka who has limited mobility; he has no smartphone, and nobody can apply on Sanad for him",
+   "note_ar": "رجل غير مؤمَّن صحياً عمره 77 عاماً في ماركا، حركته محدودة؛ لا يملك هاتفاً ذكياً، ولا أحد يقدّم الطلب عنه عبر سند",
+   "profile": "77m, Al-Rasha, mobility limited, no car, no smartphone, digital literacy low, not working, no helper, income low, uninsured",
+   "name_en": "Ali",
+   "area": "marka",
+   "baseline": "hardship",
+   "scenario": "left_out",
+   "with_top_fix": "hardship",
+   "top_fix": "pair:regional_intake+van:downtown:sat",
+   "channel": {
+    "baseline": "royal_court_unit",
+    "scenario": null,
+    "with_top_fix": "intake_marka"
+   },
+   "reasons_in_scenario": [
+    "NO_SMARTPHONE",
+    "LOW_DIGITAL_LITERACY"
+   ],
+   "recovers_with_fix": true
   }
  ]
 }

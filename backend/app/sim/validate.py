@@ -77,7 +77,7 @@ def policy_errors(p: Policy) -> list[str]:
             errs.append("each cash support entry needs at least one group")
         if not _finite(s.amount_jd_month):
             errs.append(f"cash support amount_jd_month must be a finite number, got {s.amount_jd_month}")
-    if p.service not in ("id_renewal", "everyday_travel"):
+    if p.service not in ("id_renewal", "everyday_travel", "medical_exemption"):
         errs.append(f"unknown service {p.service!r}")
     return errs
 
@@ -104,7 +104,7 @@ def count_changes(before: Policy, after: Policy) -> int:
     hours changed on existing days = 1 each. Each global setting changed = 1. Added/removed office = 1.
     Each group protection changed (walk-in exemptions, fee discounts, home
     visits, transport vouchers, hybrid pickup) = 1. everyday_travel: the fuel change, the bus fare and the taxi fare
-    setting = 1 each; cash support = 1 per group set whose amount changed."""
+    setting = 1 each; cash support = 1 per group set whose amount changed. medical_exemption: proxy_allowed = 1."""
     n = 0
     mu = lambda p: {(m.area, m.day, m.open, m.close) for m in p.mobile_units}
     n += len(mu(before) ^ mu(after))
@@ -121,7 +121,7 @@ def count_changes(before: Policy, after: Policy) -> int:
     for f in ("appointment_exempt_groups", "fee_discounts", "home_visits", "transport_vouchers", "hybrid_pickup"):
         n += bd[f] != ad[f]
     for f in ("online_enabled", "online_only", "appointment_required", "fee_jd", "visits_required",
-              "fuel_price_change_pct", "bus_fare_change_pct", "taxi_fare_change_pct", "service"):
+              "fuel_price_change_pct", "bus_fare_change_pct", "taxi_fare_change_pct", "service", "proxy_allowed"):
         n += getattr(before, f) != getattr(after, f)
     cash = lambda p: {tuple(sorted(set(s.groups))): max(x.amount_jd_month for x in p.cash_support
                                                          if set(x.groups) == set(s.groups)) for s in p.cash_support}

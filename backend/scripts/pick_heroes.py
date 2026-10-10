@@ -8,11 +8,15 @@ First choice: worse off in status under the demo scenario than today and not wor
 If nobody in a profile changes status (e.g. bus riders already priced out today), the fallback is: pays more each
 month under the scenario and the top fix improves their status; the entry then says "worse_status": false.
 
-Each run only replaces the heroes of its own service; the other service's entries are kept as they are.
+medical_exemption: 3 uninsured heroes (an older woman in east Amman, a shift worker, someone with limited mobility or
+a wheelchair) who are worse off under the demo than today, preferably back to today's status with the top grid fix.
+
+Each run only replaces the heroes of its own service; the other services' entries are kept as they are.
 Re-run after the population or scenarios change.
 
     python -m scripts.pick_heroes [scenario_id]
     python -m scripts.pick_heroes --service everyday_travel [scenario_id]
+    python -m scripts.pick_heroes --service medical_exemption [scenario_id]
 """
 import json
 import sys
@@ -215,10 +219,134 @@ def main_travel(scenario_id: str | None = None) -> None:
     _write(service, heroes)
 
 
+# ---------------------------------------------------------------------- medical_exemption
+
+def _offline_why(c: dict) -> tuple[str, str]:
+    f = c["gender"] == "f"
+    if not c["has_smartphone"]:
+        return ("has no smartphone", "لا تملك هاتفاً ذكياً" if f else "لا يملك هاتفاً ذكياً")
+    return ("can't use the app alone (low digital literacy)",
+            "لا تستطيع استخدام التطبيق وحدها" if f else "لا يستطيع استخدام التطبيق وحده")
+
+
+def _nobody(c: dict) -> tuple[str, str]:
+    f = c["gender"] == "f"
+    if c["has_helper"]:
+        return (f"{c['helper_relation_en']} can apply for {'her' if f else 'him'}",
+                f"يمكن أن يقدّم الطلب عنها: {c['helper_relation_ar']}" if f else f"يمكن أن يقدّم الطلب عنه: {c['helper_relation_ar']}")
+    return (f"nobody can apply on Sanad for {'her' if f else 'him'}",
+            "ولا أحد يقدّم الطلب عنها عبر سند" if f else "ولا أحد يقدّم الطلب عنه عبر سند")
+
+
+def _area(c: dict) -> tuple[str, str]:
+    a = world.areas()[c["area"]]
+    return a["name_en"], a["name_ar"]
+
+
+def _note_ex_elderly(c: dict) -> tuple[str, str]:
+    (oe, oa), (ne, na), (ae, aa) = _offline_why(c), _nobody(c), _area(c)
+    f = c["gender"] == "f"
+    car_en, car_ar = ("a car", "سيارة") if c["has_car"] else ("no car", "بلا سيارة")
+    return (f"{c['age']}-year-old uninsured {'woman' if f else 'man'} in {ae}, {car_en}; {'she' if f else 'he'} {oe}, and {ne}",
+            f"{'سيدة غير مؤمَّنة' if f else 'رجل غير مؤمَّن'} صحياً {'عمرها' if f else 'عمره'} {c['age']} عاماً في {aa}، "
+            f"{car_ar if not c['has_car'] else ('تملك سيارة' if f else 'يملك سيارة')}؛ {oa}، {na}")
+
+
+def _note_ex_worker(c: dict) -> tuple[str, str]:
+    (oe, oa), (ne, na), (ae, aa) = _offline_why(c), _nobody(c), _area(c)
+    f = c["gender"] == "f"
+    return (f"Uninsured {'woman' if f else 'man'} working {c['work_start']}-{c['work_end']} Sun-Thu in {ae}; "
+            f"{'she' if f else 'he'} {oe}, and {ne}",
+            f"{'عاملة غير مؤمَّنة' if f else 'عامل غير مؤمَّن'} صحياً، {'دوامها' if f else 'دوامه'} من {c['work_start']} "
+            f"إلى {c['work_end']} من الأحد إلى الخميس في {aa}؛ {oa}، {na}")
+
+
+def _note_ex_mobility(c: dict) -> tuple[str, str]:
+    (oe, oa), (ne, na), (ae, aa) = _offline_why(c), _nobody(c), _area(c)
+    f = c["gender"] == "f"
+    mob_en = "uses a wheelchair" if c["mobility"] == "wheelchair" else "has limited mobility"
+    mob_ar = ("تستخدم كرسياً متحركاً" if f else "يستخدم كرسياً متحركاً") if c["mobility"] == "wheelchair" else \
+        ("حركتها محدودة" if f else "حركته محدودة")
+    return (f"{c['age']}-year-old uninsured {'woman' if f else 'man'} in {ae} who {mob_en}; {'she' if f else 'he'} {oe}, and {ne}",
+            f"{'سيدة غير مؤمَّنة' if f else 'رجل غير مؤمَّن'} صحياً {'عمرها' if f else 'عمره'} {c['age']} عاماً في {aa}، "
+            f"{mob_ar}؛ {oa}، {na}")
+
+
+EAST = lambda c: world.areas()[c["area"]]["side"] == "east"  # noqa: E731
+# (wanted, tiers of tests on the citizen, note builder). Every hero is uninsured (the only eligible citizens).
+# Under Sanad-only, a citizen with a helper can still apply online through them (a hardship, not left out), so the
+# citizens who get WORSE are offline residents with nobody to help; the first tier of each profile asks for the
+# brief's ideal first and the later tiers relax it.
+EXEMPTION_WANTED = [
+    ("Older uninsured woman in east Amman with no car",
+     [lambda c: "elderly" in c["tags"] and c["gender"] == "f" and not c["has_car"] and c["has_helper"] and EAST(c),
+      lambda c: "elderly" in c["tags"] and c["gender"] == "f" and not c["has_car"] and EAST(c),
+      lambda c: "elderly" in c["tags"] and c["gender"] == "f",
+      lambda c: "elderly" in c["tags"]], _note_ex_elderly),
+    ("Uninsured shift worker",
+     [lambda c: c["works"] and c["work_start"] == "07:00",
+      lambda c: c["works"]], _note_ex_worker),
+    ("Uninsured resident who uses a wheelchair or has limited mobility",
+     [lambda c: c["mobility"] == "wheelchair",
+      lambda c: c["mobility"] != "none"], _note_ex_mobility),
+]
+
+
+def exemption_profile(c: dict) -> str:
+    return profile(c) + f", income {c['income_band']}, uninsured"
+
+
+def main_exemption(scenario_id: str | None = None) -> None:
+    """3 uninsured heroes who are worse off under the demo than today; first choice: back to at least today's status
+    with the top grid fix (recovers_with_fix), else just worse."""
+    service = "medical_exemption"
+    scenario_id = scenario_id or world.demo_scenario_id(service)
+    pop = world.population()
+    base = engine.run(world.scenario_policy(world.baseline_scenario_id(service)))
+    scen_policy = world.scenario_policy(scenario_id)
+    scen = engine.run(scen_policy)
+    top = fixgrid.top_fixes(scen_policy)[0]
+    fix = engine.run(top.policy)
+    rank = lambda o: STATUS_RANK[o["status"]]  # noqa: E731
+    worse = lambda i: "uninsured" in pop[i]["tags"] and rank(scen[i]) > rank(base[i])  # noqa: E731
+    recovers = lambda i: rank(fix[i]) <= rank(base[i])  # noqa: E731
+    heroes, used = [], set()
+    for wanted, tiers, note in EXEMPTION_WANTED:
+        pick = None
+        for strict in (True, False):
+            for test in tiers:
+                found = [i for i, c in enumerate(pop) if c["id"] not in used and test(c) and worse(i)
+                         and (recovers(i) or not strict)]
+                if found:
+                    pick = (found[0], strict)
+                    break
+            if pick:
+                break
+        if not pick:
+            print("no match for:", wanted)
+            continue
+        i, strict = pick
+        c = pop[i]
+        used.add(c["id"])
+        note_en, note_ar = note(c)
+        heroes.append({
+            "citizen_id": c["id"], "service": service, "scenario_id": scenario_id, "wanted": wanted,
+            "note_en": note_en, "note_ar": note_ar, "profile": exemption_profile(c), "name_en": c["name_en"],
+            "area": c["area"], "baseline": base[i]["status"], "scenario": scen[i]["status"],
+            "with_top_fix": fix[i]["status"], "top_fix": top.id,
+            "channel": {"baseline": base[i]["channel"], "scenario": scen[i]["channel"], "with_top_fix": fix[i]["channel"]},
+            "reasons_in_scenario": scen[i]["reasons"],
+            "recovers_with_fix": recovers(i),
+        })
+        print(f"{c['id']} {c['name_en']:12s} {base[i]['status']:>9} -> {scen[i]['status']:<9} -> fix: {fix[i]['status']:<9}"
+              f" ({fix[i]['channel']}, {fix[i]['mode']}) | {'strict' if strict else 'fallback'} | {exemption_profile(c)}")
+    _write(service, heroes)
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     if args[:1] == ["--service"]:
         service, args = args[1], args[2:]
-        (main_travel if service == "everyday_travel" else main)(*args)
+        {"everyday_travel": main_travel, "medical_exemption": main_exemption}.get(service, main)(*args)
     else:
         main(*args)

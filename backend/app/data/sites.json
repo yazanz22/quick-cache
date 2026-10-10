@@ -1,5 +1,5 @@
 {
- "_note": "15 candidate office sites. 7 are the real Civil Status & Passports Department (CSPD) offices in Amman (real: true; addresses from CSPD's office list, located once with OpenStreetMap Nominatim, precision noted). 8 are generic sites, one per area, so dragged office pins have somewhere to snap. 'area' is the engine area used for bus transfers.",
+ "_note": "16 candidate office sites. 7 are the real Civil Status & Passports Department (CSPD) offices in Amman (real: true; addresses from CSPD's office list, located once with OpenStreetMap Nominatim, precision noted). 8 are generic sites, one per area, so dragged office pins have somewhere to snap. 1 is the Royal Hashemite Court's Citizen Services Unit (royal_court_csu, real: true), the only office of the medical_exemption service today. 'area' is the engine area used for bus transfers.",
  "sites": [
   {
    "id": "site_downtown",
@@ -156,6 +156,17 @@
    "address_en": "Wadi Al Seer, Al Jandawil, next to the Shari'a Court",
    "geocode": "Nominatim: Al-Jandaweel, ±500 m",
    "source": "https://cspd.gov.jo/EN/ListDetails/Department_Directorates_and_Offices/17/1"
+  },
+  {
+   "id": "royal_court_csu",
+   "area": "downtown",
+   "name_ar": "دائرة خدمة الجمهور – الديوان الملكي الهاشمي",
+   "name_en": "Royal Court Citizen Services Unit",
+   "lat": 31.9565,
+   "lng": 35.9475,
+   "real": true,
+   "address_en": "Royal Hashemite Court, Amman",
+   "geocode": "Approximate, ±1 km: Raghadan, east of Downtown. One Nominatim query ('Royal Hashemite Court Amman', 2026-10-10) returned no result, so these are fixed approximate coordinates. Not in travel_matrix.json (no OSRM rows): road distance falls back to straight-line km x ROAD_FACTOR at CAR_SPEED_KMH (travel.road). Engine area: downtown (nearest centroid)."
   }
  ]
 }
