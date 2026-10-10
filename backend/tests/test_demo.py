@@ -40,9 +40,12 @@ def test_every_scenario_is_a_valid_policy(path):
 
 
 def test_exactly_one_demo_scenario():
-    flagged = [p.stem for p in _scenario_files() if json.loads(p.read_text(encoding="utf-8")).get("demo") is True]
+    files = [json.loads(p.read_text(encoding="utf-8")) for p in _scenario_files()]
+    flagged = [d["id"] for d in files if d.get("demo") is True and d.get("service", "id_renewal") == "id_renewal"]
     assert flagged == ["consolidate_digital_first"], f"exactly one scenario must have demo: true, got {flagged}"
     assert world.demo_scenario_id() == "consolidate_digital_first"
+    travel = [d["id"] for d in files if d.get("demo") is True and d.get("service") == "everyday_travel"]
+    assert travel == ["fuel_plus_25_fares"] and world.demo_scenario_id("everyday_travel") == "fuel_plus_25_fares"
 
 
 def test_pinned_demo_numbers(demo):
@@ -56,7 +59,8 @@ def test_pinned_demo_numbers(demo):
 
 def test_heroes_get_worse_and_recover_with_the_top_fix(demo):
     base, scen, r = demo
-    heroes = json.loads((SCENARIOS_DIR / "heroes.json").read_text(encoding="utf-8"))["heroes"]
+    heroes = [h for h in json.loads((SCENARIOS_DIR / "heroes.json").read_text(encoding="utf-8"))["heroes"]
+              if h.get("service", "id_renewal") == "id_renewal"]  # travel heroes: tests/test_travel.py
     assert heroes, "heroes.json has no heroes"
     pop = world.population_by_id()
     fix = fixgrid.top_fixes(scen)[0].policy

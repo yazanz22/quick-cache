@@ -43,8 +43,29 @@ def warm() -> dict:
     if ai_fix is not None:  # the badge after applying the AI-proposed fix
         results["ai_fix"] = sensitivity.check(base, demo, ai_fix)
         run(ai_fix)  # its "after Apply" compare is then a memo hit
-    for sid in world.scenarios():
-        compare(base, world.scenario_policy(sid))
+    for sid, sc in world.scenarios().items():
+        if sc["service"] == "id_renewal":
+            compare(base, world.scenario_policy(sid))
     secs = round(time.perf_counter() - t0, 1)
     log.info("warm-up done in %.1fs (AI fix %s)", secs, "warmed" if ai_fix is not None else "not available")
     return {"seconds": secs, "base": base, "demo": demo, "top": top, "ai_fix": ai_fix, "sensitivity": results}
+
+
+def warm_travel() -> dict:
+    """The everyday_travel demo path: its fix grid, the ranking-only and top-fix robustness checks, and every
+    travel preset compared with its baseline. Same shape as warm() (ai_fix is always None: no AI fix here yet).
+    The travel engine has its own memo (travel_service), so this never evicts the ID-renewal entries."""
+    t0 = time.perf_counter()
+    service = "everyday_travel"
+    base = world.scenario_policy(world.baseline_scenario_id(service))
+    demo = world.scenario_policy(world.demo_scenario_id(service))
+    top = fixgrid.build(demo)[:3]
+    results = {"ranking_only": sensitivity.check(base, demo, None)}
+    if top:
+        results["top_fix"] = sensitivity.check(base, demo, top[0]["policy"])
+    for sid, sc in world.scenarios().items():
+        if sc["service"] == service:
+            compare(base, world.scenario_policy(sid))
+    secs = round(time.perf_counter() - t0, 1)
+    log.info("travel warm-up done in %.1fs", secs)
+    return {"seconds": secs, "base": base, "demo": demo, "top": top, "ai_fix": None, "sensitivity": results}

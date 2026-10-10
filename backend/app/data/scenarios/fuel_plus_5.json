@@ -1,0 +1,20 @@
+{
+ "id": "fuel_plus_5",
+ "order": 11,
+ "service": "everyday_travel",
+ "name_ar": "رفع الوقود 5%",
+ "name_en": "Fuel +5%",
+ "description_ar": "زيادة تشرين الأول 2026: خمسة قروش على لتر البنزين 90، أي نحو 5%. أجور الحافلات والتاكسي تتبع الوقود بنسبة انعكاسها المفترضة.",
+ "description_en": "The October 2026 rise: +5 piasters a litre, about +5% on 90-octane. Bus and taxi fares follow fuel by their assumed pass-through.",
+ "policy": {
+  "service": "everyday_travel",
+  "offices": [],
+  "online_enabled": true,
+  "fee_jd": 2.0,
+  "fuel_price_change_pct": 5.0,
+  "bus_fare_change_pct": null,
+  "taxi_fare_change_pct": null,
+  "cash_support": [],
+  "transport_vouchers": []
+ }
+}

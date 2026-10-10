@@ -1,0 +1,20 @@
+{
+ "id": "travel_today",
+ "order": 10,
+ "service": "everyday_travel",
+ "name_ar": "أسعار اليوم",
+ "name_en": "Today's prices",
+ "description_ar": "أسعار الوقود وأجور الحافلات والتاكسي كما هي اليوم، دون دعم نقدي: رحلة كل مواطن المنتظمة إلى العمل أو الجامعة أو المستشفى.",
+ "description_en": "Fuel prices, bus and taxi fares as they are today, no cash support: each citizen's regular trip to work, university or hospital.",
+ "policy": {
+  "service": "everyday_travel",
+  "offices": [],
+  "online_enabled": true,
+  "fee_jd": 2.0,
+  "fuel_price_change_pct": 0.0,
+  "bus_fare_change_pct": null,
+  "taxi_fare_change_pct": null,
+  "cash_support": [],
+  "transport_vouchers": []
+ }
+}

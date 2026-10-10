@@ -16,7 +16,7 @@ import threading
 from collections import Counter, OrderedDict
 
 from ..models import CitizenOutcome, Policy, SimResult
-from . import world
+from . import travel_service, world
 from .assumptions import DEFAULT, Assumptions
 from .travel import bus, bus_transfers, car, road, taxi, to_min
 
@@ -312,7 +312,10 @@ def _allocate_home_visits(policy: Policy, pop: list[dict], bests: list, best_ch:
 # ------------------------------------------------------------------- public
 
 def run(policy: Policy, population: list[dict] | None = None, assumptions: Assumptions | None = None) -> list[dict]:
-    """Fast path: list of outcome dicts, index-aligned with the population."""
+    """Fast path: list of outcome dicts, index-aligned with the population. Dispatches on policy.service:
+    "everyday_travel" is priced by travel_service.run; everything below is the id_renewal engine."""
+    if policy.service == "everyday_travel":
+        return travel_service.run(policy, population, assumptions)
     pop = population if population is not None else world.population()
     a = assumptions or DEFAULT
     per_channel = [(ch, *_channel_results(ch, policy, pop, a)) for ch in _channels(policy)]
@@ -380,6 +383,8 @@ def summarize(outcomes: list[dict], pop: list[dict] | None = None) -> tuple[dict
         "left_out_by_reason": _count_reasons(o for o in outcomes if o["status"] == "left_out"),
         "hardship_by_reason": _count_reasons(o for o in outcomes if o["status"] == "hardship"),
     }
+    if travel_service.is_travel(outcomes):  # everyday_travel outcomes carry the travel fields
+        kpis.update(travel_service.kpis(outcomes))
     by_group = {g: {"served": pct(v["served"], v["n"]), "hardship": pct(v["hardship"], v["n"]),
                     "left_out": pct(v["left_out"], v["n"]), "n": v["n"]} for g, v in groups.items()}
     return kpis, by_group

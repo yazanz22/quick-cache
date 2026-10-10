@@ -11,6 +11,7 @@ from .assumptions import DEFAULT
 from .travel import to_min
 
 MAX_FEE_JD = 1000
+TRAVEL_PCT_RANGE = (-50, 200)   # fuel and fare changes, percent (everyday_travel)
 
 
 def _hhmm(s: str) -> bool:
@@ -62,8 +63,22 @@ def policy_errors(p: Policy) -> list[str]:
         errs.append(f"fee_jd must be at most {MAX_FEE_JD} JD")
     if p.online_only and not p.online_enabled:
         errs.append("online_only needs online_enabled (online-only with online switched off is a contradiction)")
-    if p.service != "id_renewal":
-        errs.append("only the id_renewal service is modelled")
+    lo, hi = TRAVEL_PCT_RANGE
+    for name in ("fuel_price_change_pct", "bus_fare_change_pct", "taxi_fare_change_pct"):
+        v = getattr(p, name)
+        if v is None and name != "fuel_price_change_pct":
+            continue
+        if not _finite(v):
+            errs.append(f"{name} must be a finite number, got {v}")
+        elif not lo <= v <= hi:
+            errs.append(f"{name} must be between {lo} and {hi} percent, got {v:g}")
+    for s in p.cash_support:
+        if not s.groups:
+            errs.append("each cash support entry needs at least one group")
+        if not _finite(s.amount_jd_month):
+            errs.append(f"cash support amount_jd_month must be a finite number, got {s.amount_jd_month}")
+    if p.service not in ("id_renewal", "everyday_travel"):
+        errs.append(f"unknown service {p.service!r}")
     return errs
 
 
@@ -78,6 +93,8 @@ def canonical(p: Policy) -> str:
                                      key=lambda v: (v["groups"], v["amount_jd"]))
     if d["home_visits"]:
         d["home_visits"]["groups"] = sorted(set(d["home_visits"]["groups"]))
+    d["cash_support"] = sorted(({**s, "groups": sorted(set(s["groups"]))} for s in d["cash_support"]),
+                               key=lambda s: (s["groups"], s["amount_jd_month"]))
     return json.dumps(d, sort_keys=True)
 
 
@@ -86,7 +103,8 @@ def count_changes(before: Policy, after: Policy) -> int:
     Each added/removed mobile unit = 1. Per office: moved, accessibility, days added, days removed,
     hours changed on existing days = 1 each. Each global setting changed = 1. Added/removed office = 1.
     Each group protection changed (walk-in exemptions, fee discounts, home
-    visits, transport vouchers, hybrid pickup) = 1."""
+    visits, transport vouchers, hybrid pickup) = 1. everyday_travel: the fuel change, the bus fare and the taxi fare
+    setting = 1 each; cash support = 1 per group set whose amount changed."""
     n = 0
     mu = lambda p: {(m.area, m.day, m.open, m.close) for m in p.mobile_units}
     n += len(mu(before) ^ mu(after))
@@ -102,6 +120,11 @@ def count_changes(before: Policy, after: Policy) -> int:
     bd, ad = json.loads(canonical(before)), json.loads(canonical(after))
     for f in ("appointment_exempt_groups", "fee_discounts", "home_visits", "transport_vouchers", "hybrid_pickup"):
         n += bd[f] != ad[f]
-    for f in ("online_enabled", "online_only", "appointment_required", "fee_jd", "visits_required"):
+    for f in ("online_enabled", "online_only", "appointment_required", "fee_jd", "visits_required",
+              "fuel_price_change_pct", "bus_fare_change_pct", "taxi_fare_change_pct", "service"):
         n += getattr(before, f) != getattr(after, f)
+    cash = lambda p: {tuple(sorted(set(s.groups))): max(x.amount_jd_month for x in p.cash_support
+                                                         if set(x.groups) == set(s.groups)) for s in p.cash_support}
+    cb, ca = cash(before), cash(after)
+    n += sum(cb.get(k) != ca.get(k) for k in set(cb) | set(ca))
     return n

@@ -53,6 +53,88 @@
    "scenario": "hardship",
    "with_top_fix": "served",
    "recovers_with_fix": true
+  },
+  {
+   "citizen_id": "c_0627",
+   "service": "everyday_travel",
+   "scenario_id": "fuel_plus_25_fares",
+   "wanted": "Low-income bus commuter with a change of bus",
+   "note_en": "Low-income resident who takes the bus to Wehdat every workday, with one change of bus",
+   "note_ar": "من ذوي الدخل المحدود، يتنقّل بالحافلة إلى الوحدات كل يوم عمل، مع تبديل حافلة واحدة",
+   "profile": "23m, Jabal Al-Jofeh, income low, no car, mobility none, work trip to Wehdat 5 days/week by bus (1 transfer), 44 min each way",
+   "name_en": "Mustafa",
+   "area": "downtown",
+   "baseline": "left_out",
+   "scenario": "left_out",
+   "with_top_fix": "hardship",
+   "top_fix": "pair:cash:no_car:14+freeze_bus_fares",
+   "monthly_cost_jd": {
+    "baseline": 38.97,
+    "scenario": 48.71,
+    "with_top_fix": 24.97
+   },
+   "income_share_pct": {
+    "baseline": 30.0,
+    "scenario": 37.5,
+    "with_top_fix": 19.2
+   },
+   "worse_status": false,
+   "recovers_with_fix": true
+  },
+  {
+   "citizen_id": "c_0883",
+   "service": "everyday_travel",
+   "scenario_id": "fuel_plus_25_fares",
+   "wanted": "Student by bus",
+   "note_en": "Student who takes the bus to Applied Science University every weekday, with two changes of bus",
+   "note_ar": "طالبة تذهب بالحافلة إلى جامعة العلوم التطبيقية كل يوم دراسي، مع تبديل حافلتين",
+   "profile": "18f, Shafa Badran North, income middle, no car, mobility none, university trip to Applied Science University 5 days/week by bus (2 transfers), 64.2 min each way",
+   "name_en": "Rana",
+   "area": "sweileh",
+   "baseline": "hardship",
+   "scenario": "left_out",
+   "with_top_fix": "hardship",
+   "top_fix": "pair:cash:no_car:14+freeze_bus_fares",
+   "monthly_cost_jd": {
+    "baseline": 58.45,
+    "scenario": 73.07,
+    "with_top_fix": 44.45
+   },
+   "income_share_pct": {
+    "baseline": 16.7,
+    "scenario": 20.9,
+    "with_top_fix": 12.7
+   },
+   "worse_status": true,
+   "recovers_with_fix": true
+  },
+  {
+   "citizen_id": "c_0982",
+   "service": "everyday_travel",
+   "scenario_id": "fuel_plus_25_fares",
+   "wanted": "Middle-income car commuter on a long drive who the engine's top fix does not reach",
+   "note_en": "Drives 44 minutes each way to King Hussein Business Park every workday; the fuel rise pushes him over the line, and the cash-for-riders fix leaves him there",
+   "note_ar": "يقود سيارته 44 دقيقة في كل اتجاه إلى مجمع الملك الحسين للأعمال كل يوم عمل؛ رفع الوقود يدفعه فوق الحد، والدعم الموجّه للركاب لا يصل إليه",
+   "profile": "29m, Marka Al-Janoubiya, income middle, own car, work trip to King Hussein Business Park 5 days/week by car, 44 min each way",
+   "name_en": "Issa",
+   "area": "marka",
+   "baseline": "hardship",
+   "scenario": "left_out",
+   "with_top_fix": "left_out",
+   "top_fix": "pair:cash:no_car:14+freeze_bus_fares",
+   "monthly_cost_jd": {
+    "baseline": 61.5,
+    "scenario": 70.72,
+    "with_top_fix": 70.72
+   },
+   "income_share_pct": {
+    "baseline": 17.6,
+    "scenario": 20.2,
+    "with_top_fix": 20.2
+   },
+   "worse_status": true,
+   "recovers_with_fix": false,
+   "_why": "Kept on purpose: the engine's best grid fix targets riders (cash for no-car people + a bus-fare freeze); it does not reach middle-income drivers. On stage this is the honest 'who does the fix still miss?' moment."
   }
  ]
 }

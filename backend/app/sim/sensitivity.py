@@ -1,5 +1,6 @@
-"""Robustness check (CLAUDE.md §6.5): perturb the three most uncertain assumptions
-one at a time by ±20% (6 runs), re-run baseline, scenario and the chosen fix.
+"""Robustness check (CLAUDE.md §6.5): perturb the three most uncertain assumptions of the scenario's service
+(assumptions.SENSITIVITY_PARAMS_BY_SERVICE) one at a time by ±20% (6 runs), re-run baseline, scenario and the
+chosen fix.
 
 Pass: the top-2 worst groups stay the same, in the same order, in all 6 runs,
 and the fix still reduces left_out (or, for a scenario with nobody newly left
@@ -9,7 +10,7 @@ from __future__ import annotations
 
 from ..models import Policy, SensitivityResult
 from . import world
-from .assumptions import DEFAULT, SENSITIVITY_PARAMS, Assumptions, perturbed
+from .assumptions import DEFAULT, SENSITIVITY_PARAMS_BY_SERVICE, Assumptions, perturbed
 from .compare import quick
 from .engine import run, summarize
 
@@ -35,7 +36,7 @@ def check(baseline: Policy, scenario: Policy, fix: Policy | None = None, base_as
 
     details, held, helps, tops = [], 0, 0, [ref["worst_groups"][0]]
     top2_sets = [set(ref_top2)]
-    for name in SENSITIVITY_PARAMS:
+    for name in SENSITIVITY_PARAMS_BY_SERVICE[scenario.service]:
         for f in FACTORS:
             a = perturbed(base_assumptions, name, f)
             q = quick(baseline, scenario, pop, a)

@@ -19,7 +19,7 @@
    "description_en": "Each citizen's regular trip to work, university or hospital under fuel prices, fares and cash support: who stays fine, who is squeezed, who is priced out.",
    "levers": ["fuel", "fares", "cash_support", "transport_vouchers"],
    "baseline_scenario": "travel_today",
-   "demo_scenario": "fuel_plus_25"
+   "demo_scenario": "fuel_plus_25_fares"
   }
  ]
 }

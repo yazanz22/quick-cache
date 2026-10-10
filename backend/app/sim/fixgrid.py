@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from itertools import combinations
 
-from ..models import FixCandidate, MobileUnit, Policy
+from ..models import CashSupport, FixCandidate, MobileUnit, Policy, TransportVoucher
 from . import world
 from .assumptions import Assumptions
 from .engine import run, summarize
@@ -61,7 +61,81 @@ TOGGLES = [
      "title_ar": "تجهيز كل المكاتب لذوي الإعاقة الحركية", "title_en": "Make every office wheelchair accessible"},
 ]
 
+# ------------------------------------------------- everyday_travel changes
+# A travel fix never touches fuel_price_change_pct: the fuel price is the government decision being tested.
+# Titles use Western digits (CLAUDE.md §9.1).
+CASH_GRID = [("low_income", 8.0), ("low_income", 14.0), ("low_income", 20.0),
+             ("no_car", 14.0), ("worker", 14.0), ("student", 14.0)]
+VOUCHER_GRID = [("low_income", 0.5), ("no_car", 0.5)]
+GROUP_AR = {"low_income": "لذوي الدخل المحدود", "no_car": "لمن لا يملكون سيارة", "worker": "للعاملين",
+            "student": "للطلاب", "elderly": "لكبار السن", "disabled": "لذوي الإعاقة", "offline": "لغير المتصلين رقمياً"}
+GROUP_EN = {"low_income": "low-income people", "no_car": "people without a car", "worker": "workers",
+            "student": "students", "elderly": "older people", "disabled": "disabled people", "offline": "offline people"}
+
+
+def _num(x: float) -> str:
+    return f"{x:g}"
+
+
+def _dinars_ar(x: float) -> str:
+    """Arabic counted noun for whole dinars: 3-10 take the plural, others the accusative singular."""
+    return f"{_num(x)} دنانير" if float(x).is_integer() and 3 <= x <= 10 else f"{_num(x)} ديناراً"
+
+
+def _cash(group: str, amount: float):
+    def apply(p: Policy) -> Policy:
+        q = p.model_copy(deep=True)
+        q.cash_support.append(CashSupport(groups=[group], amount_jd_month=amount))
+        return q
+    return {"id": f"cash:{group}:{_num(amount)}", "kind": "cash", "group": group, "apply": apply,
+            "title_ar": f"دعم نقدي {_dinars_ar(amount)} شهرياً {GROUP_AR[group]}",
+            "title_en": f"{_num(amount)} JD a month cash support for {GROUP_EN[group]}"}
+
+
+def _voucher(group: str, amount: float):
+    def apply(p: Policy) -> Policy:
+        q = p.model_copy(deep=True)
+        q.transport_vouchers.append(TransportVoucher(groups=[group], amount_jd=amount))
+        return q
+    return {"id": f"voucher:{group}:{_num(amount)}", "kind": "voucher", "group": group, "apply": apply,
+            "title_ar": f"تغطية أجرة الحافلة أو التاكسي حتى {_num(amount)} دينار لكل رحلة ذهاب وإياب {GROUP_AR[group]}",
+            "title_en": f"Bus or taxi fares covered up to {_num(amount)} JD per round trip for {GROUP_EN[group]}"}
+
+
+def _freeze(field: str):
+    def apply(p: Policy) -> Policy:
+        return p.model_copy(update={field: 0.0}, deep=True)
+    return apply
+
+
+TRAVEL_TOGGLES = [
+    {"id": "freeze_bus_fares", "kind": "toggle", "field": "bus_fare_change_pct", "apply": _freeze("bus_fare_change_pct"),
+     "title_ar": "تجميد أجور الحافلات", "title_en": "Freeze bus fares"},
+    {"id": "freeze_taxi_fares", "kind": "toggle", "field": "taxi_fare_change_pct",
+     "apply": _freeze("taxi_fare_change_pct"), "title_ar": "تجميد تعرفة التاكسي", "title_en": "Freeze taxi fares"},
+]
+
+
+def _travel_singles(scenario: Policy) -> list[dict]:
+    """Cash support, fare freezes and transport vouchers. A single is skipped when the scenario already gives that
+    group at least as much, or already freezes that fare."""
+    def has(entries, group, amount, attr):
+        return any(set(e.groups) == {group} and getattr(e, attr) >= amount for e in entries)
+    out = [_cash(g, amt) for g, amt in CASH_GRID if not has(scenario.cash_support, g, amt, "amount_jd_month")]
+    out += [t for t in TRAVEL_TOGGLES if getattr(scenario, t["field"]) != 0]
+    out += [_voucher(g, amt) for g, amt in VOUCHER_GRID if not has(scenario.transport_vouchers, g, amt, "amount_jd")]
+    return out
+
+
+def _same_slot(a: dict, b: dict) -> bool:
+    """Two singles that can't be paired: two vans in the same area, or two cash supports for the same group."""
+    return a["kind"] == b["kind"] and (
+        (a["kind"] == "van" and a["area"] == b["area"]) or (a["kind"] == "cash" and a["group"] == b["group"]))
+
+
 def singles(scenario: Policy) -> list[dict]:
+    if scenario.service == "everyday_travel":
+        return _travel_singles(scenario)
     out = []
     existing = {(m.area, m.day) for m in scenario.mobile_units}
     if not scenario.online_only:  # online_only ignores vans and offices entirely
@@ -104,7 +178,7 @@ def build(scenario: Policy, pop=None, assumptions: Assumptions | None = None) ->
 
     pairs = []
     for a, b in combinations(useful[:TOP_SINGLES_FOR_PAIRS], 2):
-        if a["kind"] == "van" and b["kind"] == "van" and a["area"] == b["area"]:
+        if _same_slot(a, b):
             continue
         p = b["apply"](a["apply"](scenario))
         pairs.append({

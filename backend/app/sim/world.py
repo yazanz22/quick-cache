@@ -50,18 +50,50 @@ def sides() -> dict[str, str]:
 
 
 @lru_cache(maxsize=1)
+def hubs() -> dict[str, dict]:
+    """Everyday-trip destinations (work hubs, universities, hospitals), by id."""
+    return {h["id"]: h for h in _load("hubs.json")["hubs"]}
+
+
+@lru_cache(maxsize=1)
+def daily_trips() -> dict[str, dict]:
+    """citizen id -> {purpose, hub, days_per_week}: each citizen's one regular trip (seed_daily.py). Some have none."""
+    return _load("daily_trips.json")["trips"]
+
+
+@lru_cache(maxsize=1)
+def hub_matrix() -> dict:
+    """citizen id -> "hub:<id>" -> [free-flow seconds, metres] (OSRM)."""
+    p = DATA_DIR / "hub_matrix.json"
+    return json.loads(p.read_text(encoding="utf-8"))["matrix"] if p.exists() else {}
+
+
+@lru_cache(maxsize=1)
+def services() -> list[dict]:
+    """What Nas can simulate (services.json, models.ServiceInfo)."""
+    return list(_load("services.json")["services"])
+
+
+@lru_cache(maxsize=1)
 def scenarios() -> dict[str, dict]:
+    """Preset scenarios by id. Each carries "service" (from the file, else its policy's service)."""
     out = {}
     for p in sorted(SCENARIOS_DIR.glob("*.json")):
         d = json.loads(p.read_text(encoding="utf-8"))
         if isinstance(d, dict) and "policy" in d:
+            d.setdefault("service", d["policy"].get("service", "id_renewal"))
             out[d["id"]] = d
     return out
 
 
-def demo_scenario_id() -> str:
-    """The demo path: the scenario marked "demo": true (CLAUDE.md §10)."""
-    return next(s["id"] for s in scenarios().values() if s.get("demo"))
+def demo_scenario_id(service: str = "id_renewal") -> str:
+    """The demo path of a service: its scenario marked "demo": true (CLAUDE.md §10)."""
+    return next(s["id"] for s in scenarios().values() if s.get("demo") and s["service"] == service)
+
+
+def baseline_scenario_id(service: str = "id_renewal") -> str:
+    """The "today" scenario of a service (services.json baseline_scenario)."""
+    return next(s["baseline_scenario"] for s in services() if s["id"] == service)
 
 
 def scenario_policy(scenario_id: str) -> Policy:

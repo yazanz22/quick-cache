@@ -1,0 +1,27 @@
+{
+ "id": "fuel_plus_25_support",
+ "order": 14,
+ "service": "everyday_travel",
+ "name_ar": "رفع الوقود والأجور 25% مع دعم نقدي",
+ "name_en": "Fuel and fares +25% with cash support",
+ "description_ar": "حزمة 2012 مع دعم صندوق المعونة الوطنية للوقود: زيادة 25% على الوقود والأجور، و14 ديناراً شهرياً لذوي الدخل المحدود.",
+ "description_en": "The 2012 package with the National Aid Fund's fuel support: fuel and fares +25%, and 14 JD a month for low-income people.",
+ "policy": {
+  "service": "everyday_travel",
+  "offices": [],
+  "online_enabled": true,
+  "fee_jd": 2.0,
+  "fuel_price_change_pct": 25.0,
+  "bus_fare_change_pct": 25.0,
+  "taxi_fare_change_pct": 25.0,
+  "cash_support": [
+   {
+    "groups": [
+     "low_income"
+    ],
+    "amount_jd_month": 14.0
+   }
+  ],
+  "transport_vouchers": []
+ }
+}

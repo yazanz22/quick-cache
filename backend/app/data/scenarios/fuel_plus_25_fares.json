@@ -1,0 +1,21 @@
+{
+ "id": "fuel_plus_25_fares",
+ "order": 13,
+ "service": "everyday_travel",
+ "name_ar": "رفع الوقود 25% مع رفع الأجور",
+ "name_en": "Fuel +25%, fares raised to match",
+ "description_ar": "رفع بحجم رفع الدعم: زيادة 25% على الوقود، وأجور الحافلات وسيارات الأجرة تُرفع بالنسبة نفسها، كما حدث بعد رفع 2012. دون دعم نقدي.",
+ "description_en": "A subsidy-style +25% on fuel, with bus and taxi fares raised by the same 25%, as happened after the 2012 hike. No cash support.",
+ "policy": {
+  "service": "everyday_travel",
+  "offices": [],
+  "online_enabled": true,
+  "fee_jd": 2.0,
+  "fuel_price_change_pct": 25.0,
+  "bus_fare_change_pct": 25.0,
+  "taxi_fare_change_pct": 25.0,
+  "cash_support": [],
+  "transport_vouchers": []
+ },
+ "demo": true
+}

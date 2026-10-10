@@ -1,0 +1,20 @@
+{
+ "id": "fuel_plus_25",
+ "order": 12,
+ "service": "everyday_travel",
+ "name_ar": "رفع الوقود 25% (الأجور ثابتة تقريباً)",
+ "name_en": "Fuel +25%, fares mostly held",
+ "description_ar": "زيادة 25% على الوقود بينما تنقل الأجور المنظّمة جزءاً صغيراً منها فقط (نسبة الانعكاس المفترضة). يُظهر من يتأثر عندما تُحمى أجور النقل.",
+ "description_en": "+25% on fuel while regulated fares pass on only a small part of it (the assumed pass-through). Shows who is hit when fares are protected.",
+ "policy": {
+  "service": "everyday_travel",
+  "offices": [],
+  "online_enabled": true,
+  "fee_jd": 2.0,
+  "fuel_price_change_pct": 25.0,
+  "bus_fare_change_pct": null,
+  "taxi_fare_change_pct": null,
+  "cash_support": [],
+  "transport_vouchers": []
+ }
+}
