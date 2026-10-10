@@ -1,13 +1,13 @@
-# Gamma prompt for the Nas pitch deck (9 slides)
+# Gamma prompt for the Nas pitch deck (8 slides)
 
 Paste everything inside the fence into Gamma: **Create new → Paste in text → "Preserve" text** (so Gamma keeps every
-source tag), 9 cards, 16:9. Every figure carries its source in brackets; the full list with links is on slide 9.
+source tag), 8 cards, 16:9. Every figure carries its source in brackets; the full list with links is on slide 8.
 Engine numbers are tagged (Nas simulation). Figures come from `anchors.json`, `data/census/VALIDATION.md`, the research
 notes (`I'll go claim by claim.txt`) and engine output (HANDOFF §6, §15, §16). Dropped on purpose: the GovTech TAM,
 the "10x–100x rework cost", municipal debt, and the sector results slide (the live demo shows them).
 
 ```
-Create a 9-slide pitch deck for "Nas (ناس)", a policy simulator for Jordan's public services, built by a team of 3 at the AI Quest hackathon at Al Hussein Technical University. Audience: a judging panel of technologists and public-sector people. Tone: confident, precise, evidence-led. Language: English, with the Arabic name ناس on the title slide.
+Create an 8-slide pitch deck for "Nas (ناس)", a policy simulator for Jordan's public services, built by a team of 3 at the AI Quest hackathon at Al Hussein Technical University. Audience: a judging panel of technologists and public-sector people. Tone: confident, precise, evidence-led. Language: English, with the Arabic name ناس on the title slide.
 
 RULES FOR CONTENT
 - Use exactly the numbers below. Do not add statistics, market sizes or claims that are not listed.
@@ -71,7 +71,7 @@ Table, three columns: "Published figure" → "In Nas (out of 1,000)" → "Source
 - 38.1% used an e-government service → 381 have (MoDEE ICT Survey 2024)
 - 62.5% of men and 16% of women are in the labour force → 331 of 530 men, 75 of 470 women (World Bank Gender Data Portal)
 - 49.3% of people aged 65+ have a functional difficulty → 32 of our 65 elderly (UNFPA Jordan country profile 2024)
-- 44.8% of Amman's Jordanians have no health insurance → 441 uninsured (Department of Statistics, Health Insurance in Jordan, 2015 Census)
+- 44.8% of Amman's Jordanians have no health insurance → 441 uninsured (44.1%), more often in low-income households (Department of Statistics, Health Insurance in Jordan, 2015 Census)
 - Each of Amman's 22 districts gets its census share, e.g. Basman 10.62% → 106 residents, Marka 4.21% → 42 (2015 Census district populations)
 Side panel, "Real places": every home sits on a real residential street (OpenStreetMap); travel uses real road distances from each home to every office (OSRM routing on OpenStreetMap); the baseline is the 7 real Civil Status offices in Amman, open 08:30–15:30 Sunday to Thursday, with the JD 2 renewal fee (Civil Status and Passports Department).
 Footer: Generated with a fixed random seed, so every run uses the same 1,000 people. Synthetic by design: no personal data is ever used.
@@ -106,35 +106,27 @@ Footer tech strip (small icons): Python · FastAPI · Pydantic schemas · Leafle
 
 ---
 
-SLIDE 7 — Who pays, and why now (business; left: three "why now" cards; right: model and a comparison table)
+SLIDE 7 — Why now, who pays, and the ask (business; left: three "why now" cards; right: buyers, model and a small comparison table; bottom: a one-line roadmap, then the ask in large type)
 Title: Jordan now requires impact assessment before launch.
 Why now, three cards:
 - The Good Regulation and Impact Assessment System No. 16 of 2025 has been in force since September 2025; the Prime Ministry's unit had received 45 assessment studies by April 2026 (Ad-Dustour; Petra News Agency).
 - The Digital Transformation Strategy 2026–2028 tracks what Nas measures: use of digital services by vulnerable groups, access to service centres, customer effort, and plans predictive models for policy effectiveness (MoDEE Digital Transformation Strategy 2026–2028).
 - The Digital Inclusion Policy 2025 names the elderly, people with disabilities, women and remote residents as priorities and plans incentives for startups serving them (MoDEE Digital Inclusion Policy 2025).
-First buyers: the Prime Ministry's impact assessment unit and the ministries it reviews; 28 government entities are in the public-sector reform programme (Ammon News). Donor-funded digital government programmes, such as Jordan's World Bank-supported digital transformation programme of about $549M (World Bank, project P180291).
+First buyers: the Prime Ministry's impact assessment unit and the ministries it reviews; 28 government entities are in the public-sector reform programme (Ammon News); donor-funded programmes such as Jordan's World Bank-supported digital transformation programme of about $549M (World Bank, project P180291).
 Business model: SaaS per service and agency, plus a calibration engagement. Target price $30K–$75K per agency per year. Low running cost: a CPU-only engine and cached AI calls.
-Precedent: UK regulators already require banks to assess the impact on vulnerable customers before closing branches (UK Financial Conduct Authority, FG22/6).
-Comparison table, Nas vs enterprise digital twins such as Replica (raised $41M, Dealroom): focus — public-service access vs traffic and land use; vulnerability — modelled per person vs aggregate; language — Arabic in and out vs English; data — synthetic by design vs mobile and location data.
+Small comparison table, Nas vs enterprise digital twins such as Replica (raised $41M, Dealroom): focus — public-service access vs traffic and land use; vulnerability — modelled per person vs aggregate; language — Arabic in and out vs English; data — synthetic by design vs mobile and location data.
+Roadmap, one line with three arrow steps: calibrate with Department of Statistics and MoDEE microdata → office capacity and queues, more services (first ID at 16, chronic medication pickup, the disability card) → more cities on the same engine.
+The ask, large type: A pilot with the Prime Ministry's impact assessment unit, on one real policy, before it launches.
+Closing line: Every policy leaves someone out. Nas shows you who, why, and how to fix it, before you launch.
 
 ---
 
-SLIDE 8 — Next steps, the ask, and the team (dark navy; roadmap timeline on top, ask in the middle, team at the bottom)
-Roadmap, three steps on a timeline:
-1) Calibrate with Department of Statistics and MoDEE microdata.
-2) Add office capacity and queues, and more services: first ID at 16, chronic medication pickup, the disability card.
-3) More cities: each is new areas, sites and figures on the same engine.
-The ask, large type: A pilot with the Prime Ministry's impact assessment unit, on one real policy, before it launches.
-Team, three equal cards, no photos:
+SLIDE 8 — Team and sources (sand background; team as three equal cards across the top, no photos; below, the sources in two columns, one source per line, small type, each with its link; keep every URL)
+Team:
 - Sultan Abbas — Software Engineer
 - Yazan Zarka — Software Engineer
 - Omar Hawasheen — Data Scientist
-Closing line, large: Every policy leaves someone out. Nas shows you who, why, and how to fix it, before you launch.
-
----
-
-SLIDE 9 — Sources (sand background, two columns, one source per line, small type, each with its link; keep every URL)
-Title: Sources
+Sources:
 
 Digital use and policy
 1. MoDEE, Household ICT Access and Use Survey 2024, English summary (internet use 95.6%, e-government use 38.1%) — https://modee.gov.jo/ebv4.0/root_storage/en/eb_list_page/summary_of_the_survey_on_ict_access_and_use_in_households_and_by_individuals_2024.pdf
@@ -163,11 +155,10 @@ Fuel prices
 20. Jordan News, Fuel Pricing Committee prices for October 2026 — https://www.jordannews.jo/Section-112/Economy/Jordan-Raises-Gasoline-and-Diesel-Prices-for-October-56784
 21. Ammon News, National Aid Fund fuel support of 8–14 JD a month — https://www.ammonnews.net/article/697007
 
-Market and precedent
+Market
 22. Ammon News, 28 government entities in the public-sector reform programme — https://www.instagram.com/p/DDKXFnAIAaG/
 23. World Bank, Jordan digital transformation programme P180291 (about $549M) — https://documents1.worldbank.org/curated/en/099021924052029939/pdf/P18029117c2ce2031a2bd192181a1ce9ad.pdf
-24. UK Financial Conduct Authority, FG22/6 Branch and ATM closures or conversions — https://www.fca.org.uk/publications/finalised-guidance/fg22-6-branch-and-atm-closures-or-conversions
-25. Dealroom, Replica company profile (funding) — https://dealroom.co/companies/replica/
+24. Dealroom, Replica company profile (funding) — https://dealroom.co/companies/replica/
 
 Footer: Synthetic citizens, AI-voiced: generated from the published figures above; no real person's data is used. (Nas simulation) = output of our own engine.
 ```
