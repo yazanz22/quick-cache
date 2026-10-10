@@ -21,6 +21,8 @@ from app.sim.validate import canonical
 PENDING = "needs scripts.warm_cache after the Gemini quota reset"
 TRAVEL = "everyday_travel"
 TRAVEL_PENDING = "travel cache not warmed yet"
+EXEMPTION = "medical_exemption"
+EXEMPTION_PENDING = "medical_exemption cache not warmed yet (scripts.warm_cache --service medical_exemption)"
 REQUESTS = json.loads((SCENARIOS_DIR / "demo_requests.json").read_text(encoding="utf-8"))
 HEROES = json.loads((SCENARIOS_DIR / "heroes.json").read_text(encoding="utf-8"))
 DEMO = HEROES["scenario"]
@@ -53,7 +55,9 @@ def test_stage_sentence_hits_and_equals_the_demo_preset():
 def _request_params():
     for x in REQUESTS["requests"]:
         # everyday_travel requests were added 2026-10-10 and are warmed later (quota): pending, not a regression.
-        marks = [pytest.mark.xfail(strict=False, reason=TRAVEL_PENDING)] if x.get("service") == TRAVEL else []
+        # medical_exemption requests were added 2026-10-10 too: pending until warmed.
+        pending = {TRAVEL: TRAVEL_PENDING, EXEMPTION: EXEMPTION_PENDING}.get(x.get("service"))
+        marks = [pytest.mark.xfail(strict=False, reason=pending)] if pending else []
         yield pytest.param(x, marks=marks, id=f"{x['apply_to']}:{x['text'][:40]}")
 
 
@@ -159,5 +163,51 @@ def test_travel_hero_voice_hits(cid, label):
 @pytest.mark.parametrize("fix", [None, "top_fix", "ai_fix"])
 def test_travel_report_from_policies_hits(fix):
     p = _travel_policies()
+    r = llm_routes.post_report(ReportRequest(baseline=p["baseline"], scenario=p["demo"], fix=p[fix] if fix else None))
+    assert r.source == "ai"
+
+
+# ------------------------------------------------------------------ medical_exemption (pending: not warmed yet)
+# The exemption demo path (exemption_today -> exemption_online_only). All xfail(strict=False) until
+# `python -m scripts.warm_cache --service medical_exemption` has run online; then drop the marks.
+
+exemption_pending = pytest.mark.xfail(strict=False, reason=EXEMPTION_PENDING)
+
+
+@functools.lru_cache(maxsize=1)
+def _exemption_policies() -> dict:
+    base = world.scenario_policy(world.baseline_scenario_id(EXEMPTION))
+    scen = world.scenario_policy(world.demo_scenario_id(EXEMPTION))
+    tops = fixgrid.top_fixes(scen)
+    return {"baseline": base, "demo": scen, "top_fix": tops[0].policy if tops else None,
+            "ai_fix": tasks.cached_ai_fix_policy(base, scen)}
+
+
+@exemption_pending
+def test_exemption_fixes_hit_with_the_ai_proposal_shown():
+    p = _exemption_policies()
+    r = tasks.explain_and_propose_fixes(p["baseline"], p["demo"])
+    assert r.source == "ai" and r.ai_proposal["status"] == "shown"
+
+
+def _exemption_voice_params():
+    for label in ("baseline", "demo", "top_fix", "ai_fix"):
+        for h in [h for h in HEROES["heroes"] if h.get("service") == EXEMPTION]:
+            yield pytest.param(h["citizen_id"], label, marks=[exemption_pending], id=f"exemption:{label}:{h['citizen_id']}")
+
+
+@pytest.mark.parametrize("cid,label", list(_exemption_voice_params()))
+def test_exemption_hero_voice_hits(cid, label):
+    pol = _exemption_policies()[label]
+    assert pol is not None
+    v = llm_routes.post_voice(VoiceRequest(citizen_id=cid, policy=pol))
+    assert v.source == "ai"
+
+
+@exemption_pending
+@pytest.mark.parametrize("fix", [None, "top_fix", "ai_fix"])
+def test_exemption_report_from_policies_hits(fix):
+    p = _exemption_policies()
+    assert fix is None or p[fix] is not None
     r = llm_routes.post_report(ReportRequest(baseline=p["baseline"], scenario=p["demo"], fix=p[fix] if fix else None))
     assert r.source == "ai"

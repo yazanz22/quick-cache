@@ -119,6 +119,33 @@ def travel_voice_problems(text: str) -> list[str]:
     return [f"this is about everyday travel, not ID renewal: remove {found}"] if found else []
 
 
+# medical_exemption voices are about applying for a Royal Court medical exemption, never about renewing an ID. The
+# Civil Status offices may be intake points there, so "الأحوال المدنية" and "المعاملة" are allowed; ID and renew are not.
+_ID_ONLY_WORDING = re.compile(
+    r"(?<![ء-ي])[وف]?[بلك]?(?:ال|ل)?(?:هوي[ةته]|هويتي)(?![ء-ي])"
+    r"|(?<![ء-ي])[وف]?(?:اجدد|نجدد|يجدد|تجدد|جددت|جدد|تجديد|التجديد)")
+# An exemption amount, ceiling or coverage stated in a voice (the engine computes none): "قيمة الإعفاء", "مبلغ الإعفاء",
+# "إعفاء بقيمة ...", "سقف الإعفاء", "يغطي ... بالمئة", and dinars counted in words ("ألف دينار", "خمسمئة دينار").
+_EXEMPTION_AMOUNT = re.compile(
+    r"(?:قيم|مبلغ|سقف)[ةه]?\s*(?:ال)?اعفاء|اعفاء\s*(?:(?:ال)?طبي\s*)?(?:بقيم|بمبلغ|بسقف|قيمته|مقداره)"
+    r"|(?:يغطي|تغطي|تغطيه|تغطية)\s*(?:\S+\s*){0,3}(?:%|بالمئه|بالمائه|في المئه)"
+    r"|(?<![ء-ي])(?:الف|الاف|مئه|مائه|مئتي|مئتا|ثلاثمئه|اربعمئه|خمسمئه|ستمئه|سبعمئه|ثمانمئه|تسعمئه|مليون)\s*(?:دينار|دنانير)")
+
+
+def exemption_voice_problems(text: str) -> list[str]:
+    """A medical_exemption voice must not slip into the ID-renewal story (هوية / تجديد) and must not state an
+    exemption amount: the only dinars in it are the travel costs in the facts (numbers are grounded separately)."""
+    t = _unify_hamza(_TASHKEEL.sub("", text or "")).replace("ة", "ه")
+    probs = []
+    found = sorted({m.group(0).strip() for m in _ID_ONLY_WORDING.finditer(_unify_hamza(_TASHKEEL.sub("", text or "")))})
+    if found:
+        probs.append(f"this is about the medical exemption, not ID renewal: remove {found}")
+    amount = sorted({m.group(0).strip() for m in _EXEMPTION_AMOUNT.finditer(t)})
+    if amount:
+        probs.append(f"never state an exemption amount or coverage (the engine computes none): remove {amount}")
+    return probs
+
+
 def voice_style_problems(text: str, helper_relation_ar: str | None) -> list[str]:
     """Dialect slips a native speaker flagged: the wrong currency, or the helper word without its
     possessive (e.g. "ابن" instead of "ابني")."""

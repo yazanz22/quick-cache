@@ -1,5 +1,5 @@
 {
- "_note": "Rehearsed free-text requests (CLAUDE.md §10). scripts/warm_cache.py runs each once so its parse is cached (--parse-only for just these). 'demo' is the sentence typed on stage; applied to the consolidate preset it must equal consolidate_digital_first. Each request: text, apply_to (the preset it is typed on), expect (ok | unsupported) and, for some, expected: a note on what the result shows. Most requests appear twice: on baseline (cached first) and on consolidate_digital_first, the policy on screen during the demo. Travel requests (service everyday_travel) are typed on travel_today or on fuel_plus_25_fares, the travel demo path.",
+ "_note": "Rehearsed free-text requests (CLAUDE.md §10). scripts/warm_cache.py runs each once so its parse is cached (--parse-only for just these). 'demo' is the sentence typed on stage; applied to the consolidate preset it must equal consolidate_digital_first. Each request: text, apply_to (the preset it is typed on), expect (ok | unsupported) and, for some, expected: a note on what the result shows. Most requests appear twice: on baseline (cached first) and on consolidate_digital_first, the policy on screen during the demo. Travel requests (service everyday_travel) are typed on travel_today or on fuel_plus_25_fares, the travel demo path. Medical-exemption requests (service medical_exemption) are typed on exemption_today or on exemption_online_only, the exemption demo path.",
  "demo": {
   "text": "خلّوا الكاونترات تسكر الساعة 1 الظهر، وما حدا يراجع المكتب إلا بموعد مسبق أونلاين",
   "apply_to": "consolidate",
@@ -429,6 +429,90 @@
    "expect": "unsupported",
    "service": "everyday_travel",
    "expected": "one fuel price change only: no separate diesel price"
+  },
+  {
+   "text": "خلّوا الأقارب يقدّموا بدل المريض",
+   "apply_to": "exemption_today",
+   "expect": "ok",
+   "service": "medical_exemption",
+   "expected": "proxy_allowed true (already the default today: the change list says relatives may already apply)"
+  },
+  {
+   "text": "The patient must come in person",
+   "apply_to": "exemption_today",
+   "expect": "ok",
+   "service": "medical_exemption",
+   "expected": "proxy_allowed false (= the exemption_no_proxy preset)"
+  },
+  {
+   "text": "افتحوا استقبال الطلبات في مكاتب الأحوال المدنية",
+   "apply_to": "exemption_today",
+   "expect": "ok",
+   "service": "medical_exemption",
+   "expected": "an intake office at each of the 7 real CSPD sites with the unit's hours, the unit kept (= the exemption_regional idea)"
+  },
+  {
+   "text": "Accept applications only through Sanad",
+   "apply_to": "exemption_today",
+   "expect": "ok",
+   "service": "medical_exemption",
+   "expected": "online_only true + online_enabled true (= the exemption_online_only preset)"
+  },
+  {
+   "text": "خلّوا الناس يقدّموا على سند ويستلموا الكتاب بالمكتب",
+   "apply_to": "exemption_today",
+   "expect": "ok",
+   "service": "medical_exemption",
+   "expected": "hybrid_pickup true + online_enabled true (= the exemption_hybrid preset)"
+  },
+  {
+   "text": "Add a mobile intake day in Marka on Saturday",
+   "apply_to": "exemption_today",
+   "expect": "ok",
+   "service": "medical_exemption",
+   "expected": "mobile unit marka sat 09:00-14:00"
+  },
+  {
+   "text": "زيارات منزلية لذوي الإعاقة، 30 زيارة",
+   "apply_to": "exemption_today",
+   "expect": "ok",
+   "service": "medical_exemption",
+   "expected": "home_visits {groups [disabled], slots 30}"
+  },
+  {
+   "text": "Make everyone insured",
+   "apply_to": "exemption_today",
+   "expect": "unsupported",
+   "service": "medical_exemption",
+   "expected": "who is insured is not a policy lever in Nas"
+  },
+  {
+   "text": "ارفعوا قيمة الإعفاء",
+   "apply_to": "exemption_today",
+   "expect": "unsupported",
+   "service": "medical_exemption",
+   "expected": "the exemption amount is not modelled"
+  },
+  {
+   "text": "Add more doctors to the committee",
+   "apply_to": "exemption_today",
+   "expect": "unsupported",
+   "service": "medical_exemption",
+   "expected": "staff and queues are not modelled; closest: more intake points, a mobile intake day or Sanad"
+  },
+  {
+   "text": "خلّوا كبار السن يقدّموا بالمكتب",
+   "apply_to": "exemption_online_only",
+   "expect": "ok",
+   "service": "medical_exemption",
+   "expected": "online_only false: the Royal Court office reopens for EVERYONE (Nas can't limit an office to one group); the change list must say so"
+  },
+  {
+   "text": "Open the office for people without a smartphone",
+   "apply_to": "exemption_online_only",
+   "expect": "ok",
+   "service": "medical_exemption",
+   "expected": "online_only false: the Royal Court office reopens for EVERYONE (Nas can't limit an office to one group); the change list must say so"
   }
  ]
 }

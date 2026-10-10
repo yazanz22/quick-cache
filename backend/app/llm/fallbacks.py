@@ -39,7 +39,8 @@ GROUP_LABELS = {
     "elderly": ("كبار السن", "elderly"), "disabled": ("ذوو الإعاقة", "disabled"),
     "no_car": ("من لا يملكون سيارة", "no car"), "offline": ("غير المتصلين رقمياً", "offline"),
     "low_income": ("ذوو الدخل المحدود", "low income"), "worker": ("العاملون", "workers"),
-    "student": ("الطلاب", "students"), "all": ("الجميع", "everyone"),
+    "student": ("الطلاب", "students"), "uninsured": ("غير المؤمَّنين صحياً", "uninsured"),
+    "all": ("الجميع", "everyone"),
 }
 
 
@@ -227,8 +228,155 @@ def travel_voice(citizen: dict, o: dict) -> tuple[str, str]:
     return first_ar + cost_ar + status_ar, first_en + cost_en + status_en
 
 
-def voice(citizen: dict, o: dict) -> tuple[str, str]:
-    """(text_ar first-person in فصحى, one-line first-person English summary)."""
+EXEMPTION = "medical_exemption"
+NOT_APPLICABLE = "not_applicable"
+HELPER_VISIT = "helper_visit"
+# Reasons that mean someone else had to do the online part (Sanad) for the citizen.
+ONLINE_REASONS = ("NO_SMARTPHONE", "LOW_DIGITAL_LITERACY")
+
+
+def is_not_applicable(o: dict) -> bool:
+    """medical_exemption: an insured citizen does not need the exemption (channel "not_applicable")."""
+    return (o.get("channel") or "") == NOT_APPLICABLE
+
+
+def _place_ar(name: str | None) -> str:
+    """A medical_exemption channel name as a place one goes to: "في" instead of a dash ("دائرة خدمة الجمهور في الديوان
+    الملكي"), the office itself for an intake point at a Civil Status office, a mobile intake point for a mobile day."""
+    n = (name or "دائرة خدمة الجمهور في الديوان الملكي").replace(" – ", " في ").replace(" - ", " في ")
+    if n.startswith("استقبال طلبات الإعفاء في "):
+        n = n[len("استقبال طلبات الإعفاء في "):]
+    if n.startswith("يوم استقبال متنقل في "):
+        n = "نقطة الاستقبال المتنقلة في " + n[len("يوم استقبال متنقل في "):]
+    return n
+
+
+def _place_en(name: str | None) -> str:
+    n = name or "Royal Court Citizen Services Unit"
+    if n.startswith("Exemption intake at "):
+        n = n[len("Exemption intake at "):]
+    if n.startswith("Mobile intake day in "):
+        n = "mobile intake point in " + n[len("Mobile intake day in "):]
+    return n
+
+
+def _cap(s: str) -> str:
+    return s[:1].upper() + s[1:]
+
+
+def exemption_voice(citizen: dict, o: dict, ex: dict | None = None) -> tuple[str, str]:
+    """medical_exemption voice templates, first person in فصحى. `ex` = the "exemption" block of the voice facts
+    (route, visits, visits_by), so the template says exactly what the AI is told. Never names an illness, a treatment
+    or an exemption amount; the only dinars are the travel cost the engine computed."""
+    fem_self = citizen.get("gender") == "f"
+    if is_not_applicable(o):
+        return ("أنا مؤمَّنة صحياً، فلا أحتاج إلى الإعفاء الطبي." if fem_self else "أنا مؤمَّن صحياً، فلا أحتاج إلى الإعفاء الطبي.",
+                "I have health insurance, so I don't need a medical exemption.")
+    ex = ex or {}
+    helper_ar = msa_helper(citizen.get("helper_relation_ar")) or "أحد أقاربي"
+    helper_en = citizen.get("helper_relation_en") or "a relative"
+    fem = helper_ar in FEMININE_HELPERS
+    reasons = o.get("reasons") or []
+    r_ar = [REASON_VOICE[r][0] for r in reasons if r in REASON_VOICE]
+    r_en = [REASON_VOICE[r][1] for r in reasons if r in REASON_VOICE]
+    cost = o.get("cost_jd", 0) or 0
+    hours = o.get("hours_lost", 0) or 0
+    route = ex.get("route") or ("left_out" if o["status"] == "left_out" else "in_person")
+
+    if o["status"] == "left_out" or route == "left_out":
+        if not r_ar:
+            return "لم أتمكن من تقديم طلب الإعفاء الطبي.", "I couldn't apply for the medical exemption."
+        return (f"لم أتمكن من تقديم طلب الإعفاء الطبي: {_join_ar(r_ar)}.",
+                f"I couldn't apply for the medical exemption: {_join_en(r_en)}.")
+
+    if route == "home":
+        return ("جاء موظف من الديوان الملكي إلى بيتي واستلم طلب الإعفاء الطبي، فلم أحتج إلى الذهاب.",
+                f"Royal Court staff came to my home to take my exemption application: {_n(hours)} h at home.")
+
+    online_by_helper = any(r in reasons for r in ONLINE_REASONS)
+    filed_ar = f"{'قدّمت' if fem else 'قدّم'} {helper_ar} الطلب عني عبر منصة سند"
+    filed_en = f"{_cap(helper_en)} applied for me on Sanad"
+    if route == "online":
+        if online_by_helper:
+            ar, en = filed_ar, filed_en
+            if r_ar:
+                ar += f"، ف{_join_ar(r_ar)}"
+                en += f" because {_join_en(r_en)}"
+            return ar + ".", en + "."
+        tail_ar = "، دون أي رسوم." if _free(cost) else f"، وكلّفني ذلك {count_ar(cost, 'dinar')}."
+        tail_en = ", free of charge." if _free(cost) else f" for {_n(cost)} JD."
+        if o["status"] == "hardship":
+            tail_ar, tail_en = f"، واستغرق ذلك {count_ar(hours, 'hour')} من وقتي.", f": {_n(hours)} h of my time."
+        return "قدّمت طلب الإعفاء الطبي عبر منصة سند من البيت" + tail_ar, "I applied for the exemption on Sanad from home" + tail_en
+
+    # In person (the citizen or their relative), possibly after applying online (hybrid).
+    by_relative = ex.get("visits_by") == "relative" or o.get("mode") == HELPER_VISIT
+    visits = int(ex.get("visits") or (1 if route == "hybrid" else 2))
+    times_ar = count_ar(visits, "time")
+    times_en = {1: "once", 2: "twice"}.get(visits, f"{visits} times")
+    place_ar, place_en = _place_ar(o.get("channel_name_ar")), _place_en(o.get("channel_name_en"))
+    day = o.get("visit_day")
+    day_ar = f" يوم {DAY_AR[day]}" if day and DAY_AR[day] not in (o.get("channel_name_ar") or "") else ""
+    day_en = f" on {DAY_EN[day]}" if day and DAY_EN[day] not in (o.get("channel_name_en") or "") else ""
+    mode = o.get("mode")
+    transfers = min(o.get("bus_transfers", 0) or 0, 2)
+    drove = "وأوصلتني" if fem else "وأوصلني"
+    how_ar = {"car": " بسيارتي", "taxi": " بسيارة أجرة", "helper_car": f"، {drove} {helper_ar} بالسيارة",
+              "bus": [" بحافلة واحدة", " بحافلتين", " بثلاث حافلات"][transfers]}.get(mode, "")
+    how_en = {"car": " by car", "taxi": " by taxi", "helper_car": f", driven by {helper_en}",
+              "bus": [" by one bus", " by two buses", " by three buses"][transfers]}.get(mode, "")
+    went_ar = "ذهبت" if fem else "ذهب"
+
+    if route == "hybrid":
+        first_ar = (filed_ar if online_by_helper or by_relative else "قدّمت طلب الإعفاء الطبي عبر منصة سند") + "، ثم "
+        first_en = (filed_en if online_by_helper or by_relative else "I applied on Sanad") + ", then "
+        if by_relative:  # the relative applied online and collected the letter (the proxy rule)
+            first_ar += f"{went_ar} إلى {place_ar}{day_ar} لاستلام الكتاب بدلاً مني."
+            first_en += f"{'she' if fem else 'he'} collected the letter at the {place_en}{day_en} for me"
+        else:
+            first_ar += f"ذهبت إلى {place_ar}{day_ar}{how_ar} لاستلام الكتاب."
+            first_en += f"I collected the letter at the {place_en}{day_en}{how_en}"
+    elif by_relative:
+        first_ar = f"من أجل الإعفاء الطبي، {went_ar} {helper_ar} إلى {place_ar}{day_ar} بدلاً مني {times_ar}."
+        first_en = f"For the medical exemption, {helper_en} went to the {place_en} {times_en}{day_en} instead of me"
+    else:
+        first_ar = f"من أجل الإعفاء الطبي، ذهبت {times_ar} إلى {place_ar}{day_ar}{how_ar}."
+        first_en = f"For the medical exemption, I went to the {place_en} {times_en}{day_en}{how_en}"
+
+    minutes = round(o.get("travel_minutes", 0) or 0)
+    if by_relative:
+        # The relative travelled: say the total time and the travel cost, not how or whose time.
+        spent_ar = f" استغرق ذلك {count_ar(hours, 'hour')} في المجمل" + (
+            "، دون أي رسوم." if _free(cost) else f"، وبلغت كلفة الطريق {count_ar(cost, 'dinar')}.")
+        spent_en = f": {_n(hours)} h in total" + (", free of charge." if _free(cost) else f", {_n(cost)} JD in travel.")
+        ar, en = first_ar + spent_ar, first_en + spent_en
+    else:
+        cost_ar = ("، دون أي رسوم." if _free(cost)
+                   else f" و{count_ar(cost, 'dinar')} في المجمل.")
+        spent_ar = f"وكلّفني ذلك {count_ar(hours, 'hour')} من وقتي{cost_ar}"
+        spent_en = f"{_n(hours)} h in total, free of charge." if _free(cost) else f"{_n(hours)} h and {_n(cost)} JD in total."
+        if minutes >= 1:
+            ar = first_ar + f" استغرق الطريق {count_ar(minutes, 'minute')} في كل اتجاه، {spent_ar}"
+            en = first_en + f": {minutes} min each way, {spent_en}"
+        else:
+            ar, en = first_ar + f" {spent_ar}", first_en + f": {spent_en}"
+        if o.get("work_hours_missed"):
+            ar += f" وتغيّبت عن عملي {count_ar(o['work_hours_missed'], 'hour')}."
+            en += f" I missed {_n(o['work_hours_missed'])} h of work."
+    if o["status"] == "hardship":
+        skip = {"HOURS_CONFLICT_WORK"} | (set(ONLINE_REASONS) if route == "hybrid" and online_by_helper else set())
+        extra = [x for x in reasons if x not in skip and x in REASON_VOICE]
+        if extra:
+            ar += f" إضافة إلى ذلك: {_join_ar([REASON_VOICE[r][0] for r in extra])}."
+            en += f" Also, {_join_en([REASON_VOICE[r][1] for r in extra])}."
+    return ar, en
+
+
+def voice(citizen: dict, o: dict, exemption: dict | None = None) -> tuple[str, str]:
+    """(text_ar first-person in فصحى, one-line first-person English summary). `exemption` (the voice facts'
+    "exemption" block) selects the medical_exemption templates; an insured citizen's outcome does too."""
+    if exemption is not None or is_not_applicable(o):
+        return exemption_voice(citizen, o, exemption)
     if is_travel_outcome(o):
         return travel_voice(citizen, o)
     helper_ar = msa_helper(citizen.get("helper_relation_ar")) or "أحد أقاربي"
@@ -335,6 +483,13 @@ WORDS = {
         "both_ar": "من تُضغط ميزانيتهم أو يعجزون عن التنقل", "both_en": "squeezed + priced out",
         "today_ar": "بالأسعار الحالية", "fx_lo_ar": "نسبة من يعجزون عن تحمّل كلفة التنقل",
         "fx_h_ar": "نسبة من تُضغط ميزانيتهم", "fx_lo_en": "the share priced out", "fx_h_en": "the share squeezed"},
+    # medical_exemption: the same statuses, but every percentage is over the uninsured only.
+    "medical_exemption": {
+        "served": ("من تمت خدمتهم", "served", "served"), "hardship": ("من يواجهون صعوبة", "hardship", "in hardship"),
+        "left_out": ("المستبعدين", "left out", "left out"), "both_ar": "من يواجهون صعوبة أو يُستبعدون",
+        "both_en": "hardship + left out", "today_ar": "بالوضع الحالي",
+        "fx_lo_ar": "نسبة المستبعدين من غير المؤمَّنين", "fx_h_ar": "نسبة من يواجهون صعوبة منهم",
+        "fx_lo_en": "the share of the uninsured left out", "fx_h_en": "the share in hardship"},
 }
 
 
@@ -356,7 +511,8 @@ def fix_explanation(fix: dict, improved_groups: list[str], service: str = "id_re
 
 
 def report(summary: dict) -> tuple[str, str]:
-    """summary = tasks.report_summary(...); it carries "service" only for everyday_travel."""
+    """summary = tasks.report_summary(...); it carries "service" only for everyday_travel and medical_exemption (and
+    then, for medical_exemption, an "exemption" block with the base of the percentages: the uninsured)."""
     service = summary.get("service", "id_renewal")
     w = WORDS.get(service, WORDS["id_renewal"])
     (sv_ar, sv_en, _), (hd_ar, hd_en, hd_en2), (lo_ar, lo_en, _) = w["served"], w["hardship"], w["left_out"]
@@ -367,14 +523,26 @@ def report(summary: dict) -> tuple[str, str]:
         en_head = (f"Compared with today's prices, the share who are fine moves from {_n(b['pct_served'])}% to "
                    f"{_n(s['pct_served'])}%, squeezed from {_n(b['pct_hardship'])}% to {_n(s['pct_hardship'])}%, and "
                    f"priced out from {_n(b['pct_left_out'])}% to {_n(s['pct_left_out'])}%.")
+    elif service == EXEMPTION:
+        en_head = (f"Among the uninsured, compared with today, the share served moves from {_n(b['pct_served'])}% to "
+                   f"{_n(s['pct_served'])}%, hardship from {_n(b['pct_hardship'])}% to {_n(s['pct_hardship'])}%, and "
+                   f"left out from {_n(b['pct_left_out'])}% to {_n(s['pct_left_out'])}%.")
     else:
         en_head = (f"Compared with today, the share served moves from {_n(b['pct_served'])}% to {_n(s['pct_served'])}%, "
                    f"hardship from {_n(b['pct_hardship'])}% to {_n(s['pct_hardship'])}%, and left out from "
                    f"{_n(b['pct_left_out'])}% to {_n(s['pct_left_out'])}%.")
-    ar = (f"مقارنة {w['today_ar']}، تتغير نسبة {sv_ar} من {_n(b['pct_served'])}% إلى {_n(s['pct_served'])}%، "
+    among_ar = "، وبين غير المؤمَّنين صحياً" if service == EXEMPTION else ""
+    ar = (f"مقارنة {w['today_ar']}{among_ar}، تتغير نسبة {sv_ar} من {_n(b['pct_served'])}% إلى {_n(s['pct_served'])}%، "
           f"ونسبة {hd_ar} من {_n(b['pct_hardship'])}% إلى {_n(s['pct_hardship'])}%، "
           f"ونسبة {lo_ar} من {_n(b['pct_left_out'])}% إلى {_n(s['pct_left_out'])}%.")
     en = en_head
+    if service == EXEMPTION:
+        base = summary.get("exemption") or {}
+        n_el, n_all = base.get("n_eligible"), summary.get("n_citizens")
+        if isinstance(n_el, int) and isinstance(n_all, int):
+            ar += (f" تُحسب النسب على غير المؤمَّنين صحياً فقط، لأنهم وحدهم يحتاجون إلى الإعفاء، "
+                   f"وعددهم {n_el} من أصل {n_all} من السكان الافتراضيين.")
+            en += f" Percentages are of the {n_el} uninsured residents only (of {n_all}): only they need the exemption."
     if service == TRAVEL:
         ar += (f" أي إن الرحلة المنتظمة بموجب هذا القرار تضغط ميزانية {_n(s['pct_hardship'])}% من السكان، "
                f"وتفوق قدرة {_n(s['pct_left_out'])}% منهم.")

@@ -1,6 +1,6 @@
 """Warm the AI cache for the demo (CLAUDE.md §12, H9-10). Run ONLINE, AFTER final scenario work.
 
-Per service (id_renewal, everyday_travel), it caches: the rehearsed free-text requests (demo_requests.json; for
+Per service (id_renewal, everyday_travel, medical_exemption), it caches: the rehearsed free-text requests (demo_requests.json; for
 id_renewal also the stage sentence), the /fixes answer on the service's demo scenario (explanations + the verified AI
 fix), the service's hero voices (heroes.json, by "service") under its baseline / demo scenario / top grid fix /
 verified AI fix, and the reports (no fix, top fix, AI fix applied; for id_renewal also the old top-fix shape).
@@ -10,7 +10,10 @@ Already-cached items cost nothing; the rest is roughly one AI call each.
 With DEMO_OFFLINE=1 it never calls the AI: it only reads the cache and ends with a list of MISSES
 (what is still on a template, and why it matters). It always exits 0.
 
-    python -m scripts.warm_cache [--parse-only] [--service id_renewal|everyday_travel]
+    python -m scripts.warm_cache [--parse-only] [--service id_renewal|everyday_travel|medical_exemption]
+
+medical_exemption: insured heroes (if any) always get the one-line template (no AI call by design), so they are not
+listed as misses.
 """
 import json
 import sys
@@ -24,7 +27,7 @@ from app.sim import fixgrid, sensitivity, world
 from app.sim.compare import compare
 from app.sim.validate import canonical
 
-SERVICES = ("id_renewal", "everyday_travel")
+SERVICES = ("id_renewal", "everyday_travel", "medical_exemption")
 MISSES: list[tuple[str, str, str, str]] = []  # (service, task, item, why it matters)
 
 
@@ -95,7 +98,9 @@ def warm_service(service: str) -> None:
         for h in heroes:
             v = llm_routes.post_voice(VoiceRequest(citizen_id=h["citizen_id"], policy=pol))
             print(f"[voice] {label:26s} {h['citizen_id']} {v.source:8s} {v.text_ar}")
-            if v.source != "ai":
+            insured = service == "medical_exemption" and world.population_by_id()[h["citizen_id"]].get(
+                "has_health_insurance") is True
+            if v.source != "ai" and not insured:
                 _miss(service, "voice", f"{h['citizen_id']} ({h.get('name_en', '')}) under {label}",
                       "clicking this hero shows the template voice")
 

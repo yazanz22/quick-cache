@@ -5,7 +5,7 @@ verifies that the AI's off-grid proposal beats the best grid fix. The winner is 
 to the cache under the normal /fixes key, so the demo always shows it (also offline).
 Each try is one AI call (at most len(HINTS) calls per run).
 
-    python -m scripts.find_ai_fix [--service id_renewal|everyday_travel] [scenario_id]
+    python -m scripts.find_ai_fix [--service id_renewal|everyday_travel|medical_exemption] [scenario_id]
 """
 import json
 import sys
@@ -32,6 +32,17 @@ HINTS = {
         "cash support for low_income and for worker at the largest allowed amount, plus a transport voucher for no_car",
         "a bus fare freeze and a taxi fare freeze plus cash support for the group with the highest priced-out share",
         "target the groups with the most people priced out in scenario_by_group with cash support, and freeze bus fares",
+    ],
+    "medical_exemption": [
+        None,
+        "bring the Royal Court office back next to Sanad (online_only false) and add a Saturday mobile intake day in the "
+        "area with most people left out",
+        "online_only false with hybrid_pickup true (apply on Sanad, collect the letter in person) plus a Saturday mobile "
+        "intake day where most people are left out",
+        "home visits for the disabled and the elderly (about thirty slots) plus a Saturday mobile intake day in the area "
+        "with most people left out",
+        "mobile intake days in the two areas with most people left out, on different days (Friday and Saturday)",
+        "open intake at the Civil Status offices in east Amman (Marka, Tabarbour) with a Saturday, and let a relative apply",
     ],
 }
 

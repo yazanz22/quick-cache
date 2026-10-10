@@ -23,6 +23,7 @@ from .. import config
 from ..models import (CompareResult, FixCandidate, FixesResponse, ParseResult, Policy, ReportResponse,
                       SensitivityResult, VoiceResponse)
 from ..sim import fixgrid, world
+from ..sim.assumptions import DEFAULT as ASSUMPTIONS
 from ..sim.engine import STATUS_RANK, run, summarize
 from ..sim.validate import canonical, count_changes, policy_errors
 from . import cache, checks, fallbacks, prompts
@@ -43,6 +44,13 @@ ID_RENEWAL_FIELDS = ("offices", "online_enabled", "online_only", "mobile_units",
 TRAVEL_FIELDS = ("fuel_price_change_pct", "bus_fare_change_pct", "taxi_fare_change_pct", "cash_support")
 # The only levers an AI fix proposal may use for everyday_travel (the fuel price is the decision under test).
 TRAVEL_PROPOSAL_FIELDS = ("cash_support", "bus_fare_change_pct", "taxi_fare_change_pct", "transport_vouchers")
+EXEMPTION = "medical_exemption"
+# The only levers an AI fix proposal may use for medical_exemption (never the service, who is insured, the fee, the
+# number of visits or the travel levers).
+EXEMPTION_PROPOSAL_FIELDS = ("offices", "online_enabled", "online_only", "mobile_units", "appointment_required",
+                             "hybrid_pickup", "proxy_allowed", "appointment_exempt_groups", "home_visits",
+                             "transport_vouchers", "fee_discounts")
+EXEMPTION_SITE = "royal_court_csu"  # the Royal Court's Citizen Services Unit: a site for medical_exemption only
 SENSITIVITY_PCT = 20  # the ±20% of the robustness check: allowed in report text, never part of the cache key
 
 
@@ -122,10 +130,13 @@ def _ai(task: str, inputs, system: str, user: str, check: Callable[[str, bool], 
     return Answer(None, why, {})
 
 
-def _sites_areas() -> dict:
+def _sites_areas(service: str = "id_renewal") -> dict:
+    """Sites and areas for the parse / fixes prompts (not part of any cache key). The Royal Court unit is a
+    medical_exemption site only; real_cspd_office marks the 7 Civil Status offices."""
+    sites = [s for s in world.sites().values() if service == EXEMPTION or s["id"] != EXEMPTION_SITE]
     return {"sites": [{"id": s["id"], "area": s["area"], "name_en": s["name_en"], "name_ar": s["name_ar"],
-                       "real_cspd_office": s.get("real", False)}
-                      for s in world.sites().values()],
+                       "real_cspd_office": bool(s.get("real", False)) and s["id"] != EXEMPTION_SITE}
+                      for s in sites],
             "areas": [{"id": a["id"], "name_en": a["name_en"], "name_ar": a["name_ar"], "side": a["side"]}
                       for a in world.areas().values()]}
 
@@ -166,13 +177,24 @@ def _fields_changed(a: Policy, b: Policy, fields) -> list[str]:
 
 
 def _other_service_fields(service: str) -> tuple[str, ...]:
-    return ID_RENEWAL_FIELDS if service == TRAVEL else TRAVEL_FIELDS
+    """Fields that don't apply to `service`: a parse must keep them as they are. proxy_allowed is a medical_exemption
+    lever (a no-op elsewhere)."""
+    if service == TRAVEL:
+        return ID_RENEWAL_FIELDS + ("proxy_allowed",)
+    return TRAVEL_FIELDS + (() if service == EXEMPTION else ("proxy_allowed",))
 
 
 def travel_reference() -> dict:
     """Public reference figures quoted in the travel parse prompt (not part of any cache key)."""
     return {"fuel_90_octane_jd_per_litre_oct_2026": 1.05, "last_rise_jd_per_litre": 0.05,
             "national_aid_fund_fuel_support_jd_month": [8, 14], "default_student_bus_voucher_jd_per_round_trip": 3}
+
+
+def exemption_reference() -> dict:
+    """Counts a medical_exemption change list may name ("the 7 Civil Status offices", "16 sites"): allowed numbers for
+    the grounding check, never part of a cache key."""
+    sites = world.sites().values()
+    return {"n_cspd_offices": sum(bool(s.get("real")) and s["id"] != EXEMPTION_SITE for s in sites), "n_sites": len(sites)}
 
 
 def _check_parse(raw: str, cur: dict, text: str, current: Policy | None = None) -> dict:
@@ -197,7 +219,8 @@ def _check_parse(raw: str, cur: dict, text: str, current: Policy | None = None) 
         # The full response model, so a bad shape (e.g. changes_ar as a string) is a rejection here, not a
         # cached answer that fails later with a 500.
         ParseResult.model_validate({**out, "source": "ai"})
-        also = travel_reference() if current is not None and current.service == TRAVEL else None
+        service = current.service if current is not None else "id_renewal"
+        also = travel_reference() if service == TRAVEL else exemption_reference() if service == EXEMPTION else None
         bad = checks.ungrounded(" ".join(out["changes_ar"] + out["changes_en"]), [cur, out["policy"], text], also=also)
         if bad:
             raise Rejected(f"change list mentions numbers not in the policy: {bad}")
@@ -220,7 +243,7 @@ def parse_policy(text: str, current: Policy, lang: str = "ar") -> ParseResult:
     if current.service == TRAVEL:
         context = {"groups": list(world.ALL_GROUPS), "reference": travel_reference()}
     else:
-        context = _sites_areas()
+        context = _sites_areas(current.service)
     user = json.dumps({"current_policy": cur, **context, "official_text": text, "official_ui_language": lang},
                       ensure_ascii=False)
     a = _ai("parse", inputs, prompts.system("parse", current.service), user,
@@ -272,10 +295,65 @@ def travel_voice_facts(citizen: dict, o: dict) -> dict:
     return facts
 
 
-def voice_facts(citizen: dict, o: dict) -> dict:
-    """The voice input (and cache key). id_renewal facts are exactly what they always were (the warmed demo voices)."""
+def is_exemption_outcome(o: dict) -> bool:
+    """A medical_exemption outcome: engine.run marks them "eligible"; an outcome sent by a client (CitizenOutcome drops
+    that key) is still known by its channel "not_applicable" or its mode "helper_visit"."""
+    return "eligible" in o or fallbacks.is_not_applicable(o) or o.get("mode") == fallbacks.HELPER_VISIT
+
+
+def exemption_visits(o: dict, policy: Policy | None) -> dict:
+    """How a medical_exemption citizen applied, for the voice: route (in_person / online / hybrid / home / left_out /
+    not_applicable), the number of in-person visits and who made them (self / relative). Read from the outcome; the
+    visit count and the hybrid choice are not outcome fields, so they are matched against the engine's own formula
+    (hours = (2 x travel + visit minutes) x visits + booking minutes) with the default assumptions. Words only: no
+    number a voice says comes from here except the visit count, and the engine decided everything."""
+    if fallbacks.is_not_applicable(o):
+        return {"route": "not_applicable", "visits": 0, "visits_by": None}
+    if o["status"] == "left_out" or not o.get("channel"):
+        return {"route": "left_out", "visits": 0, "visits_by": None}
+    by = "relative" if o.get("mode") == fallbacks.HELPER_VISIT else "self"
+    if o.get("mode") == "online" or o.get("channel") == "online":
+        return {"route": "online", "visits": 0, "visits_by": None}
+    if o.get("mode") == "home" or o.get("channel") == "home_visit":
+        return {"route": "home", "visits": 0, "visits_by": None}
+    v = int(policy.visits_required) if policy is not None else 2
+    if isinstance(o.get("visits"), int):  # if the engine ever reports it, trust it
+        return {"route": "hybrid" if o.get("hybrid") else "in_person", "visits": o["visits"], "visits_by": by}
+    a, t, h = ASSUMPTIONS, float(o.get("travel_minutes") or 0), float(o.get("hours_lost") or 0) * 60
+    cands = [(abs((2 * t + a.EXEMPTION_VISIT_MINUTES) * n + book - h), 0, n)
+             for n in (v, v + 1) for book in (0.0, a.ONLINE_MINUTES)]
+    if policy is not None and policy.hybrid_pickup:
+        cands.append((abs(2 * t + a.PICKUP_MINUTES + a.ONLINE_MINUTES - h), 1, 1))
+    _err, hybrid, n = min(cands)
+    return {"route": "hybrid" if hybrid else "in_person", "visits": n, "visits_by": by}
+
+
+def exemption_voice_facts(citizen: dict, o: dict, policy: Policy | None = None) -> dict:
+    """medical_exemption voice input (and cache key): the id_renewal facts plus the service, insured false and how
+    they applied (exemption_visits). An insured citizen gets a short block (and a template, never an AI call)."""
+    ex = exemption_visits(o, policy)
+    if ex["route"] == "not_applicable":
+        return {"register": "msa", "service": EXEMPTION, "insured": True,
+                "profile": {"gender": citizen["gender"]}, "outcome": {"status": o["status"], "channel": "not_applicable"}}
+    facts = _id_renewal_voice_facts(citizen, o)
+    facts["service"] = EXEMPTION
+    facts["insured"] = False
+    facts["exemption"] = ex
+    return facts
+
+
+def voice_facts(citizen: dict, o: dict, policy: Policy | None = None) -> dict:
+    """The voice input (and cache key). id_renewal facts are exactly what they always were (the warmed demo voices);
+    `policy` (optional) only matters for medical_exemption (the service, the visit count, hybrid)."""
+    if (policy is not None and policy.service == EXEMPTION) or (policy is None and is_exemption_outcome(o)):
+        return exemption_voice_facts(citizen, o, policy)
     if fallbacks.is_travel_outcome(o):
         return travel_voice_facts(citizen, o)
+    return _id_renewal_voice_facts(citizen, o)
+
+
+def _id_renewal_voice_facts(citizen: dict, o: dict) -> dict:
+    """The id_renewal voice facts: byte-identical to the warmed cache keys (tests pin them). Never add a field here."""
     a = world.areas()[citizen["area"]]
     facts = {
         "register": "msa",  # voices are فصحى; part of the cache key so old dialect voices are never reused
@@ -298,10 +376,17 @@ def voice_facts(citizen: dict, o: dict) -> dict:
     return facts
 
 
-def voice_citizen(citizen: dict, outcome: dict, started_at: float | None = None) -> VoiceResponse:
-    facts = voice_facts(citizen, outcome)
-    travel = facts.get("service") == TRAVEL
-    fb_ar, fb_en = fallbacks.voice(citizen, outcome)
+def voice_citizen(citizen: dict, outcome: dict, started_at: float | None = None,
+                  policy: Policy | None = None) -> VoiceResponse:
+    """`policy` (the routes pass it when the client sent one) tells the service and, for medical_exemption, the visit
+    count and whether hybrid applies; id_renewal and everyday_travel voices don't depend on it."""
+    facts = voice_facts(citizen, outcome, policy)
+    service = facts.get("service", "id_renewal")
+    travel, exemption = service == TRAVEL, service == EXEMPTION
+    fb_ar, fb_en = fallbacks.voice(citizen, outcome, facts.get("exemption")) if exemption else fallbacks.voice(citizen, outcome)
+    if exemption and facts.get("insured"):
+        # Insured: the exemption doesn't apply; one template line, no AI call.
+        return VoiceResponse(text_ar=fb_ar, summary_en=fb_en, source="fallback")
     user = json.dumps(facts, ensure_ascii=False)
     helper = fallbacks.msa_helper(citizen["helper_relation_ar"])
 
@@ -315,12 +400,13 @@ def voice_citizen(citizen: dict, outcome: dict, started_at: float | None = None)
         extra = checks.foreign_people(t, helper)
         if extra:
             raise Rejected(f"mentions people other than the helper: {extra}")
-        style = checks.voice_style_problems(t, helper) + (checks.travel_voice_problems(t) if travel else [])
+        style = checks.voice_style_problems(t, helper) + (checks.travel_voice_problems(t) if travel else []) + (
+            checks.exemption_voice_problems(t) if exemption else [])
         if style:
             raise Rejected("; ".join(style))
         return t
 
-    a = _ai("voice", facts, prompts.system("voice", TRAVEL if travel else "id_renewal"), user, check, smart=False,
+    a = _ai("voice", facts, prompts.system("voice", service), user, check, smart=False,
             want_json=False, budget=_left(started_at))
     if a.out is None:
         return VoiceResponse(text_ar=fb_ar, summary_en=fb_en, source="fallback")
@@ -338,10 +424,17 @@ def is_travel_result(cr: CompareResult) -> bool:
     return "n_with_trip" in cr.scenario.kpis
 
 
-def report_summary(cr: CompareResult, sens: SensitivityResult | None, applied_fix: dict | None = None) -> dict:
+def is_exemption_result(cr: CompareResult) -> bool:
+    """medical_exemption results: the engine adds n_eligible to their KPIs, and insured citizens are "not_applicable"."""
+    return "n_eligible" in cr.scenario.kpis or any(o.channel == fallbacks.NOT_APPLICABLE for o in cr.scenario.outcomes)
+
+
+def report_summary(cr: CompareResult, sens: SensitivityResult | None, applied_fix: dict | None = None,
+                   service: str | None = None) -> dict:
     """The report's input (and cache key). Without an applied fix it is exactly what it always was, so the
     warmed report entries still hit; `applied_fix` (from fix_effect) adds one block. For everyday_travel (and only
-    then) it also carries "service" and a "travel" block with the engine's travel KPIs."""
+    then) it also carries "service" and a "travel" block with the engine's travel KPIs. For medical_exemption it
+    carries "service" and an "exemption" block: the base of every percentage (the uninsured) and its size."""
     keys = ["pct_served", "pct_hardship", "pct_left_out", "avg_hours_lost", "avg_cost_jd"]
     bg, sg = cr.baseline.by_group, cr.scenario.by_group
     reasons = Counter(r for o in cr.scenario.outcomes if o.status != "served" for r in o.reasons)
@@ -366,6 +459,12 @@ def report_summary(cr: CompareResult, sens: SensitivityResult | None, applied_fi
         summary["service"] = TRAVEL
         summary["travel"] = {side: {k: r.kpis[k] for k in TRAVEL_REPORT_KPIS if k in r.kpis}
                              for side, r in (("baseline", cr.baseline), ("scenario", cr.scenario))}
+    elif service == EXEMPTION or (service is None and is_exemption_result(cr)):
+        k = cr.scenario.kpis
+        n_na = k.get("n_not_applicable", sum(o.channel == fallbacks.NOT_APPLICABLE for o in cr.scenario.outcomes))
+        summary["service"] = EXEMPTION
+        summary["exemption"] = {"base": "uninsured", "n_eligible": k.get("n_eligible", len(cr.scenario.outcomes) - n_na),
+                                "n_not_applicable": n_na}
     if applied_fix is not None:
         summary["applied_fix"] = applied_fix
     return summary
@@ -387,8 +486,8 @@ def fix_effect(cr: CompareResult, fix: Policy) -> dict:
 
 
 def write_report(cr: CompareResult, sens: SensitivityResult | None, applied_fix: dict | None = None,
-                 started_at: float | None = None) -> ReportResponse:
-    summary = report_summary(cr, sens, applied_fix)
+                 started_at: float | None = None, service: str | None = None) -> ReportResponse:
+    summary = report_summary(cr, sens, applied_fix, service)
     fb_ar, fb_en = fallbacks.report(summary)
 
     def check(raw: str, final: bool):
@@ -399,6 +498,10 @@ def write_report(cr: CompareResult, sens: SensitivityResult | None, applied_fix:
         bad = checks.ungrounded(ar + " " + en, summary, also=[SENSITIVITY_PCT])
         if bad:
             raise Rejected(f"numbers not in the input: {bad}")
+        if summary.get("service") == EXEMPTION:
+            probs = checks.exemption_voice_problems(ar)
+            if probs:
+                raise Rejected("; ".join(probs))
         return {"summary_ar": ar, "summary_en": en}
 
     a = _ai("report", summary, prompts.system("report", summary.get("service", "id_renewal")),
@@ -447,6 +550,11 @@ def _fixes_context(scenario: Policy) -> dict:
         inputs["scenario_by_mode"] = sk.get("by_mode")
         inputs["scenario_by_purpose"] = sk.get("by_purpose")
         inputs["proposal_limits"] = travel_proposal_limits()
+    elif scenario.service == EXEMPTION:
+        # medical_exemption only (new keys): every percentage above is over the uninsured, so say how many they are.
+        inputs["service"] = EXEMPTION
+        inputs["base"] = {"base": "uninsured", "n_eligible": sk.get("n_eligible"),
+                          "n_not_applicable": sk.get("n_not_applicable")}
     return {"sk": sk, "sg": sg, "grid": grid, "top": top, "ids": [c["id"] for c in top], "inputs": inputs}
 
 
@@ -465,7 +573,8 @@ def _travel_proposal_problems(scenario: Policy, pol: Policy, limits: dict) -> li
         probs.append(f'keep "service": "{scenario.service}"')
     if pol.fuel_price_change_pct != scenario.fuel_price_change_pct:
         probs.append("the fuel price (fuel_price_change_pct) is the decision being tested: keep it as in the scenario")
-    other = [f for f in _fields_changed(scenario, pol, ID_RENEWAL_FIELDS + TRAVEL_FIELDS + ("transport_vouchers",))
+    other = [f for f in _fields_changed(scenario, pol, ID_RENEWAL_FIELDS + TRAVEL_FIELDS + ("transport_vouchers",
+                                                                                           "proxy_allowed"))
              if f not in TRAVEL_PROPOSAL_FIELDS and f != "fuel_price_change_pct"]
     if other:
         probs.append(f"only cash_support, bus_fare_change_pct, taxi_fare_change_pct and transport_vouchers may change, "
@@ -482,6 +591,32 @@ def _travel_proposal_problems(scenario: Policy, pol: Policy, limits: dict) -> li
     if any(v.amount_jd > limits["max_voucher_jd"] for v in pol.transport_vouchers
            if (tuple(sorted(set(v.groups))), v.amount_jd) not in old_v):
         probs.append(f"a transport voucher above {limits['max_voucher_jd']:g} JD per round trip (proposal_limits)")
+    return probs
+
+
+def n_changes(scenario: Policy, pol: Policy) -> int:
+    """validate.count_changes, plus one for a changed proxy_allowed if count_changes does not count it."""
+    n = count_changes(scenario, pol)
+    if pol.proxy_allowed != scenario.proxy_allowed:
+        alone = scenario.model_copy(update={"proxy_allowed": pol.proxy_allowed})
+        n += count_changes(scenario, alone) == 0
+    return n
+
+
+def _exemption_proposal_problems(scenario: Policy, pol: Policy) -> list[str]:
+    """medical_exemption: the proposal may use offices (any of the 16 sites), hours, mobile intake days, the online
+    settings, hybrid, proxy and the protections; never the service, the fee, the number of visits or the travel levers."""
+    probs = []
+    if pol.service != scenario.service:
+        probs.append(f'keep "service": "{scenario.service}"')
+    other = [f for f in _fields_changed(scenario, pol, ID_RENEWAL_FIELDS + TRAVEL_FIELDS + ("transport_vouchers",
+                                                                                           "proxy_allowed"))
+             if f not in EXEMPTION_PROPOSAL_FIELDS]
+    if other:
+        probs.append(f"under medical_exemption these must stay exactly as in the scenario: {', '.join(other)} (use "
+                     "offices, hours, mobile intake days, Sanad / hybrid, proxy_allowed or the protections)")
+    if pol.hybrid_pickup and not (pol.online_enabled or pol.online_only):
+        probs.append("hybrid_pickup needs online_enabled true (apply on Sanad, then collect the letter)")
     return probs
 
 
@@ -518,7 +653,7 @@ def _check_fixes(raw: str, final: bool, scenario: Policy, inputs: dict, ids: lis
             errs = policy_errors(pol)
             if errs:
                 raise Rejected("; ".join(errs))
-            n = count_changes(scenario, pol)
+            n = n_changes(scenario, pol)
             if n > MAX_AI_CHANGES:
                 raise Rejected(f"proposal makes {n} changes; at most {MAX_AI_CHANGES} are allowed "
                                "(each van, each new opening day group, each toggle counts as one)")
@@ -526,12 +661,16 @@ def _check_fixes(raw: str, final: bool, scenario: Policy, inputs: dict, ids: lis
                 probs = _travel_proposal_problems(scenario, pol, inputs["proposal_limits"])
                 if probs:
                     raise Rejected("; ".join(probs))
+            elif scenario.service == EXEMPTION:
+                probs = _exemption_proposal_problems(scenario, pol)
+                if probs:
+                    raise Rejected("; ".join(probs))
             else:
                 used = _protections_changed(scenario, pol)
                 if used:
                     raise Rejected(f"proposal must not change the group protections ({', '.join(used)}): use offices, "
                                    "hours, days, mobile units, wheelchair access, appointments or online settings")
-                travel = _fields_changed(scenario, pol, TRAVEL_FIELDS) + (
+                travel = _fields_changed(scenario, pol, TRAVEL_FIELDS + ("proxy_allowed",)) + (
                     ["service"] if pol.service != scenario.service else [])
                 if travel:
                     raise Rejected(f"proposal must not change {', '.join(travel)}: this is the id_renewal service")
@@ -571,7 +710,7 @@ def explain_and_propose_fixes(baseline: Policy, scenario: Policy, hint: str | No
     if not top:
         return FixesResponse(fixes=[], source="fallback", ai_proposal={"status": "no_grid_fixes"})
     service = scenario.service
-    extra = {"groups": list(world.ALL_GROUPS)} if service == TRAVEL else _sites_areas()
+    extra = {"groups": list(world.ALL_GROUPS)} if service == TRAVEL else _sites_areas(service)
     user = json.dumps({**inputs, **extra}, ensure_ascii=False)
     if hint:
         user += f"\n\nIdea to consider for your proposal: {hint}"
@@ -636,7 +775,7 @@ def _verify_proposal(prop: dict, scenario: Policy, grid: list[dict], sk: dict, s
     fc = FixCandidate(
         id="ai:" + hashlib.sha256(canon.encode()).hexdigest()[:8], title_ar=prop["title_ar"], title_en=prop["title_en"],
         policy=pol, source="ai_proposed", left_out_drop=s["left_out_drop"], hardship_drop=s["hardship_drop"],
-        worsens_any_group=False, n_changes=count_changes(scenario, pol), kpis=s["kpis"],
+        worsens_any_group=False, n_changes=n_changes(scenario, pol), kpis=s["kpis"],
         explanation_ar=f"{prop.get('rationale_ar') or ''} — {fb_ar}".strip(" —"),
         explanation_en=f"{prop.get('rationale_en') or ''} — {fb_en}".strip(" —"))
     return {"status": "shown", "title_en": prop["title_en"], **numbers}, fc

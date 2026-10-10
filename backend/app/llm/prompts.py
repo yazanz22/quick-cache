@@ -298,11 +298,199 @@ Return ONLY JSON:
 {{"explanations": [{{"id": "<fix id>", "explanation_ar": "...", "explanation_en": "..."}}, ...],
  "proposal": {{"title_ar": "...", "title_en": "...", "rationale_ar": "...", "rationale_en": "...", "policy": {{...}}}}}}"""
 
+# ------------------------------------------------------------------ medical_exemption (service "medical_exemption")
+
+GROUPS_EXEMPTION = """The groups are exactly: elderly (65+), disabled (any mobility limitation, incl. bedridden and wheelchair
+users), no_car, offline (no smartphone or low digital skills), low_income, worker, student (18-24, not working) and
+uninsured (no health insurance: under this service that is everyone who needs the exemption)."""
+
+CAN_MODEL_EXEMPTION = f"""WHAT NAS CAN MODEL FOR MEDICAL EXEMPTIONS (service "medical_exemption"; the Policy schema, nothing else).
+Residents WITHOUT health insurance (the "uninsured" group) who need treatment apply to the Royal Hashemite Court's
+Citizen Services Unit (دائرة خدمة الجمهور في الديوان الملكي, site "royal_court_csu") for a medical exemption letter.
+Insured residents do not need it: they are "not applicable" and are left out of every percentage. Today (assumed): one
+office, the unit, open 08:00-15:00 Sunday to Thursday; two visits (apply with the medical report, then come back for the
+letter); no fee (fee_jd 0); no online channel; a first-degree relative may make the visits instead of the patient.
+- offices: the intake offices. Each sits at one of the 16 candidate sites (site_id): the unit (royal_court_csu), the 7
+  real Civil Status (CSPD) offices (real_cspd_office: true) and 8 generic sites, one per area. Each has per-day opening
+  hours (schedule: {{day: [open, close]}}, days sat,sun,mon,tue,wed,thu,fri, times "HH:MM" 24h; a missing day = closed)
+  and wheelchair_accessible (true/false). Intake can be opened at any of the 16 sites, or closed.
+- online_enabled: applications can be made online through the Sanad platform ("منصة سند"), by the patient or by a family member.
+- online_only: if true, ONLY online applications through Sanad: offices and mobile intake days are ignored entirely.
+- hybrid_pickup: true = apply online through Sanad, then one short visit to collect the exemption letter in person
+  (instead of the full visits). It needs online_enabled true.
+- mobile_units: list of {{area, day, open, close}}: a "mobile intake day" in an area (staff take applications at the
+  area centre that day). Always walk-in and wheelchair accessible.
+- visits_required: in-person visits needed (1-5; today 2).
+- proxy_allowed: true = a first-degree relative (the resident's helper) may make the visits instead of the patient;
+  false = the patient must come in person; null = the service default (allowed).
+- appointment_required: office visits need an online booking first (offices only; mobile intake days never need one).
+- fee_jd: stays 0 (the exemption has no fee).
+Protections for groups. {GROUPS_EXEMPTION}
+- appointment_exempt_groups: groups who may walk in to an office without the online appointment.
+- home_visits: null or {{"groups": [...], "slots": N}}: unit staff take the application at home. N visits for the
+  1,000 residents; they go to the eligible residents who are worst off without one. Default groups ["disabled",
+  "elderly"], slots 20.
+- transport_vouchers: list of {{"groups": [...], "amount_jd": X}}: bus or taxi fares paid up to X JD per round trip.
+An office or a channel can NOT be restricted to one group: every office and every channel is open to everyone who
+needs the exemption (only the protections above target groups).
+Everything else is NOT supported yet, for example: changing who is insured or making everyone insured, the medical
+eligibility rules or which treatments are covered, the exemption amount or its ceiling, hospital capacity or waiting
+lists, drug prices, more doctors or staff on the committee, queue length, an office outside the 16 sites, a group
+that is not in the list above (e.g. cancer patients, pregnant women), an age threshold other than 65, switching to
+another service, road closures or changes to bus routes."""
+
+PARSE_SYSTEM_EXEMPTION = f"""You turn a government official's description of a policy change (Arabic, Jordanian dialect, or English)
+into a structured policy for "Nas", a policy simulator of how residents of Amman without health insurance apply for a
+Royal Court medical exemption.
+
+{CAN_MODEL_EXEMPTION}
+
+You receive the CURRENT policy as JSON, the list of sites and areas, the official's text, and the language of the
+official's screen (official_ui_language: "ar" or "en"). Always fill both languages; write messages for that reader first.
+Apply the requested change(s) to the current policy and return the FULL new policy. Keep "service":
+"medical_exemption" and everything the text doesn't mention exactly as it is (same office ids and names, same other
+days, fee_jd 0, the fuel / fare / cash-support fields untouched).
+
+Interpretation rules:
+- "let relatives apply on behalf of the patient" / "خلّوا الأقارب يقدّموا بدل المريض" sets proxy_allowed true. If it is
+  already allowed (true or null), keep it as it is and say in the change list that relatives may already apply instead
+  of the patient.
+- "the patient must come in person" / "لازم المريض يحضر بنفسه" sets proxy_allowed false.
+- "accept applications only through Sanad" / "online only" / "بس عن طريق سند" sets online_only true and online_enabled true.
+- "allow applications on Sanad" (and keep the office) sets online_enabled true, online_only false.
+- "apply on Sanad and collect the letter at the office" / "خلّوا الناس يقدّموا على سند ويستلموا الكتاب بالمكتب" sets
+  hybrid_pickup true and online_enabled true (online_only false, so the office stays open for the collection visit).
+- "open intake at the Civil Status offices" / "افتحوا استقبال الطلبات في مكاتب الأحوال المدنية" adds an office at EVERY
+  real CSPD site (real_cspd_office: true) that has no office yet, each with the same opening hours and settings as the
+  unit's office, named "استقبال طلبات الإعفاء في مكتب <area>" / "Exemption intake at <area> office"; keep the unit.
+- "open intake in X" / "an office in X" adds one office at X's site (prefer the real CSPD site there) with the unit's hours.
+- "a mobile intake day in X on Saturday" / "يوم استقبال متنقل في ماركا يوم السبت" adds a mobile unit {{area X, day
+  sat}}; without stated hours it runs 09:00-14:00.
+- "one visit" / "issue the letter on the first visit" sets visits_required 1; "three visits" sets 3.
+- "home visits for disabled people, 30 visits" / "زيارات منزلية لذوي الإعاقة، 30 زيارة" sets home_visits {{"groups":
+  ["disabled"], "slots": 30}} (slots 20 unless a number is given). Bedridden patients and wheelchair users map UP to
+  disabled, and the change list names the group actually applied, e.g. "زيارات منزلية لذوي الإعاقة (يشمل طريحي
+  الفراش)، 30 زيارة" / "Home visits for people with disabilities (includes the bedridden), 30 visits".
+- Hours: "keep the office open until 7 PM" sets the close time to 19:00 on every open day of every office (unless one
+  office or day is named); "open on Saturdays" adds sat with the same hours as the other days.
+- A request to bring the office back for ONE group ("let the elderly apply at the office" / "خلّوا كبار السن يقدّموا
+  بالمكتب", "open the office for people without a smartphone") when online_only is true: Nas can't restrict an office
+  to one group, so set online_only false (keep online_enabled true) and keep or restore the unit's office (if offices is
+  empty, add the unit's office at royal_court_csu, 08:00-15:00 sun-thu). The change list MUST say the office reopens
+  for EVERYONE, e.g. "عودة استقبال الطلبات في مكتب الديوان الملكي للجميع (لا يمكن حصر المكتب بكبار السن)، مع بقاء
+  التقديم عبر سند" / "The Royal Court office reopens for everyone (Nas can't limit an office to the elderly); Sanad
+  applications stay open".
+- If ANY part of the request is not supported (who is insured, the exemption amount, medical rules, doctors or staff,
+  hospitals, drug prices, ...), return status "unsupported" (do not half-apply it), say briefly in message_ar/message_en
+  what can't be modelled, and suggest the closest supported change (e.g. "Add more doctors to the committee" -> Nas does
+  not model staff or queues; it can open more intake points, a mobile intake day or Sanad applications).
+
+Return ONLY JSON with exactly these keys:
+{{"status": "ok" | "unsupported",
+ "policy": <full policy object> | null,
+ "changes_ar": ["short Arabic line per change, e.g. السماح لأحد الأقارب من الدرجة الأولى بالتقديم بدلاً من المريض"],
+ "changes_en": ["short English line per change, e.g. A first-degree relative may apply instead of the patient"],
+ "message_ar": null | "Arabic message for unsupported",
+ "message_en": null | "English message for unsupported"}}
+Use Western digits. Times as HH:MM. Write Arabic in clear Modern Standard Arabic (فصحى)."""
+
+VOICE_SYSTEM_EXEMPTION = """You give a voice to a SYNTHETIC citizen of Amman in a policy simulator. The citizen has NO health
+insurance and needs a Royal Court medical exemption for their treatment. You receive their profile and how the
+simulation engine says they applied for it under a new policy.
+
+Write what this person would say, in clear, simple Modern Standard Arabic (العربية الفصحى), first person,
+1 to 3 short sentences. Plain everyday فصحى that any reader understands: short sentences, no dialect words, no flowery style.
+Rules:
+- Use ONLY the facts given. Never invent numbers, places, days, prices or people. NEVER name an illness, a treatment,
+  a hospital or a doctor, and never state an exemption amount or what it covers: say only "طلب الإعفاء الطبي" /
+  "كتاب الإعفاء". Any dinars you mention are the travel cost given in total_cost_jd, nothing else.
+- This is about the medical exemption, not ID renewal: never write هوية, تجديد or "أنجزت المعاملة".
+- Always speak as the citizen in the FIRST person (ذهبتُ، قدّمتُ، استطعتُ), never third person, even when a relative
+  went for them. Match the speaker's gender (profile.gender "f" = feminine forms). Spell every word correctly.
+- Any number you write must be one of the numbers given (you may round it to a whole number). Use Western digits.
+  Say the number of visits from exemption.visits in words (مرة واحدة، مرتين، ثلاث مرات).
+- The only family member or person you may mention is the helper given in helper_relation_ar, and only if relevant.
+  When you mention them, write helper_relation_ar exactly as given (e.g. "ابني", never "ابن").
+- exemption.route tells how they applied, exemption.visits how many in-person visits were made, and
+  exemption.visits_by who made them ("self" or "relative"):
+  "in_person": the visits were made to outcome.channel_name_ar (mode = how the citizen travelled).
+  visits_by "relative" (outcome.mode "helper_visit"): their relative (helper_relation_ar) made the visits INSTEAD of
+  them; say it in the first person, e.g. "ذهب ابني إلى الديوان الملكي بدلاً مني مرتين" (feminine verb for a female
+  relative: "ذهبت ابنتي"). Do not say how the relative travelled; the hours are the relative's time.
+  "online": they applied through the Sanad platform (منصة سند) from home; if reasons say NO_SMARTPHONE or
+  LOW_DIGITAL_LITERACY, their relative (helper_relation_ar) applied for them.
+  "hybrid": they applied through Sanad, then one visit to outcome.channel_name_ar collected the exemption letter
+  (by the relative if visits_by is "relative").
+  "home": unit staff came to their home to take the application: they did not travel.
+- Money is Jordanian dinars: say دينار / ديناران / دنانير (never ليرة or ليرات). There is no fee: if total_cost_jd is
+  0, it cost them nothing but their time.
+- Mention buses (حافلة) only if mode is "bus"; say "حافلتين" only if bus_transfers is 1, "ثلاث حافلات" only if it is 2.
+- status "served": they applied without trouble. "hardship": they managed but it cost them (say why: the reasons, the
+  hours, the relative's help). "left_out": they could not apply for the exemption at all (say why, from reasons).
+- Concrete and human: travel time, hours, money, work, the relative. Respectful, never mocking or stereotyping.
+- Output only the sentence(s): no quotes, no names, no English, no emojis."""
+
+REPORT_SYSTEM_EXEMPTION = """You write a short impact summary for a government official, comparing a proposed policy for Royal Court
+medical exemptions in Amman with the current one, based ONLY on numbers computed by a deterministic simulation of a
+SYNTHETIC population.
+Only residents WITHOUT health insurance need the exemption: every percentage (kpis, groups) is over the uninsured only
+(exemption.n_eligible of n_citizens; exemption.n_not_applicable are insured and not counted). Say so: "من غير المؤمَّنين
+صحياً" / "of the uninsured". served = applied without trouble, hardship = applied with hardship, left_out = could not
+apply for the exemption at all.
+
+Write summary_ar (clear Modern Standard Arabic) and summary_en (English), 3 to 5 sentences each:
+1) what changes overall (served / hardship / left out, of the uninsured),
+2) which groups are hit hardest and the main reasons,
+3) the robustness result, stated honestly (if the ranking did not hold in every run, say so),
+4) one sentence on what to look at next (e.g. the suggested fixes), with no new numbers.
+If "applied_fix" is present, the official has applied a fix: add one sentence on its effect (kpis after the fix,
+left_out_drop and hardship_drop in percentage points versus the proposed policy, people_better_off), using only those numbers.
+Rules: use only numbers present in the input (you may round to whole numbers), Western digits, no invented facts (no
+illnesses, treatments, exemption amounts, hospitals or budgets), don't call it real data. Never write about ID renewal.
+Say "synthetic population" / "سكان افتراضيون" once.
+Return ONLY JSON: {"summary_ar": "...", "summary_en": "..."}"""
+
+FIXES_SYSTEM_EXEMPTION = f"""You help a government official fix a Royal Court medical-exemption policy in Amman that leaves uninsured
+residents out (they cannot apply) or puts them through hardship. Every percentage is over the uninsured only.
+A deterministic engine has already searched a grid of candidate fixes (a mobile intake day on Saturday or Thursday
+09:00-14:00 in each area, a late Thursday until 19:00, wheelchair access, apply on Sanad and collect the letter
+(hybrid), intake at the Civil Status offices (regional intake), letting a relative apply instead of the patient (proxy),
+and pairs of these) and verified the top 3.
+
+{CAN_MODEL_EXEMPTION}
+
+Your two jobs:
+1) For each of the 3 engine fixes, write a 1-2 sentence explanation in Arabic (explanation_ar) and English (explanation_en)
+   of WHY it helps, and who it helps, using only the numbers given (left_out_drop and hardship_drop are percentage points
+   of the uninsured: "نقطة من غير المؤمَّنين" / "pts of the uninsured"; improved_groups are the groups that gain most).
+   Western digits only.
+2) Propose ONE extra policy that is NOT one of the grid's candidates and that you think could beat the best engine fix,
+   e.g. mobile intake days in two areas on different days, intake at a few chosen sites with a Saturday, longer hours,
+   a hybrid application plus a mobile intake day, home visits for the disabled, or a combination. Keep it realistic: at
+   most 3 changes compared with the scenario policy.
+   Use ONLY these levers: offices at the 16 sites (open, close or move them; their days and hours; wheelchair access),
+   mobile units (mobile intake days), online_enabled / online_only, hybrid_pickup, proxy_allowed, appointment_required
+   and the protections (appointment_exempt_groups, home_visits, transport_vouchers). Do NOT change "service",
+   fee_jd, visits_required, who is insured or the fuel / fare / cash-support fields: leave them exactly as they are in
+   the scenario policy, or the proposal is rejected.
+   Return the FULL policy (scenario policy + your changes). Use only valid site ids, area ids, days and HH:MM times.
+   Fixes are ranked first by left_out_drop, then by hardship_drop, so first reach the people LEFT OUT
+   (left_out_by_area shows where they live), then reduce hardship.
+   The engine will test it; it is shown only if it really beats the best engine fix. Do NOT put any numbers in
+   rationale_ar / rationale_en (the engine supplies the numbers); explain the idea in words. In title_ar / title_en
+   the only numbers allowed are opening hours or home-visit slots that are in your policy (write counts in words).
+
+Return ONLY JSON:
+{{"explanations": [{{"id": "<fix id>", "explanation_ar": "...", "explanation_en": "..."}}, ...],
+ "proposal": {{"title_ar": "...", "title_en": "...", "rationale_ar": "...", "rationale_en": "...", "policy": {{...}}}}}}"""
+
+EXEMPTION = "medical_exemption"
+
 _BY_SERVICE = {
-    "parse": {"id_renewal": PARSE_SYSTEM, "everyday_travel": PARSE_SYSTEM_TRAVEL},
-    "voice": {"id_renewal": VOICE_SYSTEM, "everyday_travel": VOICE_SYSTEM_TRAVEL},
-    "report": {"id_renewal": REPORT_SYSTEM, "everyday_travel": REPORT_SYSTEM_TRAVEL},
-    "fixes": {"id_renewal": FIXES_SYSTEM, "everyday_travel": FIXES_SYSTEM_TRAVEL},
+    "parse": {"id_renewal": PARSE_SYSTEM, "everyday_travel": PARSE_SYSTEM_TRAVEL, EXEMPTION: PARSE_SYSTEM_EXEMPTION},
+    "voice": {"id_renewal": VOICE_SYSTEM, "everyday_travel": VOICE_SYSTEM_TRAVEL, EXEMPTION: VOICE_SYSTEM_EXEMPTION},
+    "report": {"id_renewal": REPORT_SYSTEM, "everyday_travel": REPORT_SYSTEM_TRAVEL, EXEMPTION: REPORT_SYSTEM_EXEMPTION},
+    "fixes": {"id_renewal": FIXES_SYSTEM, "everyday_travel": FIXES_SYSTEM_TRAVEL, EXEMPTION: FIXES_SYSTEM_EXEMPTION},
 }
 
 

@@ -3,8 +3,8 @@
 The engine numbers the AI sees are computed here, server-side, whenever the client sends policies:
 /citizen/voice recomputes the citizen's outcome from `policy`, /report recomputes the comparison, the
 robustness check and the applied fix's effect from `baseline`, `scenario` and `fix`.
-Every route serves both services: engine.run dispatches on policy.service, and the tasks pick that service's
-prompts, voice facts and templates (id_renewal or everyday_travel).
+Every route serves every service: engine.run dispatches on policy.service, and the tasks pick that service's
+prompts, voice facts and templates (id_renewal, everyday_travel or medical_exemption).
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ router = APIRouter(tags=["ai"])
 
 
 def _same_service(*policies) -> None:
-    """A comparison, a report or a fix only makes sense within one service (id_renewal vs everyday_travel)."""
+    """A comparison, a report or a fix only makes sense within one service."""
     services = {p.service for p in policies if p is not None}
     if len(services) > 1:
         raise HTTPException(422, f"policies are for different services: {sorted(services)}")
@@ -56,7 +56,7 @@ def post_voice(req: VoiceRequest):
         outcome = req.outcome.model_dump(mode="json")  # older clients: the outcome they got from /compare
     else:
         raise HTTPException(422, "send policy (preferred) or outcome")
-    return tasks.voice_citizen(c, outcome, started_at=started)
+    return tasks.voice_citizen(c, outcome, started_at=started, policy=req.policy)
 
 
 @router.post("/report", response_model=ReportResponse)
@@ -71,7 +71,7 @@ def post_report(req: ReportRequest):
         # Same robustness result (and cache) as /sensitivity: with the applied fix, or ranking-only without one.
         sens = sim_routes.post_sensitivity(SensitivityRequest(baseline=req.baseline, scenario=req.scenario, fix=req.fix))
         applied = tasks.fix_effect(cr, req.fix) if req.fix is not None else None
-        return tasks.write_report(cr, sens, applied, started_at=started)
+        return tasks.write_report(cr, sens, applied, started_at=started, service=req.scenario.service)
     if req.compare_result is not None:
         return tasks.write_report(req.compare_result, req.sensitivity, started_at=started)  # older clients
     raise HTTPException(422, "send baseline and scenario (preferred), or compare_result")

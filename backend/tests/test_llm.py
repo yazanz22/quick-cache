@@ -603,3 +603,275 @@ def test_travel_proposal_within_its_levers_is_scored_by_the_engine(live_ai):
                            title_en="20 JD a month cash support and a bus fare freeze"))
     r = _travel_fixes(scen)
     assert r.ai_proposal["status"] in ("shown", "hidden_not_better", "hidden_worsens_a_group"), r.ai_proposal
+
+
+# ------------------------------------------------------------------ cache keys of the other services (snapshot)
+
+def test_travel_voice_facts_report_and_fixes_keys_unchanged():
+    """The medical_exemption work must not touch an everyday_travel cache key either (pinned before it started)."""
+    pop = world.population()
+    i = next(k for k, c in enumerate(pop) if c["id"] == "c_0627")
+    keys = {sid: cache.key("voice", tasks.voice_facts(pop[i], engine.run(world.scenario_policy(sid), pop)[i]))
+            for sid in ("travel_today", TRAVEL_DEMO)}
+    assert keys == {"travel_today": "fb3af990215ffeb989abe5035c55cd908e0c2dd2cd305a17f265ee02b9ac7e44",
+                    TRAVEL_DEMO: "481e2ef41e9f06f2b38c7f6b343a7e5396768775800133478ecb6b6d8ccac213"}
+    cr = compare(world.scenario_policy("travel_today"), world.scenario_policy(TRAVEL_DEMO))
+    assert cache.key("report", tasks.report_summary(cr, None)) == \
+        "1337595e2088ba79b19150dc6a8d95e17388fa4ca71e127ed4882d793cf7fd54"
+    assert cache.key("report", tasks.report_summary(cr, None, None, "everyday_travel")) == \
+        "1337595e2088ba79b19150dc6a8d95e17388fa4ca71e127ed4882d793cf7fd54"
+    assert cache.key("fixes", tasks._fixes_context(world.scenario_policy(TRAVEL_DEMO))["inputs"]) == \
+        "97916d1237725051e1450eeca7743d72bf834a9f2b2275db9caa4137fda4148e"
+
+
+def test_voice_facts_ignore_the_policy_and_the_new_tag_outside_medical_exemption():
+    """The routes now pass the policy; id_renewal and travel facts must be the same with or without it, and the
+    "uninsured" tag / has_health_insurance never enter them."""
+    pop = world.population()
+    for sid in ("baseline", DEMO, "travel_today", TRAVEL_DEMO):
+        pol = world.scenario_policy(sid)
+        outs = engine.run(pol, pop)
+        for c, o in list(zip(pop, outs))[:200]:
+            f = tasks.voice_facts(c, o, pol)
+            assert f == tasks.voice_facts(c, o)
+            s = json.dumps(f, ensure_ascii=False)
+            assert "uninsured" not in s and "insur" not in s and "exemption" not in s
+    cr = compare(world.scenario_policy("baseline"), world.scenario_policy(DEMO))
+    assert tasks.report_summary(cr, None, None, "id_renewal") == tasks.report_summary(cr, None)
+
+
+# ------------------------------------------------------------------ medical_exemption
+
+EX_TODAY, EX_DEMO = "exemption_today", "exemption_online_only"
+EXEMPTION = "medical_exemption"
+
+
+def test_group_labels_cover_every_group():
+    from typing import get_args
+    from app.models import Group
+    assert set(get_args(Group)) <= set(fallbacks.GROUP_LABELS)
+    assert fallbacks.GROUP_LABELS["uninsured"] == ("غير المؤمَّنين صحياً", "uninsured")
+
+
+def _ex_outcome(**kw):
+    o = {"citizen_id": "c_0028", "status": "hardship", "channel": "royal_court_unit", "eligible": True,
+         "channel_name_ar": "دائرة خدمة الجمهور – الديوان الملكي الهاشمي", "channel_name_en": "Royal Court Citizen Services Unit",
+         "mode": "bus", "bus_transfers": 1, "visit_day": "sun", "travel_minutes": 64.0, "cost_jd": 3.6,
+         "hours_lost": 8.27, "work_hours_missed": 0.0, "reasons": []}
+    o.update(kw)
+    return o
+
+
+def _ex_citizen(**kw):
+    c = dict(next(c for c in world.population() if c["id"] == "c_0028"))
+    c.update(kw)
+    return c
+
+
+def test_exemption_voice_facts_extend_the_id_renewal_facts():
+    c, o = _ex_citizen(), _ex_outcome()
+    pol = world.scenario_policy(EX_TODAY)
+    f = tasks.voice_facts(c, o, pol)
+    assert f["service"] == EXEMPTION and f["insured"] is False
+    assert f["exemption"] == {"route": "in_person", "visits": 2, "visits_by": "self"}
+    base = {k: v for k, v in f.items() if k not in ("service", "insured", "exemption")}
+    assert base == tasks._id_renewal_voice_facts(c, o)          # the id_renewal facts, byte for byte
+    assert "uninsured" not in json.dumps(f) and "tags" not in f["profile"]
+    # The engine's own outcome marks it ("eligible"), so the policy-less path finds the service too.
+    assert tasks.voice_facts(c, o)["service"] == EXEMPTION
+    # A relative made the visits (the proxy rule).
+    assert tasks.voice_facts(c, _ex_outcome(mode="helper_visit"), pol)["exemption"]["visits_by"] == "relative"
+    # Hybrid: apply on Sanad (20 min), one 15-min collection visit: (2 x 30 + 15 + 20) / 60 h.
+    hyb = pol.model_copy(update={"hybrid_pickup": True, "online_enabled": True})
+    f = tasks.voice_facts(c, _ex_outcome(travel_minutes=30.0, hours_lost=95 / 60), hyb)
+    assert f["exemption"] == {"route": "hybrid", "visits": 1, "visits_by": "self"}
+    # Insured: a short block, a template, never an AI call.
+    na = {"citizen_id": "c_0028", "status": "served", "channel": "not_applicable", "mode": None, "reasons": [],
+          "cost_jd": 0.0, "hours_lost": 0.0, "travel_minutes": 0.0}
+    assert tasks.voice_facts(c, na, pol) == {"register": "msa", "service": EXEMPTION, "insured": True,
+                                             "profile": {"gender": "f"},
+                                             "outcome": {"status": "served", "channel": "not_applicable"}}
+
+
+def test_exemption_voice_templates_grammar_and_grounding():
+    son = _ex_citizen(helper_relation_ar="ابني", helper_relation_en="my son", gender="f")
+    dau = _ex_citizen(helper_relation_ar="بنتي", helper_relation_en="my daughter", gender="m")
+    pol = world.scenario_policy(EX_TODAY)
+
+    def say(c, o, p=pol):
+        f = tasks.voice_facts(c, o, p)
+        ar, en = fallbacks.voice(c, o, f.get("exemption"))
+        assert checks.ungrounded(ar, f) == [], ar
+        assert checks.exemption_voice_problems(ar) == [], ar
+        assert not checks.foreign_people(ar, fallbacks.msa_helper(c["helper_relation_ar"])), ar
+        return ar, en
+
+    ar, en = say(son, _ex_outcome())
+    assert ar.startswith("من أجل الإعفاء الطبي، ذهبت مرتين إلى دائرة خدمة الجمهور في الديوان الملكي الهاشمي يوم الأحد بحافلتين.")
+    assert "64 دقيقة في كل اتجاه" in ar and "8.3 ساعة" in ar and "3.6 دينار" in ar and "twice" in en
+    ar, _ = say(son, _ex_outcome(mode="helper_visit", bus_transfers=0, cost_jd=2.0))
+    assert ar.startswith("من أجل الإعفاء الطبي، ذهب ابني إلى دائرة خدمة الجمهور في الديوان الملكي الهاشمي يوم الأحد بدلاً مني مرتين.")
+    assert "وبلغت كلفة الطريق دينارين" in ar and "بحافلت" not in ar
+    ar, en = say(dau, _ex_outcome(mode="helper_visit", cost_jd=0.0))
+    assert "ذهبت ابنتي إلى" in ar and "بدلاً مني" in ar and "دون أي رسوم" in ar and "my daughter went" in en
+    three = pol.model_copy(update={"visits_required": 3})
+    assert "ذهبت 3 مرات إلى" in say(son, _ex_outcome(hours_lost=(2 * 64 + 120) * 3 / 60), three)[0]
+    ar, en = say(son, _ex_outcome(channel="online", channel_name_ar="عبر منصة سند", mode="online", status="served",
+                                  travel_minutes=0.0, cost_jd=0.0, hours_lost=0.33, bus_transfers=0, visit_day=None))
+    assert ar == "قدّمت طلب الإعفاء الطبي عبر منصة سند من البيت، دون أي رسوم." and "Sanad" in en
+    ar, _ = say(dau, _ex_outcome(channel="online", mode="online", reasons=["NO_SMARTPHONE"], travel_minutes=0.0,
+                                 cost_jd=0.0, hours_lost=0.33, bus_transfers=0, visit_day=None))
+    assert ar == "قدّمت ابنتي الطلب عني عبر منصة سند، فلا أملك هاتفاً ذكياً."
+    hyb = pol.model_copy(update={"hybrid_pickup": True, "online_enabled": True})
+    ar, _ = say(son, _ex_outcome(mode="car", travel_minutes=30.0, hours_lost=95 / 60, cost_jd=1.2), hyb)
+    assert ar.startswith("قدّمت طلب الإعفاء الطبي عبر منصة سند، ثم ذهبت إلى دائرة خدمة الجمهور في الديوان الملكي "
+                         "الهاشمي يوم الأحد بسيارتي لاستلام الكتاب.")
+    ar, _ = say(son, _ex_outcome(mode="helper_visit", travel_minutes=30.0, hours_lost=95 / 60, cost_jd=0.0), hyb)
+    assert ar.startswith("قدّم ابني الطلب عني عبر منصة سند، ثم ذهب إلى") and "لاستلام الكتاب بدلاً مني" in ar
+    ar, _ = say(son, _ex_outcome(channel="home_visit", mode="home", travel_minutes=0.0, hours_lost=4.0, cost_jd=0.0))
+    assert "إلى بيتي" in ar and "فلم أحتج إلى الذهاب" in ar
+    ar, en = say(son, _ex_outcome(status="left_out", channel=None, mode=None, reasons=["TOO_FAR", "NO_TRANSPORT"]))
+    assert ar == "لم أتمكن من تقديم طلب الإعفاء الطبي: المكتب بعيد عني، ولا توجد وسيلة نقل توصلني."
+    ar, _ = say(son, _ex_outcome(channel_name_ar="يوم استقبال متنقل في ماركا يوم السبت", visit_day="sat"))
+    assert "إلى نقطة الاستقبال المتنقلة في ماركا يوم السبت بحافلتين." in ar and ar.count("السبت") == 1
+    ar, _ = say(son, _ex_outcome(channel_name_ar="استقبال طلبات الإعفاء في مكتب الأحوال المدنية في ماركا"))
+    assert "إلى مكتب الأحوال المدنية في ماركا يوم الأحد" in ar
+    na = {"status": "served", "channel": "not_applicable", "reasons": []}
+    assert fallbacks.voice(son, na)[0] == "أنا مؤمَّنة صحياً، فلا أحتاج إلى الإعفاء الطبي."
+    assert fallbacks.voice(dau, na)[0] == "أنا مؤمَّن صحياً، فلا أحتاج إلى الإعفاء الطبي."
+
+
+def test_exemption_templates_from_the_engine_are_grounded():
+    pop = world.population()
+    for sid in [s for s, d in world.scenarios().items() if d["service"] == EXEMPTION]:
+        pol = world.scenario_policy(sid)
+        for c, o in zip(pop, engine.run(pol, pop)):
+            f = tasks.voice_facts(c, o, pol)
+            ar, _ = fallbacks.voice(c, o, f.get("exemption"))
+            assert checks.ungrounded(ar, f) == [], (sid, c["id"], ar)
+            assert not checks.exemption_voice_problems(ar), ar
+            assert not checks.foreign_people(ar, fallbacks.msa_helper(c["helper_relation_ar"])), ar
+
+
+def test_exemption_voice_checks():
+    assert checks.exemption_voice_problems("لم أتمكن من تجديد هويتي")
+    assert checks.exemption_voice_problems("حصلت على إعفاء بقيمة كبيرة")
+    assert checks.exemption_voice_problems("قيمة الإعفاء ألف دينار")
+    assert checks.exemption_voice_problems("يغطي الإعفاء 80% من العلاج")
+    assert checks.exemption_voice_problems("ذهبت إلى مكتب الأحوال المدنية في ماركا مرتين، وكلّفني ذلك 3 دنانير") == []
+
+
+def test_exemption_voice_ai_is_checked_and_insured_never_calls(live_ai):
+    pop = world.population()
+    pol = world.scenario_policy(EX_TODAY)
+    outs = engine.run(pol, pop)
+    i = next(k for k, o in enumerate(outs) if o["status"] == "hardship")
+    j = next(k for k, o in enumerate(outs) if o["channel"] == "not_applicable")
+    calls = live_ai("لم أتمكن من تجديد هويتي.", "أنا بخير.")
+    v = tasks.voice_citizen(pop[i], outs[i], policy=pol)
+    assert v.source == "ai" and v.text_ar == "أنا بخير." and "rejected" in calls[1]["user"]
+    assert '"service": "medical_exemption"' in calls[0]["user"]
+    n = len(calls)
+    v = tasks.voice_citizen(pop[j], outs[j], policy=pol)
+    assert v.source == "fallback" and "مؤمَّن" in v.text_ar and len(calls) == n
+
+
+def test_exemption_report_summary_and_template():
+    cr = compare(world.scenario_policy(EX_TODAY), world.scenario_policy(EX_DEMO))
+    s = tasks.report_summary(cr, None)
+    assert s["service"] == EXEMPTION and s["exemption"]["base"] == "uninsured"
+    assert s["exemption"]["n_eligible"] + s["exemption"]["n_not_applicable"] == s["n_citizens"]
+    assert tasks.report_summary(cr, None, None, EXEMPTION) == s
+    ar, en = fallbacks.report(s)
+    assert "غير المؤمَّنين صحياً" in ar and "uninsured" in en and f"وعددهم {s['exemption']['n_eligible']}" in ar
+    assert checks.ungrounded(ar + " " + en, s) == [] and not checks.exemption_voice_problems(ar)
+    r = tasks.write_report(cr, None)
+    assert r.source == "fallback" and r.summary_ar == ar
+
+
+def test_parse_exemption_relatives_and_sanad(live_ai):
+    cur = world.scenario_policy(EX_TODAY)
+    proxy = cur.model_copy(update={"proxy_allowed": True})
+    sanad = cur.model_copy(update={"online_enabled": True, "online_only": True})
+    calls = live_ai(_parse_ok(proxy, ["السماح لأحد الأقارب بالتقديم بدلاً من المريض"], ["Relatives may apply instead"]),
+                    _parse_ok(sanad, ["تقديم الطلبات عبر منصة سند فقط"], ["Applications only through Sanad"]))
+    r = tasks.parse_policy("let relatives apply on behalf of the patient (stub)", cur)
+    assert r.source == "ai" and r.status == "ok" and r.policy.proxy_allowed is True
+    assert '"royal_court_csu"' in calls[0]["user"]
+    r = tasks.parse_policy("accept applications only through Sanad (stub)", cur)
+    assert r.source == "ai" and r.policy.online_only is True and r.policy.service == EXEMPTION
+    # The id_renewal parse never sees the Royal Court site.
+    assert '"royal_court_csu"' not in json.dumps(tasks._sites_areas("id_renewal"))
+
+
+def test_parse_exemption_must_keep_service_and_travel_fields(live_ai):
+    cur = world.scenario_policy(EX_TODAY)
+    calls = live_ai(_parse_ok(cur.model_copy(update={"service": "id_renewal"}), ["x"], ["x"]),
+                    _parse_ok(cur.model_copy(update={"fuel_price_change_pct": 10.0}), ["x"], ["x"]))
+    assert tasks.parse_policy("switch service (stub)", cur).source == "fallback" and len(calls) == 2
+    base = world.scenario_policy("baseline")
+    live_ai(_parse_ok(base.model_copy(update={"proxy_allowed": True}), ["x"], ["x"]),
+            _parse_ok(base.model_copy(update={"proxy_allowed": True}), ["x"], ["x"]))
+    assert tasks.parse_policy("let relatives renew for me (stub)", base).source == "fallback"
+
+
+def _ex_fix_ctx():
+    scen = world.scenario_policy(EX_DEMO)
+    return scen, tasks._fixes_context(scen)
+
+
+def _ex_answer(ctx, pol):
+    prop = {"title_ar": "عودة المكتب مع يوم استقبال متنقل", "title_en": "The office back plus a mobile intake day",
+            "rationale_ar": "يعود من لا يستطيع استخدام سند إلى المكتب.",
+            "rationale_en": "People who can't use Sanad get the office back.", "policy": pol.model_dump(mode="json")}
+    return {"explanations": _explanations(ctx), "proposal": prop}
+
+
+def test_exemption_fixes_inputs_and_templates():
+    scen, ctx = _ex_fix_ctx()
+    assert ctx["inputs"]["service"] == EXEMPTION and ctx["inputs"]["base"]["base"] == "uninsured"
+    r = tasks.explain_and_propose_fixes(world.scenario_policy(EX_TODAY), scen)   # offline: grid + templates
+    assert r.source == "fallback" and r.fixes
+    assert all("من غير المؤمَّنين" in f.explanation_ar and "of the uninsured" in f.explanation_en for f in r.fixes)
+
+
+@pytest.mark.parametrize("change,why", [
+    ({"service": "id_renewal"}, "the service"),
+    ({"visits_required": 1}, "the number of visits"),
+    ({"fee_jd": 1.0}, "the fee"),
+    ({"cash_support": [{"groups": ["uninsured"], "amount_jd_month": 10.0}]}, "a travel lever"),
+])
+def test_exemption_proposal_outside_its_levers_is_rejected(live_ai, change, why):
+    scen, ctx = _ex_fix_ctx()
+    pol = Policy.model_validate({**scen.model_dump(mode="json"), "online_only": False, **change})
+    calls = live_ai(_ex_answer(ctx, pol), _ex_answer(ctx, pol))
+    r = tasks.explain_and_propose_fixes(world.scenario_policy(EX_TODAY), scen)
+    assert len(calls) == 2 and "rejected" in calls[1]["user"], why
+    assert r.ai_proposal["status"] == "invalid", why
+
+
+def test_exemption_proposal_within_its_levers_is_scored_by_the_engine(live_ai):
+    scen, ctx = _ex_fix_ctx()
+    pol = _vans(scen.model_copy(update={"online_only": False, "proxy_allowed": True}), ("marka", "sat"))
+    assert tasks.n_changes(scen, pol) <= tasks.MAX_AI_CHANGES
+    live_ai(_ex_answer(ctx, pol))
+    r = tasks.explain_and_propose_fixes(world.scenario_policy(EX_TODAY), scen)
+    assert r.ai_proposal["status"] in ("shown", "hidden_not_better", "hidden_worsens_a_group",
+                                       "hidden_duplicate_of_grid"), r.ai_proposal
+
+
+def test_exemption_routes_answer_with_templates_offline():
+    from fastapi.testclient import TestClient
+    from app.config import SCENARIOS_DIR
+    from app.main import app
+    client = TestClient(app)
+    heroes = json.loads((SCENARIOS_DIR / "heroes.json").read_text(encoding="utf-8"))["heroes"]
+    ex = [h["citizen_id"] for h in heroes if h.get("service") == EXEMPTION] or ["c_0028"]
+    today, demo = (world.scenario_policy(s).model_dump(mode="json") for s in (EX_TODAY, EX_DEMO))
+    for cid in ex:
+        v = client.post("/citizen/voice", json={"citizen_id": cid, "policy": today}).json()
+        assert v["text_ar"] and v["source"] in ("fallback", "ai") and "هوي" not in v["text_ar"]
+    rep = client.post("/report", json={"baseline": today, "scenario": demo}).json()
+    assert "غير المؤمَّنين" in rep["summary_ar"]
+    fx = client.post("/fixes", json={"baseline": today, "scenario": demo}).json()
+    assert fx["fixes"] and all(f["policy"]["service"] == EXEMPTION for f in fx["fixes"])
