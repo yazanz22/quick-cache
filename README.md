@@ -9,7 +9,7 @@ AI-voiced, and shows who it leaves out, why, and how to fix it before launch.
 
 - **Live:** https://nas-rbo5.onrender.com (free plan: the first visit can take 30-60 s to wake). On stage, add
   `?sector=id_renewal`, `?sector=everyday_travel` or `?sector=medical_exemption` to skip the sector list.
-- **Pitch deck:** [Google Slides](https://docs.google.com/presentation/d/1UhYvTizc9gUma6rlJEZ0eUoJ3NYGOb_K7Vos8E5h3II/edit?usp=sharing)
+- **Pitch deck:** [Google Slides](https://docs.google.com/presentation/d/1UhYvTizc9gUma6rlJEZ0eUoJ3NYGOb_K7Vos8E5h3II/edit?usp=sharing) (also in [PITCH_DECK.md](PITCH_DECK.md))
 - **Built for:** AI Quest @ Al Hussein Technical University · theme *Future in Jordan* · sector *Smart Society & Public Services*.
 - **Team:** Sultan Abbas (Software Engineer) · Yazan Zarka (Software Engineer) · Omar Hawasheen (Data Scientist).
 
