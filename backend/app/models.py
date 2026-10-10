@@ -11,6 +11,11 @@ from pydantic import BaseModel, Field
 
 Day = Literal["sat", "sun", "mon", "tue", "wed", "thu", "fri"]
 
+# The services Nas can simulate. "id_renewal": a citizen goes through ID renewal (offices, online, vans...).
+# "everyday_travel": a citizen's regular trip (work, university, hospital) under fuel and fare prices; the
+# statuses keep the same keys but mean fine / squeezed / priced out (share of income spent on the trip).
+Service = Literal["id_renewal", "everyday_travel"]
+
 Status = Literal["served", "hardship", "left_out"]
 
 ReasonCode = Literal[
@@ -22,6 +27,10 @@ ReasonCode = Literal[
     "NOT_WHEELCHAIR_ACCESSIBLE",
     "TOO_EXPENSIVE",
     "OFFICE_CLOSED_ON_AVAILABLE_DAYS",
+    # everyday_travel only:
+    "TRANSPORT_OVER_BUDGET",   # the regular trip costs >= TRANSPORT_SHARE_* of per-capita income
+    "FUEL_COST",               # the squeeze comes from private-car fuel (mode car / helper_car)
+    "FARE_COST",               # the squeeze comes from bus or taxi fares
 ]
 
 # ---------------------------------------------------------------- population
@@ -58,6 +67,7 @@ class Hero(BaseModel):
     note_ar: str | None = None
     note_en: str | None = None
     profile: str | None = None
+    service: Service = "id_renewal"
 
 
 class Area(BaseModel):
@@ -115,8 +125,16 @@ class TransportVoucher(BaseModel):
     amount_jd: float = Field(ge=0, le=50)
 
 
+class CashSupport(BaseModel):
+    """Monthly cash paid to people in these groups (e.g. the National Aid Fund's fuel support, 8-14 JD a month).
+    everyday_travel only: it offsets the monthly trip cost; a citizen gets their largest amount."""
+    groups: list[Group]
+    amount_jd_month: float = Field(ge=0, le=500)
+
+
 class Policy(BaseModel):
-    service: str = "id_renewal"
+    service: Service = "id_renewal"
+    # --- id_renewal levers (ignored by everyday_travel) ---
     offices: list[Office]
     online_enabled: bool = True
     online_only: bool = False
@@ -128,8 +146,13 @@ class Policy(BaseModel):
     appointment_exempt_groups: list[Group] = []   # may walk in to an office without an online appointment
     fee_discounts: dict[Group, float] = {}        # percent off fee_jd (0-100); a citizen gets their largest discount
     home_visits: HomeVisits | None = None
-    transport_vouchers: list[TransportVoucher] = []
+    transport_vouchers: list[TransportVoucher] = []   # both services: bus/taxi fares paid up to X JD per round trip
     hybrid_pickup: bool = False   # apply online (yourself or via a helper), then one short visit to collect the card
+    # --- everyday_travel levers (all no-ops at their defaults, so id_renewal results and cache keys are unchanged) ---
+    fuel_price_change_pct: float = 0.0            # government fuel price change, e.g. +10 (90-octane was 1.050 JD/L in Oct 2026)
+    bus_fare_change_pct: float | None = None      # None = fares follow fuel via BUS_FARE_FUEL_PASS_THROUGH; 0 = a fare freeze; N = set change
+    taxi_fare_change_pct: float | None = None     # same for the taxi per-km tariff
+    cash_support: list[CashSupport] = []          # monthly cash to groups, offsets the trip cost
 
 
 class Scenario(BaseModel):
@@ -139,7 +162,20 @@ class Scenario(BaseModel):
     description_ar: str = ""
     description_en: str = ""
     policy: Policy
-    demo: bool = False   # the demo path (CLAUDE.md §10)
+    demo: bool = False   # the demo path (CLAUDE.md §10): at most one per service
+    service: Service = "id_renewal"
+
+
+class ServiceInfo(BaseModel):
+    """GET /services: what Nas can simulate. Labels for statuses and KPIs live in the frontend's i18n, keyed by id."""
+    id: Service
+    name_ar: str
+    name_en: str
+    description_ar: str = ""
+    description_en: str = ""
+    levers: list[str] = []        # which policy-panel sections apply, e.g. ["offices", "online", ...] or ["fuel", "fares", "cash_support", "transport_vouchers"]
+    demo_scenario: str | None = None
+    baseline_scenario: str | None = None
 
 
 # ---------------------------------------------------------------- simulation
@@ -158,6 +194,14 @@ class CitizenOutcome(BaseModel):
     hours_lost: float = 0.0
     work_hours_missed: float = 0.0
     reasons: list[ReasonCode] = []
+    # everyday_travel only (None for id_renewal). channel = "trip:<hub id>" or "no_regular_trip", mode = car / helper_car /
+    # bus / taxi, travel_minutes = one way, cost_jd = monthly trip cost AFTER the policy, hours_lost = monthly hours in transit.
+    purpose: Literal["work", "university", "hospital"] | None = None
+    days_per_week: int | None = None
+    monthly_cost_before_jd: float | None = None    # at today's prices (every travel lever at its default)
+    extra_jd_month: float | None = None            # cost_jd - monthly_cost_before_jd (negative when support exceeds the rise)
+    income_share_pct: float | None = None          # cost_jd / INCOME_JD_MONTH[band] * 100, after the policy
+    cash_support_jd_month: float | None = None     # the support this citizen received under the policy
 
 
 class SimResult(BaseModel):

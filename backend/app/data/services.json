@@ -1,0 +1,25 @@
+{
+ "_note": "The services Nas can simulate (models.Service). Served by GET /services. The frontend keeps every label in i18n.js keyed by the service id; this file only lists ids, names and which policy-panel sections apply. One scenario per service is its baseline and one is flagged demo.",
+ "services": [
+  {
+   "id": "id_renewal",
+   "name_ar": "تجديد الهوية",
+   "name_en": "ID renewal",
+   "description_ar": "ألف مواطن افتراضي يجدّدون هويتهم عبر المكاتب أو الإنترنت أو الوحدات المتنقلة تحت أي سياسة.",
+   "description_en": "1,000 synthetic citizens renew their ID through offices, online or mobile units under any policy.",
+   "levers": ["offices", "online", "appointments", "mobile_units", "fee", "visits", "protections"],
+   "baseline_scenario": "baseline",
+   "demo_scenario": "consolidate_digital_first"
+  },
+  {
+   "id": "everyday_travel",
+   "name_ar": "التنقل اليومي",
+   "name_en": "Everyday travel",
+   "description_ar": "رحلة كل مواطن المنتظمة إلى العمل أو الجامعة أو المستشفى تحت أسعار الوقود وأجور النقل والدعم النقدي: من يبقى بخير، ومن تُضغط ميزانيته، ومن يعجز عن التنقل.",
+   "description_en": "Each citizen's regular trip to work, university or hospital under fuel prices, fares and cash support: who stays fine, who is squeezed, who is priced out.",
+   "levers": ["fuel", "fares", "cash_support", "transport_vouchers"],
+   "baseline_scenario": "travel_today",
+   "demo_scenario": "fuel_plus_25"
+  }
+ ]
+}

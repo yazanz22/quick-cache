@@ -82,6 +82,24 @@ class Assumptions:
     # ASSUMPTION: extra burden per hour of work missed, on top of the hours themselves.
     WORK_WEIGHT: float = 1.0
 
+    # --- Everyday travel (the fuel-price service). Added 2026-10-10, set BEFORE any travel scenario was run. ---
+    # ASSUMPTION: weeks in a month, to turn a weekly trip count into a monthly cost.
+    WEEKS_PER_MONTH: float = 4.33
+    # ASSUMPTION: representative monthly per-capita income by band, JD. Medians of the census generator's own
+    # synthetic per-capita incomes per band (133 / 344 / 942, data/census), rounded. Not a statistic.
+    INCOME_JD_MONTH: dict = field(default_factory=lambda: {"low": 130.0, "middle": 350.0, "high": 950.0})
+    # ASSUMPTION: a regular trip costing this share of per-capita income or more means a squeezed budget
+    # (the usual 10% transport-poverty benchmark).
+    TRANSPORT_SHARE_SQUEEZED: float = 0.10
+    # ASSUMPTION: at this share or more the trip is effectively unaffordable ("priced out").
+    TRANSPORT_SHARE_PRICED_OUT: float = 0.20
+    # ASSUMPTION: share of a private car's per-km running cost that is fuel (the rest is wear, tyres, servicing).
+    FUEL_SHARE_OF_CAR_COST: float = 0.6
+    # ASSUMPTION: share of a fuel price change that regulated bus fares pass on when fares follow fuel.
+    BUS_FARE_FUEL_PASS_THROUGH: float = 0.3
+    # ASSUMPTION: share of a fuel price change that the taxi per-km tariff passes on when fares follow fuel.
+    TAXI_FARE_FUEL_PASS_THROUGH: float = 0.5
+
     def key(self) -> tuple:
         """Hashable identity, used by the engine's memo cache."""
         d = asdict(self)
@@ -98,6 +116,9 @@ UNITS = {
     "TAXI_MAX_JD": "JD", "MAX_TRAVEL_MINUTES": "min", "LONG_TRIP_MINUTES": "min",
     "MAX_WORK_HOURS_MISSED": "h", "HELPER_FREE_FROM": "HH:MM", "HARDSHIP_THRESHOLD": "h-equiv",
     "COST_WEIGHT": "h/JD", "WORK_WEIGHT": "×",
+    "WEEKS_PER_MONTH": "weeks", "INCOME_JD_MONTH": "JD/month", "TRANSPORT_SHARE_SQUEEZED": "share of income",
+    "TRANSPORT_SHARE_PRICED_OUT": "share of income", "FUEL_SHARE_OF_CAR_COST": "share",
+    "BUS_FARE_FUEL_PASS_THROUGH": "share", "TAXI_FARE_FUEL_PASS_THROUGH": "share",
 }
 
 # Shown in the AssumptionsTable: name -> (rationale, tag, source). Every tag is ASSUMPTION. `source` is a short
@@ -129,10 +150,24 @@ META = {
     "HARDSHIP_THRESHOLD": ("Burden that counts as hardship: half a working day", "ASSUMPTION", None),
     "COST_WEIGHT": ("Hours of burden per JD spent", "ASSUMPTION", None),
     "WORK_WEIGHT": ("Extra weight on missed work hours", "ASSUMPTION", None),
+    "WEEKS_PER_MONTH": ("Weeks per month, for monthly trip costs", "ASSUMPTION", None),
+    "INCOME_JD_MONTH": ("Representative per-capita monthly income by band", "ASSUMPTION",
+                        "Medians of the census generator's synthetic per-capita incomes per band (133 / 344 / 942 JD), rounded; not a statistic"),
+    "TRANSPORT_SHARE_SQUEEZED": ("Regular trip costing this share of income or more: squeezed", "ASSUMPTION",
+                                 "The 10% transport-poverty benchmark used in affordability studies; our research cites bus waits alone costing up to 12% of income"),
+    "TRANSPORT_SHARE_PRICED_OUT": ("Regular trip costing this share of income or more: priced out", "ASSUMPTION", None),
+    "FUEL_SHARE_OF_CAR_COST": ("Fuel's share of a car's per-km running cost", "ASSUMPTION", None),
+    "BUS_FARE_FUEL_PASS_THROUGH": ("Share of a fuel change passed on to regulated bus fares", "ASSUMPTION",
+                                   "Bus fares are set by the LTRC and move less than fuel; no published pass-through rate found"),
+    "TAXI_FARE_FUEL_PASS_THROUGH": ("Share of a fuel change passed on to the taxi per-km tariff", "ASSUMPTION", None),
 }
 
-# The three uncertain constants perturbed by the robustness check (§6.5).
+# The uncertain constants perturbed by the robustness check (§6.5), per service.
 SENSITIVITY_PARAMS = ["SERVICE_MINUTES", "BUS_WAIT_PLUS_TRANSFER_MIN", "HARDSHIP_THRESHOLD"]
+SENSITIVITY_PARAMS_BY_SERVICE = {
+    "id_renewal": SENSITIVITY_PARAMS,
+    "everyday_travel": ["FUEL_SHARE_OF_CAR_COST", "BUS_FARE_FUEL_PASS_THROUGH", "TRANSPORT_SHARE_SQUEEZED"],
+}
 
 
 def perturbed(base: Assumptions, name: str, factor: float) -> Assumptions:
@@ -146,6 +181,14 @@ def as_table(a: Assumptions = DEFAULT) -> list[dict]:
         rows.append({
             "name": name, "value": value, "unit": UNITS.get(name, ""),
             "rationale": rationale, "tag": tag, "source": source,
-            "perturbed_in_robustness_check": name in SENSITIVITY_PARAMS,
+            "perturbed_in_robustness_check": any(name in v for v in SENSITIVITY_PARAMS_BY_SERVICE.values()),
+            "service": "everyday_travel" if name in ("WEEKS_PER_MONTH", "INCOME_JD_MONTH", "TRANSPORT_SHARE_SQUEEZED",
+                                                      "TRANSPORT_SHARE_PRICED_OUT", "FUEL_SHARE_OF_CAR_COST",
+                                                      "BUS_FARE_FUEL_PASS_THROUGH", "TAXI_FARE_FUEL_PASS_THROUGH")
+                       else "shared" if name in ("TRAFFIC_FACTOR", "ROAD_FACTOR", "CAR_SPEED_KMH", "CAR_COST_PER_KM_JD",
+                                                 "BUS_SPEED_KMH", "BUS_WALK_MIN", "LIMITED_MOBILITY_WALK_FACTOR",
+                                                 "BUS_FIRST_WAIT_MIN", "BUS_WAIT_PLUS_TRANSFER_MIN", "BUS_FARE_JD",
+                                                 "TAXI_WAIT_MIN", "TAXI_BASE_JD", "TAXI_PER_KM_JD")
+                       else "id_renewal",
         })
     return rows
