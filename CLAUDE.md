@@ -28,6 +28,8 @@ Nas then **finds fixes**. The engine searches a grid of candidate fixes and veri
 
 **A second sector: everyday travel under fuel prices** (`service: "everyday_travel"`, added 2026-10-10; UI name "أسعار المحروقات / Fuel prices"). The same 1,000 synthetic citizens each make one regular trip (to work, university or a public hospital); an official tests a fuel price change, bus and taxi fare changes, cash support per group and transport vouchers, and the map shows who stays **fine**, who is **squeezed** and who is **priced out** (the trip's monthly cost as a share of income). Same principle: the engine decides and searches fixes (cash support, fare freezes, vouchers; never the fuel price itself), the AI parses, voices and proposes, the engine verifies (§6.6). The app opens on a **sector list** (§9.3).
 
+**A third sector: Royal Court medical exemptions** (`service: "medical_exemption"`, added 2026-10-10; UI name "الإعفاءات الطبية / Medical exemptions"). A synthetic resident **without health insurance** (441 of the 1,000, tag `uninsured`, drawn by `seed_insurance.py` from income-band rates calibrated to the DoS 2015 Amman figure) applies for a Royal Court medical exemption. Today that means one office (the Royal Court's Citizen Services Unit), **two visits** and no online channel; an official tests applying through **Sanad** (online), intake at the 7 Civil Status offices, mobile intake days, apply-online-then-collect, letting a relative apply on the patient's behalf, and the group protections. Outcomes are served / hardship / left out, counted **over the uninsured only** (insured residents are "not applicable"). It runs on the same in-person engine as ID renewal (§6.7). Its story: *Sanad helps most people, but 30 offline residents with nobody to help them lose the counter; the engine finds the mix that reaches them.*
+
 **The one-line pitch:** *Every policy leaves someone out. Nas shows you who, why, and how to fix it before you launch.*
 
 **Wording rule:** say "synthetic citizens, AI-voiced", never "1,000 AI citizens". The citizens are rule-based; the AI gives them a voice. Overclaiming loses the AI judge.
@@ -111,11 +113,11 @@ nas/
 │   │   │   ├── sim_routes.py   # /services, /population, /scenarios, /sites, /areas, /heroes?service=, /assumptions, /simulate, /compare, /fixgrid, /sensitivity
 │   │   │   └── llm_routes.py   # /policy/parse, /citizen/voice, /report, /fixes, /llm/status
 │   │   ├── sim/
-│   │   │   ├── assumptions.py  # every tunable constant, each with a comment, a rationale, a tag (all 26 are ASSUMPTION) and an optional context source
+│   │   │   ├── assumptions.py  # every tunable constant, each with a comment, a rationale, a tag (all 35 are ASSUMPTION) and an optional context source
 │   │   │   ├── assumption_labels.py # Arabic/English labels for the assumptions table (text only, no values)
 │   │   │   ├── travel.py       # OSRM road distances/times, mode times and costs, bus transfers
 │   │   │   ├── travel_service.py # the everyday_travel engine (§6.6): regular trips, monthly cost, share of income
-│   │   │   ├── engine.py       # simulate(policy, population, assumptions=None) -> SimResult (dispatches by policy.service)
+│   │   │   ├── engine.py       # simulate(policy, population, assumptions=None) -> SimResult (dispatches by policy.service; SERVICE_RULES: id_renewal + medical_exemption, §6.7)
 │   │   │   ├── compare.py      # baseline vs scenario diff + equity breakdown
 │   │   │   ├── fixgrid.py      # build + score the candidate-fix grid (§6.4)
 │   │   │   ├── sensitivity.py  # ±20% robustness check (§6.5)
@@ -132,19 +134,20 @@ nas/
 │   │   └── data/
 │   │       ├── seed_census.py  # generates the census-anchored population (seed=42); --install writes population.json
 │   │       ├── seed.py         # shared helpers for seed_census: names, shifts, helper relations, tag rules
+│   │       ├── seed_insurance.py # adds has_health_insurance + the "uninsured" tag (seed 42); re-run after seed_census --install
 │   │       ├── census/         # seed_census outputs: VALIDATION.md, targets.json, reference CSV/JSON sets
 │   │       ├── fetch_map_data.py # one-time OSM/OSRM fetches: home_points.json, travel_matrix.json
 │   │       ├── anchors.json    # public figures, each with status (ANCHORED / TEAM_CONFIRMED / CITED_UNVERIFIED), source name, URL, year (docs only, not read at runtime)
 │   │       ├── areas.json      # the 8 engine areas: name_ar, name_en, lat, lng, side
-│   │       ├── sites.json      # 15 office sites: the 7 real CSPD offices + 8 generic snap sites
+│   │       ├── sites.json      # 16 office sites: the 7 real CSPD offices + 8 generic snap sites + royal_court_csu (medical_exemption only)
 │   │       ├── population.json # 1,000 synthetic citizens, committed so everyone has the same people
 │   │       ├── travel_matrix.json, home_points.json  # fetched once (OSRM / OpenStreetMap)
-│   │       ├── services.json   # the 2 sectors (id, names, levers, baseline/demo scenario), served by GET /services
+│   │       ├── services.json   # the 3 sectors (id, names, levers, baseline/demo scenario), served by GET /services
 │   │       ├── hubs.json, daily_trips.json, hub_matrix.json, seed_daily.py  # everyday_travel: 25 destinations, one trip per citizen (seed 42), OSRM times
 │   │       └── scenarios/      # presets per service (one "demo": true per service), heroes.json, demo_requests.json
 │   ├── scripts/                # pick_heroes.py, find_ai_fix.py, warm_cache.py
 │   ├── cache/                  # AI cache files (committed for offline mode)
-│   └── tests/                  # test_engine.py, test_fixgrid.py, test_llm.py, test_levers.py, test_demo.py, test_travel.py, test_cache_hits.py, test_api.py (offline, no AI calls)
+│   └── tests/                  # test_engine.py, test_fixgrid.py, test_llm.py, test_levers.py, test_demo.py, test_travel.py, test_exemption.py, test_cache_hits.py, test_api.py (offline, no AI calls)
 └── nas-frontend/               # static UI, no build step (see its README)
     ├── index.html              # layout + all CSS (light/dark, RTL, responsive)
     ├── config.js               # backend URL, timeouts, offline map switch, fallback areas/heroes
@@ -182,6 +185,8 @@ class Citizen(BaseModel):
     district: str | None = None          # GAM district id, e.g. "bader"
     neighbourhood: str | None = None     # e.g. "Jabal Nazzal"
     neighbourhood_ar: str | None = None  # e.g. "جبل النزال"
+    # From data/seed_insurance.py (seed 42, UNINSURED_RATE_BY_BAND); False adds the "uninsured" tag. None = not assigned.
+    has_health_insurance: bool | None = None
 ```
 
 Tag rules (derived, never set by hand):
@@ -192,6 +197,7 @@ Tag rules (derived, never set by hand):
 - `offline`: not has_smartphone or digital_literacy == "low"
 - `worker`: works
 - `student`: 18 ≤ age ≤ 24 and not works
+- `uninsured`: has_health_insurance == False (set by `seed_insurance.py`, appended last; only the medical-exemption engine reads it)
 
 All workers work **Sun–Thu** between `work_start` and `work_end`. Non-workers are free every day.
 
@@ -212,7 +218,7 @@ class MobileUnit(BaseModel):
     day: Day; open: str; close: str
     # Mobile units are ALWAYS walk-in (no appointment) and wheelchair accessible.
 
-Group = Literal["elderly", "disabled", "no_car", "offline", "low_income", "worker", "student"]   # = the tags
+Group = Literal["elderly", "disabled", "no_car", "offline", "low_income", "worker", "student", "uninsured"]   # = the tags
 
 class HomeVisits(BaseModel):
     groups: list[Group] = ["disabled", "elderly"]   # who may get one
@@ -222,7 +228,7 @@ class TransportVoucher(BaseModel):
     groups: list[Group]
     amount_jd: float                              # bus or taxi fares paid up to this per round trip
 
-Service = Literal["id_renewal", "everyday_travel"]   # the sectors; GET /services lists them (data/services.json)
+Service = Literal["id_renewal", "everyday_travel", "medical_exemption"]   # the sectors; GET /services lists them (data/services.json)
 
 class CashSupport(BaseModel):                     # everyday_travel only
     groups: list[Group]
@@ -250,11 +256,14 @@ class Policy(BaseModel):
     taxi_fare_change_pct: float | None = None     # same for the taxi per-km tariff (TAXI_FARE_FUEL_PASS_THROUGH)
     cash_support: list[CashSupport] = []          # {groups, amount_jd_month}
     # transport_vouchers (above) apply to both services: in everyday_travel they cut the bus/taxi round-trip fare
+    # --- medical_exemption lever (None = the service's default: True for medical_exemption, False otherwise) ---
+    proxy_allowed: bool | None = None             # a first-degree relative (the citizen's helper) may make the visits instead
+    # medical_exemption reuses the id_renewal levers above (offices, online = Sanad, mobile units = mobile intake days, visits, protections)
 ```
 
 Scenarios carry `service` too, and each service has one baseline and one `"demo": true` preset (`services.json`). Offices and fee stay required fields, so a travel policy sends `offices: []` and `fee_jd: 2.0` (ignored).
 
-**What Nas can model** (ID renewal) is exactly what this schema expresses: where offices are (any of the 15 sites), their hours per day, wheelchair access, online on/off/only, appointments at offices, mobile units (area, day, hours), the fee, the number of visits, and the group protections (walk-in exemption, fee discounts, capped home visits, transport vouchers, hybrid apply-online-then-collect). Offices can be opened or closed at any of the 15 sites. Anything else is "not supported yet" (§8.5). The protections are manual/free-text levers only: they are not in the fix grid (§6.4), so the demo path's fixes are unchanged. **Everyday travel** models one fuel price change (%), bus and taxi fare changes (follow fuel / freeze / a set %), cash support per group (JD/month) and transport vouchers; anything else (a separate diesel or petrol price, electricity or other prices, more buses or new routes, people switching modes) is "not supported yet".
+**What Nas can model** (ID renewal) is exactly what this schema expresses: where offices are (any of the 15 sites), their hours per day, wheelchair access, online on/off/only, appointments at offices, mobile units (area, day, hours), the fee, the number of visits, and the group protections (walk-in exemption, fee discounts, capped home visits, transport vouchers, hybrid apply-online-then-collect). Offices can be opened or closed at any of the 15 sites. Anything else is "not supported yet" (§8.5). The protections are manual/free-text levers only: they are not in the fix grid (§6.4), so the demo path's fixes are unchanged. **Everyday travel** models one fuel price change (%), bus and taxi fare changes (follow fuel / freeze / a set %), cash support per group (JD/month) and transport vouchers; anything else (a separate diesel or petrol price, electricity or other prices, more buses or new routes, people switching modes) is "not supported yet". **Medical exemptions** models the ID-renewal levers (intake offices at any of the 16 sites incl. the Royal Court unit, online via Sanad on/off/only, mobile intake days, visits, appointments, hybrid, the protections) plus `proxy_allowed`; anything else (who is insured, the exemption amount, doctors, staff or queues, limiting an office to one group) is "not supported yet".
 
 ### Simulation output
 ```python
@@ -267,10 +276,11 @@ ReasonCode = Literal[
 class CitizenOutcome(BaseModel):
     citizen_id: str
     status: Literal["served", "hardship", "left_out"]
-    channel: str | None           # office id, "online", "mobile:<area>:<day>" or "home_visit"
+    channel: str | None           # office id, "online", "mobile:<area>:<day>" or "home_visit"; medical_exemption adds "royal_court_unit",
+                                  # "intake_<cspd office>", and "not_applicable" (insured: excluded from every percentage)
     channel_name_ar: str | None   # e.g. "مكتب العبدلي", "الوحدة المتنقلة في ماركا يوم السبت", "أونلاين"
     channel_name_en: str | None
-    mode: str | None              # car, helper_car, bus, taxi, online, home
+    mode: str | None              # car, helper_car, bus, taxi, online, home; medical_exemption adds helper_visit (a relative made the visits)
     bus_transfers: int = 0        # 0, 1 or 2; from travel.py (cross-city trips need a transfer)
     visit_day: Day | None
     travel_minutes: float
@@ -289,7 +299,8 @@ class CitizenOutcome(BaseModel):
 class SimResult(BaseModel):
     outcomes: list[CitizenOutcome]
     kpis: dict                    # pct_served, pct_hardship, pct_left_out, avg_hours_lost, avg_cost_jd, n_*, n_home_visits
-                                  # (travel adds avg_monthly_cost_jd, avg_extra_jd_month, total_extra_jd_month, avg_income_share_pct, n_cash_support, by_purpose, by_mode)
+                                  # (travel adds avg_monthly_cost_jd, avg_extra_jd_month, total_extra_jd_month, avg_income_share_pct, n_cash_support, by_purpose, by_mode;
+                                  #  medical_exemption: every % is over the eligible only, plus n_eligible and n_not_applicable)
     by_group: dict                # tag -> {served, hardship, left_out} percentages
 
 class CompareResult(BaseModel):
@@ -375,11 +386,11 @@ Every constant lives in `sim/assumptions.py` with a comment, a one-line rational
 - `# ANCHORED: <source>` if it comes from a public figure in `anchors.json`.
 - `# ASSUMPTION` otherwise (round, plausible values).
 
-**Today all 33 constants are `ASSUMPTION`** (26 for ID renewal and the shared travel model, 7 for everyday travel, §6.6). Where our desk research gives context for one (bus fare range, a peak
+**Today all 35 constants are `ASSUMPTION`** (26 for ID renewal and the shared travel model, 7 for everyday travel, §6.6, 2 for medical exemptions, §6.7). Where our desk research gives context for one (bus fare range, a peak
 bus-wait study, the OSRM road ratio), the assumptions table shows it in a `source` note (`META` in `assumptions.py`,
 Arabic in `assumption_labels.SOURCE_AR`); that note never upgrades the tag.
 
-Constants include `SERVICE_MINUTES`, `BUS_SPEED_KMH`, `BUS_WAIT_PLUS_TRANSFER_MIN` (per transfer), `CAR_SPEED_KMH`, taxi base fare and per-km rate, `MAX_TRAVEL_MINUTES`, `TAXI_MAX_JD[band]`, `MAX_WORK_HOURS_MISSED[band]`, `HELPER_FREE_FROM`, `HARDSHIP_THRESHOLD`, `COST_WEIGHT`, `WORK_WEIGHT`. Two were added later, with the group protections, and committed (`0387862`) before any code used them: `HOME_VISIT_MINUTES` (120: a 2-hour visit window) and `PICKUP_MINUTES` (15: collecting a card applied for online). Seven more, for everyday travel, were committed in `3b1cde0` **before any travel scenario ran**: `WEEKS_PER_MONTH` (4.33), `INCOME_JD_MONTH` (130 / 350 / 950 JD by band), `TRANSPORT_SHARE_SQUEEZED` (0.10), `TRANSPORT_SHARE_PRICED_OUT` (0.20), `FUEL_SHARE_OF_CAR_COST` (0.6), `BUS_FARE_FUEL_PASS_THROUGH` (0.3), `TAXI_FARE_FUEL_PASS_THROUGH` (0.5).
+Constants include `SERVICE_MINUTES`, `BUS_SPEED_KMH`, `BUS_WAIT_PLUS_TRANSFER_MIN` (per transfer), `CAR_SPEED_KMH`, taxi base fare and per-km rate, `MAX_TRAVEL_MINUTES`, `TAXI_MAX_JD[band]`, `MAX_WORK_HOURS_MISSED[band]`, `HELPER_FREE_FROM`, `HARDSHIP_THRESHOLD`, `COST_WEIGHT`, `WORK_WEIGHT`. Two were added later, with the group protections, and committed (`0387862`) before any code used them: `HOME_VISIT_MINUTES` (120: a 2-hour visit window) and `PICKUP_MINUTES` (15: collecting a card applied for online). Seven more, for everyday travel, were committed in `3b1cde0` **before any travel scenario ran**: `WEEKS_PER_MONTH` (4.33), `INCOME_JD_MONTH` (130 / 350 / 950 JD by band), `TRANSPORT_SHARE_SQUEEZED` (0.10), `TRANSPORT_SHARE_PRICED_OUT` (0.20), `FUEL_SHARE_OF_CAR_COST` (0.6), `BUS_FARE_FUEL_PASS_THROUGH` (0.3), `TAXI_FARE_FUEL_PASS_THROUGH` (0.5). Two more, for medical exemptions, were committed in `a200815` **before any exemption scenario ran**: `EXEMPTION_VISIT_MINUTES` (120: queue + the doctor's review, one visit) and `UNINSURED_RATE_BY_BAND` (low 0.65 / middle 0.45 / high 0.20, calibrated to the anchored DoS 2015 Amman figure; read only by `seed_insurance.py`).
 
 **Freeze rule (do not break this):** *Set assumptions once to round, plausible values with a stated rationale. Freeze them before running any scenario. If a scenario's story doesn't appear, change the scenario, not the assumptions.* Never present any of these values as official statistics.
 
@@ -422,17 +433,27 @@ Deterministic, no AI; `engine.simulate`, compare, the fix grid and the robustnes
 5. **Fix grid:** cash support per group (low_income 8 / 14 / 20 JD, no_car / worker / student 14 JD a month), freeze bus fares, freeze taxi fares, 0.5 JD vouchers for low_income / no_car, plus pairs; same scoring and ranking as §6.4. **A fix never changes the fuel price**: it is the decision being tested (the AI's proposal is rejected if it does).
 6. **Robustness** perturbs `FUEL_SHARE_OF_CAR_COST`, `BUS_FARE_FUEL_PASS_THROUGH` and `TRANSPORT_SHARE_SQUEEZED` by ±20% (6 runs), same pass rule as §6.5.
 
+### 6.7 Medical exemptions (`sim/engine.py` `SERVICE_RULES`, service `medical_exemption`)
+The same in-person engine as ID renewal (§6.1 rules 1-9), with three per-service rules. Deterministic, no AI.
+1. **Eligibility:** only citizens tagged `uninsured` apply (441 of 1,000: low income 61.0%, middle 44.6%, high 17.5%; `seed_insurance.py`, seed 42). Everyone else gets `channel: "not_applicable"` (served at zero cost internally) and is **left out of every percentage** and of compare, equity bars, worst groups, the fix grid and home-visit slots. KPIs add `n_eligible` (441) and `n_not_applicable` (559).
+2. **Visit time:** one visit = `EXEMPTION_VISIT_MINUTES` (120) instead of `SERVICE_MINUTES`; today's process needs **2 visits** (apply with the medical report, return for the letter), fee 0. Hours 08:00-15:00 Sun-Thu are ASSUMED (none published). Two 2-hour visits already equal `HARDSHIP_THRESHOLD` (4 hours), so in-person applicants are at least in hardship.
+3. **Proxy rule** (`proxy_allowed`, default **on** for this service): the citizen's helper (a first-degree relative) may make the visits instead, by the household's mode (the car if the citizen has one, else the bus; the citizen's own mobility doesn't apply), only in the helper's free time (Fri/Sat, or Sun-Thu from `HELPER_FREE_FROM`). Mode `helper_visit`, always a hardship, no work missed for the citizen. An extra option: taken only if it ranks better. With the unit's 08:00-15:00 hours it is never better (helpers are free from 16:00), so it changes nothing in the presets: an honest result, not tuned.
+4. **Channels and names:** the Royal Court Citizen Services Unit (`royal_court_csu`, approximate coordinates, no OSRM rows: straight-line × `ROAD_FACTOR`); "Exemption intake at …" at a CSPD site; "Mobile intake day in …"; online = "Online (Sanad)" / "عبر منصة سند"; home visits.
+5. **Fix grid:** the §6.4 grid in exemption wording (16 mobile intake days, Sat/Thu 09:00-14:00, walk-in) plus **hybrid** (apply on Sanad, one short visit to collect the letter), **regional intake** (intake at the 7 CSPD offices with the unit's hours) and, with offices in play, late Thursday / no appointments / accessible / proxy. Under online-only, an in-person fix first lifts `online_only` (Sanad stays on). An AI proposal may never change the service, who is insured, the fee or the number of visits.
+6. **Robustness** perturbs `EXEMPTION_VISIT_MINUTES`, `BUS_WAIT_PLUS_TRANSFER_MIN` and `HARDSHIP_THRESHOLD` by ±20% (6 runs), same pass rule as §6.5.
+7. ID-renewal and travel outcomes are byte-identical with the sector added (sha256 pinned in `tests/test_exemption.py`).
+
 ### Areas (approximate centroids, verify on the map first)
 Downtown/Al-Balad (31.951, 35.934) · Abdali (31.962, 35.910) · Jabal Al-Hussein (31.968, 35.920) · Marka (31.975, 35.985) · Wehdat (31.935, 35.940) · Tabarbour (32.000, 35.940) · Sweileh (32.020, 35.840) · Khalda (31.995, 35.835).
 
 ### Candidate office sites (`sites.json`)
-15 fixed sites: the 7 real CSPD offices plus 8 generic sites, one per area. Offices can be opened at, closed at or moved to any of them. When an office pin is dragged on the map, it **snaps to the nearest site**. This keeps scenarios realistic and keeps AI cache keys stable.
+15 fixed sites for ID renewal: the 7 real CSPD offices plus 8 generic sites, one per area. A 16th, `royal_court_csu` (the Royal Court's Citizen Services Unit, `real: true`, area downtown, approximate coordinates), exists only in the medical-exemption sector's site lists. Offices can be opened at, closed at or moved to any of them. When an office pin is dragged on the map, it **snaps to the nearest site**. This keeps scenarios realistic and keeps AI cache keys stable.
 
 ## 7. API
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/services` | The sectors (`id_renewal`, `everyday_travel`): names, descriptions, `levers`, `baseline_scenario`, `demo_scenario` (from `services.json`) |
+| GET | `/services` | The sectors (`id_renewal`, `everyday_travel`, `medical_exemption`): names, descriptions, `levers`, `baseline_scenario`, `demo_scenario` (from `services.json`) |
 | GET | `/population` | All citizens (for drawing dots) |
 | GET | `/scenarios` | Preset scenarios for every service; each carries `service` (baseline + presets, one `demo: true` per service) |
 | GET | `/heroes?service=` | Hero citizens for that service's demo path (default `id_renewal`), with notes and a factual profile |
@@ -476,7 +497,7 @@ Extract every number from AI text (Arabic-Indic and Western digits). Each must m
 ### 8.5 Policy parse
 - The prompt includes the current policy JSON, the list of areas, sites and offices, the schema, and the explicit **"what Nas can model" list** (§5).
 - Output is a `ParseResult`: either a full Policy plus a bilingual "understood as" change list, or `unsupported` with a short message saying what can't be modeled and what the closest supported change would be.
-- Examples of unsupported requests: a group that isn't one of the 7 tags (e.g. pregnant women), an age threshold other than 65, extra staff or queues, an office outside the 15 sites, a service other than the two sectors, road closures or changes to bus routes; for everyday travel, a separate diesel or petrol price, electricity or other prices, more buses, or people switching modes.
+- Examples of unsupported requests: a group that isn't one of the 7 tags (e.g. pregnant women), an age threshold other than 65, extra staff or queues, an office outside the 15 sites, a service other than the three sectors, road closures or changes to bus routes; for everyday travel, a separate diesel or petrol price, electricity or other prices, more buses, or people switching modes; for medical exemptions, making people insured, the exemption amount, more doctors or staff, or an office open to one group only (the closest supported change reopens it for everyone, and the change list says so).
 - The UI shows the change list in `ParsePreview` and only applies the policy after **Apply**. A wrong parse is visible and harmless.
 - Any policy a parse could produce can also be built with the manual controls, so if parsing fails on stage, build it by hand.
 
@@ -527,10 +548,11 @@ Policy Panel · Map · Impact Panel. The Citizen Card opens as a drawer over the
 - Map and KPIs never wait on the AI.
 
 ### 9.3 Sector list (start state)
-- The app opens on a **sector list** in the left panel: one card per service from `GET /services` ("تجديد الهوية / ID renewal", "أسعار المحروقات / Fuel prices"). The map shows every citizen as a neutral **blue** dot (no pins, rings or heroes), the right panel waits until a sector is chosen, and no `/compare` is sent. The sector is not remembered.
+- The app opens on a **sector list** in the left panel: one card per service from `GET /services` ("تجديد الهوية / ID renewal", "أسعار المحروقات / Fuel prices", "الإعفاءات الطبية / Medical exemptions"). The map shows every citizen as a neutral **blue** dot (no pins, rings or heroes), the right panel waits until a sector is chosen, and no `/compare` is sent. The sector is not remembered.
 - Choosing a card loads that sector's presets (`/scenarios` filtered by `service`), heroes (`/heroes?service=`) and policy-panel sections (`levers`). A back button in the panel head returns to the list and resets everything.
-- **`?sector=id_renewal` or `?sector=everyday_travel` skips the list: use it on stage.**
+- **`?sector=id_renewal`, `?sector=everyday_travel` or `?sector=medical_exemption` skips the list: use it on stage.**
 - The fuel panel: fuel price % (with "90-octane 1.050 JD/L → X", display only), bus and taxi fares (follow fuel / freeze / custom %), cash support (groups + JD/month), transport vouchers. The status words become fine / squeezed / priced out (بخير / مضغوطون / عاجزون عن التنقل); the citizen card shows the trip (purpose, destination, mode, transfers), the monthly cost before → after, the extra JD and the share of income. The travel map has no hub pins.
+- The medical-exemption panel reuses the ID-renewal controls with exemption labels (intake offices incl. the Royal Court site, online via Sanad, mobile intake days, visits, protections) plus an **"Applying on someone's behalf"** switch (`proxy_allowed`). Insured residents are lighter neutral dots with a legend entry ("Insured: not applicable"); KPI cards read "N of 441 uninsured"; the citizen card shows `helper_visit` as "a relative applied on his/her behalf", and an insured citizen's card is a one-line note with no voice call.
 
 ## 10. Demo scenarios (preset JSON in `data/scenarios/`)
 
@@ -568,6 +590,15 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 - **`fuel_plus_25_support`:** the same + 14 JD/month for low_income (NAF's fuel support is 8-14 JD): 73.8 / 11.7 / 14.5. 14 JD does not undo a 25% fare rise for a daily commuter.
 - **Heroes:** c_0627 Mustafa (23, low income, bus with 1 transfer to Wehdat; priced out before and after, squeezed with the fix), c_0883 Rana (18, student, bus with 2 transfers to Applied Science University; squeezed → priced out → squeezed), c_0982 Issa (29, middle income, drives 44 min to King Hussein Business Park; squeezed → priced out, and the top fix does **not** reach him: kept on purpose).
 - Rehearsed travel requests are in `demo_requests.json` with `service: "everyday_travel"` (raise petrol 10%, fuel +25% with 14 JD for low-income families, freeze bus fares, pay the bus fare for students, give every worker 20 JD a month; unsupported: electricity prices, diesel only).
+
+### Medical-exemption presets and heroes (service `medical_exemption`, compared against `exemption_today`; % of the 441 uninsured)
+- **`exemption_today`:** the Royal Court unit only, 08:00-15:00 Sun-Thu (assumed), 2 visits, no fee, no online channel, a relative may apply: **0.0 served / 74.8 hardship / 25.2 left out**. Nobody is served: two 2-hour visits already reach the hardship threshold.
+- **`exemption_online_only`:** the **exemption demo path** (`"demo": true`): applications only through Sanad, the letter by post: **77.6 / 14.1 / 8.4, 364 better off, 30 worse** (all offline residents with no helper; offline left out 29.3% → 37.4%); worst groups offline, elderly. Top grid fix: "intake at the 7 Civil Status offices + a Saturday mobile intake day in Downtown": left out 8.4 → 0.2. Robustness **6/6**, fix helps 6/6.
+- **`exemption_hybrid`:** today + apply on Sanad and collect the letter in one short visit: 77.6 / 20.9 / 1.6, nobody worse.
+- **`exemption_regional`:** the unit + intake at the 7 CSPD offices, no online: 0.0 / 87.1 / 12.9; robustness 5/6 (at `EXEMPTION_VISIT_MINUTES` × 1.2 the second group becomes low_income).
+- **`exemption_no_proxy`:** today, but the patient must come in person: identical to today (relatives work the same hours, §6.7 rule 3).
+- **Heroes** (all hardship → left out → hardship with the top fix): c_0931 Salma (72, Wehdat, no car, low digital literacy, no helper; reached by the Downtown Saturday intake day), c_0497 Abdullah (42, works 07:00-16:00, low digital literacy, no helper), c_0188 Ali (77, Marka, limited mobility, no smartphone, no helper; reached through the Marka intake point).
+- Rehearsed exemption requests are in `demo_requests.json` with `service: "medical_exemption"` (let relatives apply, the patient must come in person, intake at the Civil Status offices, Sanad only, apply on Sanad and collect, a Saturday mobile intake day in Marka, 30 home visits for the disabled; on the demo: reopen the office for the elderly / for people without a smartphone, which reopens it for everyone; unsupported: make everyone insured, raise the exemption amount, more doctors).
 
 ## 11. Team split (3 people)
 
@@ -612,10 +643,12 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 
 **Optional, Q&A only: the fuel sector.** If a judge says "name a policy" and there is time, open `?sector=everyday_travel`, pick `fuel_plus_25_fares` (fuel +25% with fares raised to match), click Issa and Mustafa, "Suggest fixes", apply the top fix, and say out loud that Issa is still priced out. The 7-minute script stays on ID renewal. Runbook: `DEMO_RUNBOOK.md`, "Fuel sector".
 
+**Optional, Q&A only: medical exemptions.** Open `?sector=medical_exemption`, pick `exemption_online_only` (Sanad only): 364 people better off, 30 worse. Click Salma (left out: she can't use the app and nobody can apply for her), "Suggest fixes", apply the top fix (intake at the 7 Civil Status offices + a Saturday intake day in Downtown), click Salma again: she is back. Runbook: `DEMO_RUNBOOK.md`, "Medical exemptions".
+
 ## 14. Judge Q&A prep
 
 - **"Are these real people?"** No. A clearly labelled synthetic population, anchored to published figures where we found them (only the three MoDEE 2024 figures and the CSPD office list are verified by us; the other research figures are labelled CITED). The engine is data-agnostic; better data drops in. Slide-ready list: README, "What is real and what is assumed".
-- **"Didn't you tune it to get this result?"** The population is anchored to published figures where we found them; the engine constants are labelled assumptions (all 33: 26 for ID renewal, 7 added for fuel and committed before any travel scenario ran), frozen before any scenario ran and tested at ±20%: the ranking holds 6/6 on the ID-renewal demo (badge) and 5/6 on the fuel demo, shown honestly. If a story didn't show up, we changed the scenario, never the assumptions.
+- **"Didn't you tune it to get this result?"** The population is anchored to published figures where we found them; the engine constants are labelled assumptions (all 35: 26 for ID renewal, 7 added for fuel and 2 for medical exemptions, each set committed before any scenario of its sector ran), frozen before any scenario ran and tested at ±20%: the ranking holds 6/6 on the ID-renewal and medical-exemption demos (badge) and 5/6 on the fuel demo, shown honestly. If a story didn't show up, we changed the scenario, never the assumptions.
 - **"Is the AI making things up?"** No. The engine computes every outcome and number. A grounding check rejects any AI text with a number the engine didn't produce, and every AI fix is re-verified by the engine before it's shown.
 - **"What does the AI do that a spreadsheet couldn't?"** See §1.
 - **"Does it reach the people left out?"** See §1. Plus: the relatives' answers slide.
@@ -623,10 +656,14 @@ List ~6 policies a judge is likely to ask for, run each live once, and keep the 
 - **"Show us another policy."** Type it live. If it's outside what Nas models, it says so and suggests the closest supported change.
 - **"Why doesn't closing Thursdays change anything?"** Nas doesn't model office capacity or queues yet, so the open days are interchangeable: anyone who went on Thursday goes on another workday instead (on the demo path nobody changes status). Capacity and queues are the next module. "Add more staff" is unsupported for the same reason.
 - **"Business model?"** SaaS per service/municipality plus a setup engagement to calibrate data. Cheap to run: the engine is CPU-only and AI calls are cached.
-- **"Scalability?"** A new service is a policy template + channel rules; a new city is areas + sites + anchors. Proof: the fuel-price sector was added in one day on the same engine, population and UI.
+- **"Scalability?"** A new service is a policy template + channel rules; a new city is areas + sites + anchors. Proof: the fuel-price and medical-exemption sectors were each added in a day on the same engine, population and UI.
 - **(Fuel) "Why are the people hurt by a fuel rise all drivers?"** On `fuel_plus_5` and `fuel_plus_25`, bus and taxi fares are regulated and lag fuel (only a pass-through share follows), so the first hit lands on car owners. And the riders were already squeezed: low-income daily bus commuters spend a median 30% of income on the trip today. When fares rise with fuel (`fuel_plus_25_fares`), 48 of the 72 people worse off are bus riders.
 - **(Fuel) "Your fix misses Issa."** Yes, and we show it: the engine's best fix is cash for people without a car plus a bus-fare freeze, which doesn't reach a middle-income driver. Try cash support for workers live: the grid's third fix (freeze bus fares + 14 JD/month for workers) brings Issa back to squeezed, at a slightly smaller drop overall (−6.8 vs −7.2 pts priced out).
 - **(Fuel) "Are the fuel prices real?"** The October 2026 prices (90-octane 1.050 JD/L, +0.05) and NAF's 8-14 JD/month fuel support are from press reports (CITED in `anchors.json`); the engine works in % changes, and its 7 travel constants are labelled assumptions frozen before any travel scenario ran.
+- **(Exemption) "Why is nobody served today?"** Because today's process is two visits of about two hours each at one office in Downtown, and our hardship line is half a working day (4 hours): two visits reach it before anyone has travelled. Both constants (`EXEMPTION_VISIT_MINUTES`, `HARDSHIP_THRESHOLD`) were frozen before any exemption scenario ran and are moved ±20% in the robustness check. It is an honest result: the current process is a hardship for everyone who needs it.
+- **(Exemption) "Why does Sanad-only improve things?"** It does, for 364 of the 441 uninsured: no visits at all. The point is the other 30: offline residents with nobody to apply for them, who lose the counter and are left out (offline left out 29.3% → 37.4%). Nas shows them before launch, and the engine finds the mix that reaches them (intake at the 7 Civil Status offices + a Saturday intake day: left out 8.4% → 0.2%).
+- **(Exemption) "Does letting a relative apply matter?"** Rarely, in our model: relatives work the same Sun-Thu hours and are free only from 16:00, after the office closes at 15:00, so "patient must come in person" changes nobody's outcome. It would matter with a Saturday or evening intake day; the lever is there to test it. We show the result as it is.
+- **(Exemption) "Are the uninsured numbers real?"** The rate is anchored: DoS 2015 census paper, 44.8% of Amman's Jordanians uninsured (all ages). Our income-band rates are an assumption calibrated to it (441 of 1,000 synthetic adults, 44.1%). The process (in person, a medical report, a doctor's review, a return visit) is from press reports; the office hours and queue time are not published, so they are labelled assumptions.
 
 ## 15. Commands
 
@@ -636,6 +673,7 @@ cd backend
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python -m app.data.seed_census --install            # census-anchored population.json (1,000 citizens, seed=42)
+python -m app.data.seed_insurance                    # then re-add has_health_insurance + the "uninsured" tag (seed 42)
 python -m app.data.fetch_map_data matrix             # then refresh OSRM road times for the new homes
 uvicorn app.main:app --reload --port 8000
 pytest -q
@@ -646,6 +684,7 @@ pytest -q
 # demo prep (online, after final scenario work)
 python -m scripts.pick_heroes && python -m scripts.find_ai_fix && python -m scripts.warm_cache   # from backend/
 python -m scripts.warm_cache --parse-only   # only the rehearsed free-text requests (demo_requests.json)
+python -m scripts.find_ai_fix --service medical_exemption && python -m scripts.warm_cache --service medical_exemption   # one sector
 ```
 
 `.env.example` (repo root) lists every setting with a comment: provider keys, model chains per slot
@@ -658,7 +697,7 @@ python -m scripts.warm_cache --parse-only   # only the rehearsed free-text reque
 - **Respect the core principle (§2).** The engine decides and searches; the AI explains and proposes; the engine verifies. Never route an outcome or number through the AI.
 - **Respect the freeze rule (§6.2).** Never change `assumptions.py` to make a scenario look better. Change the scenario. If asked to, refuse and point to this rule.
 - **`models.py` is the API contract.** If you change it, check `nas-frontend/api.js` (its normalisers) in the same change and say so.
-- **Keep the engine pure and deterministic.** No randomness at simulate time; randomness only in `seed_census.py` with a fixed seed. Engine functions accept an optional assumptions override (needed by `sensitivity.py`).
+- **Keep the engine pure and deterministic.** No randomness at simulate time; randomness only in the seed scripts (`seed_census.py`, `seed_daily.py`, `seed_insurance.py`) with a fixed seed. Engine functions accept an optional assumptions override (needed by `sensitivity.py`).
 - **Every constant goes in `assumptions.py`** with a comment, rationale and `# ANCHORED` or `# ASSUMPTION` tag. Never mark a value ANCHORED without a real source in `anchors.json`.
 - **Never present synthetic numbers as real Jordanian statistics** in UI copy, prompts, or the report.
 - **No real personal data.** Names come from generic first-name lists only.

@@ -14,7 +14,7 @@ Day = Literal["sat", "sun", "mon", "tue", "wed", "thu", "fri"]
 # The services Nas can simulate. "id_renewal": a citizen goes through ID renewal (offices, online, vans...).
 # "everyday_travel": a citizen's regular trip (work, university, hospital) under fuel and fare prices; the
 # statuses keep the same keys but mean fine / squeezed / priced out (share of income spent on the trip).
-# "medical_exemption": an UNINSURED citizen (tag "uninsured", ~46% of adults) applies for a Royal Court medical
+# "medical_exemption": an UNINSURED citizen (tag "uninsured", ~44% of adults (44.1% in the population)) applies for a Royal Court medical
 # exemption: today one office (the Citizen Services Unit), two visits, no online channel; a first-degree relative
 # may apply on their behalf (proxy). Insured citizens are "not applicable" (channel "not_applicable") and are left
 # out of every percentage.

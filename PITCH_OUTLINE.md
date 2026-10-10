@@ -18,7 +18,8 @@ Arabic on screen with English subtitles if the jury mixes. Every number below is
   digital skills, work hours, income, who helps them at home.
 - Anchored to published figures where we found them (MoDEE 2024: 95.6% internet use, 99% smartphone households, 38.1%
   e-gov use), the 7 real CSPD offices in Amman, real road times from OpenStreetMap routing.
-- One service for the MVP: national ID renewal. Add services and cities by data, not code.
+- Three sectors on the same engine and population: **national ID renewal** (the live demo), **fuel prices** (slide 7b) and
+  **Royal Court medical exemptions** for the uninsured (slide 5 aside, backup B6). Add services and cities by data, not code.
 - Then: **switch to the live app.** (Baseline: 88.4% served · 11.5% hardship · 1 person left out.)
 
 ## 4. Live: break it (1:15–3:00) — no slide; app on screen
@@ -27,6 +28,12 @@ Arabic on screen with English subtitles if the jury mixes. Every number below is
 
 ## 5. Live: understand it (3:00–4:15) — no slide
 - Elderly hardship 40% → 85%, offline residents 56% → 96%. Robustness badge: ranking held 6/6 at ±20%.
+- (Optional aside, ~15 s, or the answer to "who does going digital leave out?") **The same pattern in health: Royal Court
+  medical exemptions**, over the 441 synthetic residents without health insurance. Today: one office, two visits, nobody
+  served (0.0 / 74.8 / 25.2). **Sanad only: 364 people better off, 30 worse off, all offline with nobody to apply for them**
+  (offline left out 29.3% → 37.4%). The engine's fix, intake at the 7 Civil Status offices + a Saturday intake day in
+  Downtown: left out 8.4% → 0.2%. Robustness 6/6. Footer: uninsured rate anchored to DoS 2015 (44.8% of Amman's Jordanians);
+  the process from press reports; hours and visit time are labelled assumptions.
 
 ## 6. Live: fix it (4:15–5:45) — no slide
 - Engine fixes instantly (Saturday vans Sweileh + Downtown: left out 9 → 1, hardship 195 → 90), AI explains and proposes
@@ -58,8 +65,8 @@ Arabic on screen with English subtitles if the jury mixes. Every number below is
 - Buyers: Greater Amman Municipality, ministries running digital-transformation programmes, CSPD itself.
 - Model: SaaS per service and municipality + a calibration engagement. CPU-only engine, cached AI: cheap to run.
 - Next: calibrate with more public data, add capacity/queues ("why Thursday doesn't matter today"), more services
-  (passports, licences; the fuel sector shows it takes a day, not a rebuild), the **Royal Court medical exemption** sector
-  (backup B6), more cities (areas + sites + anchors).
+  (passports, licences; the fuel and medical-exemption sectors each took a day, not a rebuild), more cities (areas + sites +
+  anchors).
 - **Relatives' answers slide** (if collected): 3–5 anonymised quotes from elderly/no-car relatives in east Amman next
   to the simulated voices. No names.
 
@@ -78,15 +85,21 @@ Arabic on screen with English subtitles if the jury mixes. Every number below is
   + 20 home visits → 83.6%, left out 0.5%; all five levers → 87.1 / 12.6 / 0.3.
 - **B5. Honest limits** — no capacity or queue model (days are interchangeable); 8 coarse areas and an east/west bus
   transfer rule; synthetic incomes; in the fuel sector nobody switches mode when prices change, and the map has no pins for
-  workplaces or hospitals. Each is the next module, not a hidden flaw.
-- **B6. Next: the Royal Court medical exemption (health insurance)** — who is uninsured in Amman, from official figures:
+  workplaces or hospitals; in medical exemptions the Royal Court unit's location is approximate and its hours assumed, and
+  letting a relative apply changes nobody (relatives work the same hours). Each is the next module, not a hidden flaw.
+- **B6. The Royal Court medical exemption (health insurance)** — built as the third sector; who is uninsured in Amman,
+  from official figures (**now used by the engine**):
   - DoS, *Health Insurance in Jordan* (Census 2015 analytical paper, ANCHORED): **in Amman, 55.2% of Jordanians are insured
     (44.8% are not)**; 41.2% of the total population (58.8% not); Amman and Zarqa are the least-covered governorates (41%).
   - Nationally: 68.7% of Jordanians and ~56% of all residents insured; every child under 6 is insured by the Ministry of
     Health; the least-covered ages are 15-34; non-Jordanians 25.3% (16.4-16.8% in Amman).
   - JPFHS 2023 (DoS / DHS, ANCHORED): 69% of ever-married women and 59% of men aged 15-49 have any health insurance.
-  - What we'd model: about 45-50% of Amman's Jordanian adults uninsured (44.8% covers all ages, including the fully insured
-    under-6s), and who can reach an exemption: documents, offices, online, a helper.
+  - **Now used by the engine:** income-band uninsured rates (65 / 45 / 20%, an assumption calibrated to the anchored 44.8%,
+    which covers all ages including the fully insured under-6s) give **441 of 1,000 synthetic adults uninsured (44.1%)**; who
+    can reach an exemption: the Citizen Services Unit, intake offices, mobile intake days, Sanad, a relative.
+  - The process (press reports, CITED): in person with a medical report, a Ministry of Health doctor's review, a return visit
+    for the letter. Hours and queue time are not published: labelled assumptions.
+  - Numbers: today 0.0 / 74.8 / 25.2; Sanad only 77.6 / 14.1 / 8.4 (364 better, 30 worse); engine fix: left out 8.4 → 0.2.
   - Footnote (say it if asked): we dropped two figures from our desk research, a "76.8% insured" whose own breakdown sums to
     84.9%, and a "38% of non-Jordanians insured" that was a misreading of DoS. Checked figures only.
 
@@ -101,3 +114,5 @@ Arabic on screen with English subtitles if the jury mixes. Every number below is
 8. After Apply: 92.3% served; Dana's card today → policy → after fix.
 9. Fuel sector (`?sector=everyday_travel`, preset fuel +25% with fares): the map and KPI cards (70.2 / 14.6 / 15.2), and
    Issa's card after the top fix (still priced out) for slide 7b.
+10. Medical exemptions (`?sector=medical_exemption`, preset Sanad only): the map with the lighter insured dots and the KPI
+    cards ("N of 441 uninsured", 77.6 / 14.1 / 8.4), and Salma's card today → Sanad only → after fix, for slide 5 and B6.

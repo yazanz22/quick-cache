@@ -1,5 +1,5 @@
 {
-  "_note": "Documentation only: no code reads this file at runtime. It records the public figures behind Nas, with the status of each, for the team and for the assumptions table. Status: ANCHORED = the team opened the source URL and checked the figure (MoDEE figures on 2026-10-09; 'retrieved' where recorded); TEAM_CONFIRMED = confirmed by the team, no source link recorded yet; CITED_UNVERIFIED = quoted by our AI-assisted desk research (Qwen, 'Amman in a Box') with a source we could not open or confirm (VALIDATION.md and seed_census.py call these CITED). The 33 engine constants in sim/assumptions.py (26 for ID renewal and shared travel, 7 for everyday_travel) are all ASSUMPTION; entries here only give context for them. The fuel entries (fuel_prices_oct_2026, naf_fuel_support_jd_month) give context for the everyday_travel presets; the health_insurance_* and jpfhs_* entries are for a planned third sector (Royal Court medical exemption) and are not used yet. Entries whose id starts with research_doc_ are figures from the team's research doc that must NOT be reused (see their notes). Never present a CITED_UNVERIFIED figure as an official statistic. Last checked 2026-10-10.",
+  "_note": "Documentation only: no code reads this file at runtime. It records the public figures behind Nas, with the status of each, for the team and for the assumptions table. Status: ANCHORED = the team opened the source URL and checked the figure (MoDEE figures on 2026-10-09; 'retrieved' where recorded); TEAM_CONFIRMED = confirmed by the team, no source link recorded yet; CITED_UNVERIFIED = quoted by our AI-assisted desk research (Qwen, 'Amman in a Box') with a source we could not open or confirm (VALIDATION.md and seed_census.py call these CITED). The 35 engine constants in sim/assumptions.py (26 for ID renewal and shared travel, 7 for everyday_travel, 2 for medical_exemption) are all ASSUMPTION; entries here only give context for them. The fuel entries (fuel_prices_oct_2026, naf_fuel_support_jd_month) give context for the everyday_travel presets; health_insurance_amman_2015 is the calibration target of UNINSURED_RATE_BY_BAND (medical_exemption sector, via data/seed_insurance.py), health_insurance_jordan_2015 and jpfhs_2023_health_insurance are context and cross-checks for it, and royal_court_medical_exemption_process (press reports) describes the process the exemption presets model. Entries whose id starts with research_doc_ are figures from the team's research doc that must NOT be reused (see their notes). Never present a CITED_UNVERIFIED figure as an official statistic. Last checked 2026-10-10.",
   "anchors": {
     "internet_use_individuals_jordan": {
       "value": 0.956,
@@ -206,7 +206,7 @@
       "source_name": "Department of Statistics, 'Health Insurance in Jordan: analytical paper prepared according to the results of the General Population and Housing Census 2015'",
       "url": "https://dosweb.dos.gov.jo/DataBank/Analytical_Reports/Health_Insurance_in_Jordan.pdf",
       "retrieved": "2026-10-10",
-      "notes": "Opened by the team on 2026-10-10 (the official DoS PDF). For the planned 'Royal Court medical exemption' sector; nothing reads it yet. The ~56% total-population figure is the paper's rounded national rate. All children under 6 are insured by the Ministry of Health, so all-ages rates understate adult uninsurance. The lowest-covered age group is 15-34. The paper also says 38% of the INSURED non-Jordanians are under special arrangements: that is not an insurance rate (see research_doc_non_jordanians_insured_38)."
+      "notes": "Opened by the team on 2026-10-10 (the official DoS PDF). National context for the medical_exemption sector; the engine's calibration target is the Amman figure (health_insurance_amman_2015). The ~56% total-population figure is the paper's rounded national rate. All children under 6 are insured by the Ministry of Health, so all-ages rates understate adult uninsurance. The lowest-covered age group is 15-34. The paper also says 38% of the INSURED non-Jordanians are under special arrangements: that is not an insurance rate (see research_doc_non_jordanians_insured_38)."
     },
     "health_insurance_amman_2015": {
       "value": {
@@ -226,7 +226,8 @@
       "url": "https://dosweb.dos.gov.jo/DataBank/Analytical_Reports/Health_Insurance_in_Jordan.pdf",
       "retrieved": "2026-10-10",
       "recommended_for_engine": "Amman Jordanians aged 16+ uninsured: about 45-50%. The ANCHORED figure is 44.8% (all ages); it includes children under 6, who are all insured, so adults are higher. The 45-50% adult range is our ASSUMPTION built on that anchor, not a published figure.",
-      "notes": "Amman and Zarqa are the lowest-covered governorates (about 41% of their total population insured). Our synthetic population is Jordanian nationals 16+, so the Jordanians figure (55.2% insured / 44.8% not) is the relevant one, not the 41.2% total-population figure (which mixes in non-Jordanians at 16.4-16.8% insured). Say '2015 census' on stage: it is a 2015 figure, not today's."
+      "notes": "Amman and Zarqa are the lowest-covered governorates (about 41% of their total population insured). Our synthetic population is Jordanian nationals 16+, so the Jordanians figure (55.2% insured / 44.8% not) is the relevant one, not the 41.2% total-population figure (which mixes in non-Jordanians at 16.4-16.8% insured). Say '2015 census' on stage: it is a 2015 figure, not today's.",
+      "used_by_engine": "Since da8d79f (2026-10-10): the calibration target of UNINSURED_RATE_BY_BAND in sim/assumptions.py (low 0.65 / middle 0.45 / high 0.20, tagged ASSUMPTION: the per-band split is ours, not published). data/seed_insurance.py (seed 42) draws each synthetic citizen's has_health_insurance from those rates: 441 of 1,000 uninsured (44.1%; low 61.0%, middle 44.6%, high 17.5%), tag 'uninsured', the eligibility rule of the medical_exemption sector. The constant stays ASSUMPTION; only this 44.8% target is ANCHORED."
     },
     "jpfhs_2023_health_insurance": {
       "value": {
@@ -242,6 +243,26 @@
       "url": "https://dosweb.dos.gov.jo/DataBank/Population/Health/JPFHS_Summary_Report__2023_en.pdf",
       "retrieved": "2026-10-10",
       "notes": "A more recent national cross-check of the 2015 census rates, for adults of working age. No Amman breakdown is used from it."
+    },
+    "royal_court_medical_exemption_process": {
+      "value": {
+        "where": "In person at the Royal Hashemite Court's Citizen Services Unit (دائرة خدمة الجمهور)",
+        "documents": "A medical report",
+        "review": "A Ministry of Health doctor reviews the application",
+        "visits": "A return visit to collect the exemption letter",
+        "published_hours": null,
+        "published_queue_time": null
+      },
+      "status": "CITED_UNVERIFIED",
+      "year": null,
+      "scope": "Royal Court medical exemptions for citizens without health insurance (Amman)",
+      "source_name": "Press reports: Al Rai and Ad-Dustour articles on the Royal Court's medical exemption procedure",
+      "url": "http://alrai.com/article/10420420",
+      "urls": [
+        "http://alrai.com/article/10420420",
+        "https://www.addustour.com/articles/637618"
+      ],
+      "notes": "CITED (press reports), not an official procedure page. Context for the medical_exemption presets: exemption_today models one office (site royal_court_csu, approximate coordinates), 2 visits (apply with the report, return for the letter), fee 0, no online channel. The hours and the queue time are not published, so the presets' 08:00-15:00 Sun-Thu hours are ASSUMED and EXEMPTION_VISIT_MINUTES (120) is an ASSUMPTION. No engine constant comes from this entry. The proxy rule (a first-degree relative may apply on the patient's behalf) is the presets' service default (proxy_allowed null), not a figure from these reports."
     },
     "research_doc_jordanians_insured_76_8": {
       "value": 0.768,

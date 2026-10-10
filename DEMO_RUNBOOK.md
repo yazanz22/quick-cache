@@ -13,14 +13,19 @@ Everything below was verified on the 2026-10-10 build. Numbers are exact engine 
    2. `.venv/Scripts/python -m scripts.warm_cache --service everyday_travel` (~12 calls: fixes 1, hero voices 9, reports 2)
    3. optional: `.venv/Scripts/python -m scripts.find_ai_fix --service everyday_travel`, then step 2 again (the AI-fix voices and report)
    4. `.venv/Scripts/python -m scripts.warm_cache --service id_renewal` (Amina's voice after the AI fix; 1 call)
-   5. `DEMO_OFFLINE=1 .venv/Scripts/python -m scripts.warm_cache` must end with **"No misses"** (or only what you chose to skip)
-   6. `.venv/Scripts/python -m pytest -q`; warmed entries show as XPASS: drop the travel xfail marks in `tests/test_cache_hits.py`
-      and Amina from `PENDING_VOICES`
-   7. `git add backend/cache backend/tests/test_cache_hits.py && git commit -m "Cache: travel sector + Amina's post-fix voice" && git push`, then redeploy Render.
-   Until this runs, the fuel sector shows template voices, explanations and reports (labelled "template", never blank).
+   5. `.venv/Scripts/python -m scripts.find_ai_fix --service medical_exemption` (up to 6 calls), then
+      `.venv/Scripts/python -m scripts.warm_cache --service medical_exemption` (~28 calls: 12 parses, 1 fixes, 12 hero voices, 3 reports)
+   6. `DEMO_OFFLINE=1 .venv/Scripts/python -m scripts.warm_cache` must end with **"No misses"** (or only what you chose to skip)
+   7. `.venv/Scripts/python -m pytest -q` (today: 285 passed, 57 xfailed); warmed entries show as XPASS: drop the travel and
+      exemption xfail marks in `tests/test_cache_hits.py` (`travel_pending` / `TRAVEL_PENDING`, `exemption_pending` /
+      `EXEMPTION_PENDING`) and Amina from `PENDING_VOICES`
+   8. `git add backend/cache backend/tests/test_cache_hits.py && git commit -m "Cache: travel and medical-exemption sectors + Amina's post-fix voice" && git push`, then redeploy Render.
+   **Totals:** ID renewal 1 call, fuel ~24 (+ optional find_ai_fix), medical exemptions ~28 (+ up to 6): about 60 calls, so
+   spread them over the model chains (Groq can do the parses). Until this runs, the fuel and medical-exemption sectors show
+   template voices, explanations and reports (labelled "template", never blank).
 3. Open **https://nas-rbo5.onrender.com/?sector=id_renewal** in Arabic on the laptop you'll present with (`?sector=` skips the
    sector list), run the script below once, and **record a backup screen video** of that run. Then open `?sector=everyday_travel`
-   once and click through the fuel section below.
+   and `?sector=medical_exemption` once each and click through their sections below.
 4. Decide the connectivity mode (see "If the wifi is bad").
 
 ## The script (clicks in order)
@@ -82,6 +87,38 @@ were already squeezed (≈30% of income). **"Are the prices real?"** October 202
 National Aid Fund's 8-14 JD fuel support are from press reports (CITED); the 7 travel constants are labelled assumptions,
 committed before any travel scenario ran. **"Do people switch to the bus?"** Not modelled yet: the next module.
 
+## Medical exemptions (optional, Q&A)
+Use it when a judge asks about health, "only services?", or "who does going digital leave out?". The 7-minute script stays
+on ID renewal. Numbers are engine output (`compare(exemption_today, preset)`), **percentages of the 441 uninsured only**:
+insured residents are the lighter dots ("Insured: not applicable"). Status words are ID renewal's.
+
+| Do | Say (the numbers on screen) |
+|---|---|
+| Open `?sector=medical_exemption` (or the back button → **الإعفاءات الطبية**) | Same 1,000 synthetic citizens; the 441 without health insurance apply for a Royal Court medical exemption. Today: one office in Downtown, two visits, no online channel: **0.0% served, 74.8% hardship, 25.2% left out**. Two visits of about two hours already reach our hardship line: today's process is a hardship for everyone who needs it. |
+| Preset **عبر سند فقط** (`exemption_online_only`, Sanad only) | Applications only through Sanad: **77.6 / 14.1 / 8.4**. **364 people better off.** But **30 worse off, all offline residents with nobody to apply for them**: they lose the counter (offline left out 29.3% → 37.4%). Hit hardest: offline, elderly. |
+| Click **سلمى** (Salma) | 72, Wehdat, no car, can't use the app alone, nobody to help: today hardship → Sanad only **left out**. Read her voice. |
+| Robustness badge | Ranking held **6 of 6** at ±20%. |
+| **اقترح حلول** (Suggest fixes) | Engine fix, verified: **exemption intake at the 7 Civil Status offices + a Saturday mobile intake day in Downtown**: left out 37 → 1 person (8.4% → 0.2%). Hardship rises (14.1% → 22.2%) because the people brought back still travel. |
+| **طبّق الحل** on the top fix, click **سلمى** again | Today → policy → after fix: hardship → left out → **hardship**: she reaches the Saturday intake day by bus. (Ali, 77 in Marka, comes back through the Marka intake point.) |
+| (if asked) Preset **سند ثم استلام الكتاب** (`exemption_hybrid`) | Keep the office and add Sanad with one short visit to collect: 77.6 / 20.9 / 1.6, nobody worse off. |
+
+**Rehearsed exemption requests** (`demo_requests.json`; instant and offline **only once the morning warm run is done**, step 5;
+before that they parse live in 3-8 s): on **الوضع الحالي** (today): خلّوا الأقارب يقدّموا بدل المريض (already allowed today) ·
+The patient must come in person (= no change in outcomes: relatives work the same hours) · افتحوا استقبال الطلبات في مكاتب الأحوال المدنية ·
+Accept applications only through Sanad · خلّوا الناس يقدّموا على سند ويستلموا الكتاب بالمكتب · Add a mobile intake day in Marka on Saturday ·
+زيارات منزلية لذوي الإعاقة، 30 زيارة; on **عبر سند فقط**: خلّوا كبار السن يقدّموا بالمكتب / Open the office for people without a smartphone
+(both reopen the office **for everyone**: Nas can't limit an office to one group, and the "understood as" list says so);
+**unsupported, answered honestly:** Make everyone insured · ارفعوا قيمة الإعفاء · Add more doctors to the committee.
+
+Exemption answers: **"Why is nobody served today?"** Two visits of about two hours each at one office already reach our
+hardship line (half a working day); both constants were frozen before any exemption scenario ran and are moved ±20% in the
+robustness check. **"So Sanad is good?"** For 364 people, yes; the 30 it leaves out are the point, and the engine finds the
+mix that reaches them. **"Does letting a relative apply matter?"** Rarely here: relatives work the same Sun-Thu hours and are
+free from 16:00, after the office closes; the switch is there to test a Saturday or evening intake day. **"Is 44% uninsured
+real?"** The DoS 2015 census paper: 44.8% of Amman's Jordanians uninsured (all ages, ANCHORED); our 441 of 1,000 (44.1%) come
+from income-band rates calibrated to it (an assumption). The process (medical report, doctor's review, return visit) is from
+press reports; the hours and queue time are labelled assumptions.
+
 ## Answers to have ready
 - **Real people?** No. A labelled synthetic population; anchored where we could (MoDEE 2024: 95.6% internet use, 99% smartphone households, 38.1% e-gov use; the 7 real CSPD offices; OSRM road times). Everything else is a labelled assumption. README has the full "what is real, what is assumed" list.
 - **Did you tune it?** Assumptions were frozen before any scenario ran, all 26 are labelled, and the ranking holds 6/6 at ±20%. When a story didn't appear we changed the scenario, never the constants.
@@ -99,6 +136,10 @@ committed before any travel scenario ran. **"Do people switch to the bus?"** Not
 ## Known and accepted
 - Amina's voice after the **AI fix** is a template until the morning warm run (step 2). The demo reads Dana's.
 - The fuel sector's voices, fix explanations and reports are templates until the travel warm run (step 2); its robustness is 5/6, not 6/6 (say why).
+- The medical-exemption sector's voices, fix explanations and reports are templates until its warm run (step 5), and no AI fix is
+  shown until `find_ai_fix --service medical_exemption` has found one.
+- Medical exemptions: the Royal Court unit's coordinates are approximate (±1 km, Raghadan) and its hours (08:00-15:00 Sun-Thu)
+  are assumed; "patient must come in person" changes nobody (relatives work the same hours). Both are said, not hidden.
 - The fuel map shows citizens only: no pins for workplaces, universities or hospitals.
 - Fix titles show Arabic-Indic digits (٩–٢); changing them would invalidate the cached AI fix.
 - Three engine refinements are on hold so the rehearsed numbers stay exact (HANDOFF §14).
