@@ -46,6 +46,7 @@
   const post = function (p, b) { return call("POST", p, b); };
 
   /* ---------- normalisers (accept a few reasonable variants) ---------- */
+  const TRAVEL_KPIS = ["avg_monthly_cost_jd", "avg_extra_jd_month", "total_extra_jd_month", "n_cash_support", "avg_income_share_pct"];
   const arr = function (x, key) { return Array.isArray(x) ? x : (x && Array.isArray(x[key]) ? x[key] : null); };
 
   // Citizen[] (§5). The backend always sends tags (seed.derive_tags), so nothing is derived here.
@@ -71,14 +72,16 @@
     return out;
   }
 
-  // -> [{ id, name_ar, name_en, note_ar, note_en, policy, demo }]  (baseline first)
+  // -> [{ id, name_ar, name_en, note_ar, note_en, policy, demo, service }]  (baseline first). service: the scenario's
+  // own field, else its policy's, else "id_renewal" (an older backend has one service).
   function normScenarios(raw) {
     let list = arr(raw, "scenarios");
     if (!list && raw && typeof raw === "object") list = Object.keys(raw).map(function (k) { return Object.assign({ id: k }, raw[k]); });
     list = (list || []).map(function (s) {
       const policy = s.policy || (s.offices ? s : null);
       return { id: s.id || s.key || s.name, name_ar: s.name_ar || s.title_ar || null, name_en: s.name_en || s.title_en || null,
-        note_ar: s.description_ar || s.note_ar || null, note_en: s.description_en || s.note_en || null, policy: policy, demo: !!s.demo };
+        note_ar: s.description_ar || s.note_ar || null, note_en: s.description_en || s.note_en || null, policy: policy, demo: !!s.demo,
+        service: s.service || (policy && policy.service) || "id_renewal" };
     }).filter(function (s) { return s.policy; });
     list.sort(function (a, b) { return (a.id === "baseline" ? -1 : 0) - (b.id === "baseline" ? -1 : 0); });
     return list;
@@ -91,19 +94,30 @@
     return (list || []).map(function (a) {
       return { key: a.name || a.key || a.id, label_ar: a.label_ar || null, label_en: a.label_en || null, value: a.value, unit: a.unit || null,
         tag: a.tag || (a.anchored ? "ANCHORED" : "ASSUMPTION"), rationale_ar: a.rationale_ar || a.rationale || "", rationale_en: a.rationale_en || a.rationale || "", source: a.source || null,
-        source_ar: a.source_ar || null, source_en: a.source_en || (typeof a.source === "string" ? a.source : null) };
+        source_ar: a.source_ar || null, source_en: a.source_en || (typeof a.source === "string" ? a.source : null),
+        service: a.service || null };   // "id_renewal" | "everyday_travel" | "shared" | null (older backend: shown for every service)
     });
   }
 
-  // -> [{ id, note_ar, note_en }]
+  // -> [{ id, note_ar, note_en, service }]  (service defaults to "id_renewal", as in models.Hero)
   function normHeroes(raw) {
     const list = arr(raw, "heroes") || [];
-    return list.map(function (h) { return typeof h === "string" ? { id: h } : { id: h.id || h.citizen_id, note_ar: h.note_ar || h.note || null, note_en: h.note_en || h.note || null }; });
+    return list.map(function (h) { return typeof h === "string" ? { id: h, service: "id_renewal" } : { id: h.id || h.citizen_id, note_ar: h.note_ar || h.note || null, note_en: h.note_en || h.note || null, service: h.service || "id_renewal" }; });
+  }
+
+  // GET /services -> [{ id, name_ar, name_en, description_ar, description_en, levers[], baseline_scenario, demo_scenario }]
+  function normServices(raw) {
+    return (arr(raw, "services") || []).map(function (v) {
+      return { id: v.id, name_ar: v.name_ar || v.id, name_en: v.name_en || v.id, description_ar: v.description_ar || "", description_en: v.description_en || "",
+        levers: Array.isArray(v.levers) ? v.levers : [], baseline_scenario: v.baseline_scenario || null, demo_scenario: v.demo_scenario || null };
+    }).filter(function (v) { return v.id; });
   }
 
   // kpis: percentages are 0-100 (the backend always sends 0-100, so nothing is rescaled). Adds
   // .counts {served, hardship, left_out} (people) from the n_* keys, or by counting outcomes on an older backend.
-  // left_out_by_reason / hardship_by_reason ({reason: n people}) pass through untouched when present.
+  // left_out_by_reason / hardship_by_reason ({reason: n people}) pass through untouched when present, and so do the
+  // everyday-travel keys (avg_monthly_cost_jd, avg_extra_jd_month, total_extra_jd_month, n_cash_support,
+  // avg_income_share_pct, by_purpose, by_mode): a missing one stays missing and the UI hides it.
   function normKpis(kpis, outcomes) {
     const k = Object.assign({}, kpis || {});
     ["pct_served", "pct_hardship", "pct_left_out", "avg_hours_lost", "avg_cost_jd"].forEach(function (x) { k[x] = +k[x] || 0; });
@@ -132,6 +146,11 @@
     const b = normSim(raw.baseline), s = normSim(raw.scenario);
     const kpi_delta = {}, D = raw.kpi_delta || {};
     ["pct_served", "pct_hardship", "pct_left_out", "avg_hours_lost", "avg_cost_jd"].forEach(function (x) { kpi_delta[x] = typeof D[x] === "number" ? D[x] : s.kpis[x] - b.kpis[x]; });
+    // Optional kpis (everyday travel): the backend's delta when present, else the plain difference, else absent.
+    TRAVEL_KPIS.forEach(function (x) {
+      if (typeof D[x] === "number") kpi_delta[x] = D[x];
+      else if (typeof s.kpis[x] === "number" && typeof b.kpis[x] === "number") kpi_delta[x] = s.kpis[x] - b.kpis[x];
+    });
     return { raw: raw, baseline: b, scenario: s, kpi_delta: kpi_delta,
       flipped_worse: raw.flipped_worse || [], flipped_better: raw.flipped_better || [], worst_groups: raw.worst_groups || [] };
   }
@@ -176,7 +195,13 @@
     assumptions: function () { return get("/assumptions").then(normAssumptions); },
     // Optional extras, not in §7. The UI falls back to config.js (or hides the AI chip) if they 404.
     areas: function () { return get("/areas").then(normAreas); },
-    heroes: function () { return get("/heroes").then(normHeroes); },
+    // Heroes of one service. An older backend ignores ?service= and sends the ID-renewal heroes (service
+    // "id_renewal"), so the filter keeps only the asked service's heroes.
+    heroes: function (service) {
+      return get("/heroes" + (service ? "?service=" + encodeURIComponent(service) : "")).then(normHeroes)
+        .then(function (list) { return service ? list.filter(function (h) { return h.service === service; }) : list; });
+    },
+    services: function () { return get("/services").then(normServices); },
     llmStatus: function () { return get("/llm/status").then(normStatus); },
 
     simulate: function (policy) { return post("/simulate", { policy: policy }).then(normSim); },

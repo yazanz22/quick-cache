@@ -23,6 +23,20 @@ editing anything: `?api=http://192.168.1.20:8000`.
 
 If the backend is down, the page shows a "can't reach the engine" screen with the URL it tried and a Retry button.
 
+## Sectors (services)
+
+The page always opens on a **start state**: the left panel lists one card per sector from `GET /services`
+("اختر القطاع / Choose a sector"; names from i18n `svc_name_<id>`: ID renewal, **Fuel prices** for `everyday_travel`;
+the backend's `description_*` as one line). The map shows every resident as a neutral dot (no pins, rings, heroes or
+steps), the right panel shows a short note instead of KPIs, and no `/compare` is sent. The sector is **not** remembered.
+`?sector=id_renewal` or `?sector=everyday_travel` skips the list (for the stage).
+
+Choosing a card loads that sector: its presets (`/scenarios` filtered by `service`, its `baseline_scenario` first and
+used as the compare baseline), its heroes (`/heroes?service=<id>`), and a policy panel built from `ServiceInfo.levers`.
+The panel head has a back button ("→ القطاعات / ← Sectors") that returns to the start state and drops everything (policy,
+fixes, robustness, report, drawer, filter). Strings that differ per sector are `<key>_<service id>` overrides in
+`i18n.js` (e.g. `served_everyday_travel` = "Fine"), picked by `ts()` in `app.js`; ID renewal has none, so it reads as before.
+
 ## What the UI calls
 
 All bodies are JSON. Field names follow `backend/app/models.py` (CLAUDE.md §5). Timeouts: `config.js` `TIMEOUT_MS`
@@ -32,10 +46,11 @@ All bodies are JSON. Field names follow `backend/app/models.py` (CLAUDE.md §5).
 |---|---|---|---|
 | Page load | `GET /population` | | `Citizen[]` (or `{citizens: [...]}`) with `tags` (the backend always sends them) |
 | Page load | `GET /sites` | | `[{id, name_ar, name_en, lat, lng, area}]` (or a dict keyed by id) |
-| Page load | `GET /scenarios` | | `[{id, name_ar?, name_en?, description_ar?, description_en?, policy, demo?}]`, or a dict `{id: {...}}`, or `{id: Policy}`. The one with `id: "baseline"` is the baseline |
-| Page load | `GET /assumptions` | | `[{name, value, tag, rationale, source, label_ar?, label_en?, unit?, rationale_ar?, source_ar?}]` (`source`: a short context note or null; every tag is ASSUMPTION) or a dict `{NAME: {value, tag, rationale, source}}` |
+| Page load | `GET /scenarios` | | `[{id, name_ar?, name_en?, description_ar?, description_en?, policy, demo?, service?}]`, or a dict `{id: {...}}`, or `{id: Policy}`. `service` (else `policy.service`, else `id_renewal`) puts it in a sector; the sector's `baseline_scenario` (ID renewal: `baseline`) is its baseline |
+| Page load | `GET /assumptions` | | `[{name, value, tag, rationale, source, label_ar?, label_en?, unit?, rationale_ar?, source_ar?, service?}]` (the table shows rows whose `service` is the current sector or `shared`; untagged rows always) (`source`: a short context note or null; every tag is ASSUMPTION) or a dict `{NAME: {value, tag, rationale, source}}` |
 | Page load, optional | `GET /areas` | | `[{id, name_ar, name_en, lat, lng}]`. 404 → uses `config.js` AREAS |
-| Page load, optional | `GET /heroes` | | `[{id, note_ar, note_en}]` or `["c_0262", ...]`. 404 → uses `config.js` HERO_IDS. The note shows under the name on the citizen card |
+| Page load, optional | `GET /services` | | `[{id, name_ar, name_en, description_ar, description_en, levers[], baseline_scenario, demo_scenario}]`. 404 → `config.js` SERVICES (ID renewal only). A service with no scenario in `/scenarios` isn't listed |
+| A sector is chosen (once per sector) | `GET /heroes?service=<id>` | | `[{id, note_ar, note_en, service}]` or `["c_0262", ...]`. Only heroes whose `service` matches are kept (an older backend that ignores the parameter sends ID-renewal heroes). 404 → `config.js` HERO_IDS for ID renewal. The note shows under the name on the citizen card |
 | Page load, and after every AI call | `GET /llm/status` | | `{offline, providers, models: [{provider, slot, model, available, cooldown}]}`. Drives the header chip: "AI live", "AI: cache only" (`offline`) or "AI resting (rate limit)" (no model available); clicking it lists the models. Failure hides the chip |
 | Any policy edit, pin drop (300 ms debounce) | `POST /compare` | `{baseline, scenario}` | `CompareResult`. A 4xx (the engine rejects the policy) restores the last policy that ran, with its applied fix, fixes and robustness result, and shows a translated reason (bad hours / unknown site or area / contradictory settings) with no Retry. Retry is offered only for network errors and 5xx |
 | A fix is applied (for the green "got better" rings, the three-step status on the citizen card and the KPI deltas "vs the policy before the fix") | `POST /compare` | `{baseline: <policy before fix>, scenario: <fix policy>}` | `CompareResult` |
@@ -57,6 +72,27 @@ All bodies are JSON. Field names follow `backend/app/models.py` (CLAUDE.md §5).
 - `ParseResult`: `status: "ok" | "unsupported"`, `policy`, `changes_ar[]`, `changes_en[]`, `message_ar`, `message_en`, `source`.
 - 4xx bodies: `detail` as a string (the engine's policy checks) or a list `[{loc, msg, type}]` (schema errors); `api.js` turns both into `err.detail` text.
 - Reason codes and modes are the enums from §5; their labels live in `i18n.js` (`r_TOO_FAR`, `m_bus`, ...). Plurals use `key_one/_two/_few/_many/_other` variants picked by `Intl.PluralRules`.
+
+### Everyday travel (fuel prices)
+
+- **Policy fields the panel edits** (`ServiceInfo.levers` = `fuel`, `fares`, `cash_support`, `transport_vouchers`):
+  `fuel_price_change_pct` (stepper −50..+100, step 5; next to it "90-octane 1.050 JD/L → X", display only, from
+  `config.js` `FUEL_PRICE_90_JD`), `bus_fare_change_pct` and `taxi_fare_change_pct` (each: "Follow fuel" = `null`,
+  "Freeze" = `0`, "Custom %" = a −50..+100 stepper that skips 0), `cash_support` (`[{groups, amount_jd_month}]`: group
+  chips + a 0..50 JD/month stepper, step 2; the panel shows the first entry and editing replaces the list), and
+  `transport_vouchers` (the same voucher control as ID renewal). Everything else in the Policy is sent as the preset had it.
+- **Outcome fields the citizen card reads**: `purpose` (work / university / hospital), `channel_name_*` (the destination),
+  `mode` (car, helper_car = "family member's car", bus with `bus_transfers`, taxi), `days_per_week`, `travel_minutes` (one way),
+  `monthly_cost_before_jd` → `cost_jd` with `extra_jd_month`, `income_share_pct`, `cash_support_jd_month` (when > 0), `reasons`.
+  `channel: "no_regular_trip"` shows a one-line note instead. Missing fields are hidden.
+- **KPIs**: the status words are fine / squeezed / priced out (بخير / مضغوطون / عاجزون عن التنقل). Under the cards, when present:
+  `avg_monthly_cost_jd`, `avg_extra_jd_month` (+ `total_extra_jd_month`), `avg_income_share_pct`, `n_cash_support`; deltas from
+  `kpi_delta` (else the plain difference). "Who is squeezed or priced out" lists `left_out_by_reason` and `hardship_by_reason`
+  (reasons `TRANSPORT_OVER_BUDGET`, `FUEL_COST`, `FARE_COST`); clicking one dims everyone else of that status on the map.
+  `by_purpose` / `by_mode` (`{key: {served, hardship, left_out, n}}` in percent) are drawn as small bars. The glossary adds the
+  two thresholds from `/assumptions` (`TRANSPORT_SHARE_SQUEEZED`, `TRANSPORT_SHARE_PRICED_OUT`).
+- **Map**: no pins (the backend has no hub coordinates; offices and vans are ID-renewal levers), no candidate-site marks.
+- Fixes, robustness and the report work exactly as for ID renewal (titles and numbers from the backend; the report heading names the sector).
 
 ### What the UI sends as a Policy
 

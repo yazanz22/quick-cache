@@ -10,7 +10,6 @@ window.NAS_CONFIG = {
   TIMEOUT_MS: 20000,
   // AI routes can take a while (the backend tries several models before its template). Per route, in ms.
   TIMEOUT_AI_MS: { "/fixes": 30000, "/report": 30000, "/policy/parse": 25000, "/citizen/voice": 25000 },
-
   // Debounce before re-running /compare after an edit or a pin drag (CLAUDE.md §9.2).
   COMPARE_DEBOUNCE_MS: 300,
 
@@ -20,6 +19,13 @@ window.NAS_CONFIG = {
 
   // Hero citizens to show as quick buttons. Used only if GET /heroes doesn't exist.
   HERO_IDS: [],
+
+  // Everyday travel: today's 90-octane pump price (JD per litre, Oct 2026), shown next to the fuel stepper as
+  // "1.050 JD/L -> X". Display only: the engine works from fuel_price_change_pct, never from this number.
+  FUEL_PRICE_90_JD: 1.050,
+
+  // Used only if GET /services doesn't exist: one service, so the switcher stays hidden.
+  SERVICES: [{ id: "id_renewal", name_ar: "تجديد الهوية", name_en: "ID renewal", levers: ["offices", "online", "appointments", "mobile_units", "fee", "visits", "protections"], baseline_scenario: "baseline", demo_scenario: null }],
 
   // Used only if GET /areas doesn't exist. Approximate centroids from CLAUDE.md §6.
   AREAS: {

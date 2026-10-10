@@ -425,6 +425,36 @@ tbody tr:last-child td { border-bottom: 0; }
 .robust.idle { background: var(--surface-2); border-color: var(--line-strong); }
 .robust.idle > i { color: var(--accent); }
 
+/* sectors: the start-state list, the sector panel head, travel panel controls, trip block */
+.steps[hidden], .seg[hidden], .legend[hidden], .tabs[hidden], .actions[hidden] { display: none; }
+.sectors { display: grid; gap: 8px; }
+.sector { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; text-align: start; border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--r-card); padding: 12px; transition: border-color .2s, background .2s; }
+.sector:hover { border-color: var(--accent); background: var(--accent-soft); }
+.sector > i.ph:first-child { grid-row: 1 / span 2; font-size: 24px; color: var(--accent); width: 40px; height: 40px; border-radius: 9px; background: var(--accent-soft); display: grid; place-items: center; }
+.sector b { font-size: 14px; font-weight: 600; }
+.sector small { grid-column: 2; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sector .go { grid-row: 1 / span 2; grid-column: 3; color: var(--muted); font-size: 16px; }
+.back-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding-inline: 8px 10px; border-radius: var(--r-ctl); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-2); font-size: 12.5px; font-weight: 500; flex: none; }
+.back-btn:hover { background: var(--surface-2); }
+.panel-head.sector-head { justify-content: flex-start; gap: 10px; }
+.home-note { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--ink-2); background: var(--surface-2); border: 1px dashed var(--line-strong); border-radius: var(--r-card); padding: 14px; }
+.home-note i { font-size: 20px; color: var(--accent); flex: none; }
+.dot.idle { fill: var(--faint); stroke: var(--surface); cursor: default; }
+.seg3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 3px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-ctl); }
+.seg3 button { border: 0; background: transparent; border-radius: 6px; padding: 5px 4px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.seg3 button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgb(18 22 28 / .12); }
+.fuel-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; margin: 0 0 8px; padding: 8px 10px; border-radius: var(--r-ctl); background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.fuel-line small { color: var(--muted); font-size: 11.5px; }
+.kpi-sub.wrap { flex-wrap: wrap; row-gap: 6px; }
+.kpi-sub.wrap i { vertical-align: -2px; }
+.sub-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin: 12px 0 6px; }
+.sub-title:first-of-type { margin-top: 0; }
+.sub-title > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
+.facts.one { grid-template-columns: 1fr; }
+.facts.one .fact { border-inline-end: 0; }
+.facts.one .fact:not(:last-child) { border-bottom: 1px solid var(--line); }
+.fact b small { font-weight: 500; color: var(--muted); font-size: 11.5px; }
+
 /* backend states */
 .boot { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; background: var(--bg); padding: 16px; }
 .boot[hidden] { display: none; }
@@ -487,6 +517,8 @@ html[dir="rtl"] .boot-card .bar-load i { animation-name: load-rtl; }
   .mapwrap .leaflet-bottom { bottom: calc(var(--heroes-h, 0px) + 8px); }
   .panel.impact { order: 0; }
   .panel.policy { order: 1; }
+  body.home .panel.policy { order: 0; }
+  body.home .panel.impact { order: 1; }
   .report-cols { grid-template-columns: 1fr; }
 }
 @media (max-width: 520px) {
@@ -524,7 +556,7 @@ html[dir="rtl"] .boot-card .bar-load i { animation-name: load-rtl; }
 
   <div class="main">
     <aside class="panel policy" aria-labelledby="policyTitle">
-      <div class="panel-head"><h2 class="panel-title" id="policyTitle" data-t="policy"></h2></div>
+      <div class="panel-head" id="policyHead"><h2 class="panel-title" id="policyTitle" data-t="policy"></h2></div>
       <div class="panel-scroll" id="policyPanel"></div>
     </aside>
 
@@ -559,9 +591,9 @@ html[dir="rtl"] .boot-card .bar-load i { animation-name: load-rtl; }
 <div class="toast" id="toast" role="alert" hidden></div>
 
 <script src="vendor/leaflet/leaflet.js"></script>
-<script src="config.js?v=6"></script>
-<script src="i18n.js?v=6"></script>
-<script src="api.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="config.js?v=8"></script>
+<script src="i18n.js?v=8"></script>
+<script src="api.js?v=8"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>

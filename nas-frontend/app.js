@@ -5,9 +5,14 @@
   const API = window.NasAPI, DICT = window.NasI18n, CFG = window.NAS_CONFIG;
   const DAYS = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
   const GROUP_ORDER = ["elderly", "disabled", "no_car", "offline", "low_income", "worker", "student"];
-  const REASON_ICON = { TOO_FAR: "ph-map-pin-line", NO_TRANSPORT: "ph-bus", HOURS_CONFLICT_WORK: "ph-clock-countdown", NO_SMARTPHONE: "ph-device-mobile-slash", LOW_DIGITAL_LITERACY: "ph-cursor-click", NOT_WHEELCHAIR_ACCESSIBLE: "ph-wheelchair", TOO_EXPENSIVE: "ph-coins", OFFICE_CLOSED_ON_AVAILABLE_DAYS: "ph-calendar-x" };
+  const REASON_ICON = { TOO_FAR: "ph-map-pin-line", NO_TRANSPORT: "ph-bus", HOURS_CONFLICT_WORK: "ph-clock-countdown", NO_SMARTPHONE: "ph-device-mobile-slash", LOW_DIGITAL_LITERACY: "ph-cursor-click", NOT_WHEELCHAIR_ACCESSIBLE: "ph-wheelchair", TOO_EXPENSIVE: "ph-coins", OFFICE_CLOSED_ON_AVAILABLE_DAYS: "ph-calendar-x",
+    TRANSPORT_OVER_BUDGET: "ph-wallet", FUEL_COST: "ph-gas-pump", FARE_COST: "ph-ticket" };
   const MODE_ICON = { car: "ph-car-profile", helper_car: "ph-car-profile", bus: "ph-bus", taxi: "ph-taxi", online: "ph-globe-simple", home: "ph-house-line" };
+  const PURPOSE_ICON = { work: "ph-briefcase", university: "ph-graduation-cap", hospital: "ph-first-aid-kit" };
   const PROTECT_GROUPS = GROUP_ORDER;
+  const TRAVEL = "everyday_travel";
+  // The ID-renewal panel sections, used when GET /services doesn't say (an older backend).
+  const ID_LEVERS = ["offices", "online", "appointments", "mobile_units", "fee", "visits", "protections"];
 
   const $ = function (id) { return document.getElementById(id); };
   const esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]; }); };
@@ -29,7 +34,10 @@
     theme: store.get("nas.theme"),
     // reference data (GET)
     pop: [], byId: new Map(), sites: {}, areas: {}, scenarios: [], assumptions: [], heroes: [],
+    // services (GET /services): S.scenarios holds the current service's presets, S.allScenarios every service's.
+    service: null, services: [], allScenarios: [], heroCache: {},
     feePct: 100, voucherJd: 3, newOfficeArea: null,
+    fareCustom: { bus: 10, taxi: 10 }, cashJd: 14, reasonSt: "left_out",
     baseline: null, policy: null, preset: null,
     prePolicy: null, preKpis: null, appliedFix: null,
     view: "after", reason: null, sel: null, tab: "impact", deltaRef: "prefix",
@@ -53,6 +61,17 @@
     const cat = n === 0 && d[k + "_zero"] != null ? "zero" : pr.select(n);
     return t(d[k + "_" + cat] != null ? k + "_" + cat : k + "_other", { n: int(n) });
   }
+  // Service-aware string: "<key>_<service id>" when the dictionary has it (e.g. served_everyday_travel = "Fine"),
+  // else the plain key. ID renewal has no overrides, so its strings are exactly as before.
+  function ts(k, vars) { return DICT.en[k + "_" + S.service] != null ? t(k + "_" + S.service, vars) : t(k, vars); }
+  const svcInfo = function () { return S.services.find(function (v) { return v.id === S.service; }) || null; };
+  const isTravel = function () { return S.service === TRAVEL; };
+  function levers() {
+    const v = svcInfo();
+    if (v && v.levers.length) return v.levers;
+    return isTravel() ? ["fuel", "fares", "cash_support", "transport_vouchers"] : ID_LEVERS;
+  }
+  const lever = function (x) { return levers().indexOf(x) >= 0; };
   const loc = function (o, base) { return o ? (o[base + "_" + S.lang] || o[base + "_" + (S.lang === "ar" ? "en" : "ar")] || "") : ""; };
   const areaName = function (k) { return S.areas[k] ? loc(S.areas[k], "name") : k; };
   const siteName = function (id) { return S.sites[id] ? loc(S.sites[id], "name") : id; };
@@ -104,22 +123,107 @@
       '<div><button class="btn accent" id="bootRetry"><i class="ph ph-arrow-clockwise"></i>' + t("retry") + '</button> <button class="btn ghost" id="langBtn2">' + t("lang_other") + "</button></div></div>";
   }
 
+  const opt = function (p, fb) { return p.catch(function (e) { if (e.status === 404 || e.status === 405) return fb; throw e; }); };
+
+  // The current service's presets (its baseline first), heroes and baseline policy. The compare baseline is
+  // always the current service's baseline_scenario. Heroes are fetched once per service.
+  async function loadService() {
+    const v = svcInfo();
+    S.scenarios = S.allScenarios.filter(function (s) { return s.service === S.service; });
+    if (!S.scenarios.length) throw new API.ApiError("no scenarios for " + S.service, 0, "/scenarios");
+    const baseId = (v && v.baseline_scenario) || (S.service === "id_renewal" ? "baseline" : null);
+    const base = S.scenarios.find(function (s) { return s.id === baseId; }) || S.scenarios[0];
+    S.scenarios.sort(function (a, b) { return (a === base ? -1 : 0) - (b === base ? -1 : 0); });
+    S.baseline = clone(base.policy); S.policy = clone(base.policy);
+    if (!S.heroCache[S.service]) {
+      const fb = S.service === "id_renewal" ? CFG.HERO_IDS.map(function (id) { return { id: id }; }) : [];
+      const h = await opt(API.heroes(S.service), null);
+      S.heroCache[S.service] = (h && h.length ? h : fb).filter(function (x) { return S.byId.has(x.id); });
+    }
+    S.heroes = S.heroCache[S.service];
+  }
+
+  // Everything a sector carries is dropped when entering or leaving one: fixes, robustness, report, parse,
+  // drawer, reason filter, applied fix.
+  function resetSectorState() {
+    clearTimeout(cmpTimer); ++cmpSeq; ++sensSeq;
+    S.appliedFix = null; S.prePolicy = null; S.preKpis = null; S.cmp = null; S.cmpFix = null; S.fixes = null; S.sens = null; S.report = null;
+    S.parse = null; S.text = ""; S.reason = null; S.reasonSt = "left_out"; S.sel = null; S.view = "after"; S.tab = "impact"; S.deltaRef = "prefix";
+    S.undo = null; S.kpiPrev = {}; S.busy = false; renderBusy();
+    if (S.modal) closeModal();
+  }
+
+  // Choose a sector from the start list (or ?sector= on load): its baseline, presets and heroes, then /compare.
+  let svcSeq = 0;
+  async function chooseSector(id) {
+    if (!S.services.some(function (v) { return v.id === id; })) return;
+    const seq = ++svcSeq;
+    resetSectorState();
+    S.service = id;
+    try { await loadService(); }
+    catch (e) { console.error(e); if (seq === svcSeq) { S.service = null; renderHome(); toastErr(e); } return; }
+    if (seq !== svcSeq) return;
+    document.body.classList.remove("home");
+    styleDots();
+    renderStatic(); renderSteps(); renderPolicy(); renderDrawer();
+    await recompute();
+  }
+
+  // Start state: the sector list on the left, every resident as a neutral dot, no pins, rings, heroes or steps,
+  // a note instead of KPIs, and no /compare.
+  function goHome() {
+    ++svcSeq;
+    resetSectorState();
+    S.service = null; S.scenarios = []; S.heroes = []; S.baseline = null; S.policy = null; S.preset = null;
+    styleDots();
+    renderHome();
+  }
+  function renderHome() {
+    document.body.classList.add("home");
+    renderStatic();
+    $("steps").hidden = true;
+    $("policyHead").className = "panel-head";
+    $("policyHead").innerHTML = '<h2 class="panel-title" id="policyTitle">' + t("choose_sector") + "</h2>";
+    $("policyPanel").innerHTML = '<div class="sec"><div class="sectors">' + S.services.map(function (v) {
+      const nm = DICT.en["svc_name_" + v.id] ? t("svc_name_" + v.id) : loc(v, "name"), desc = loc(v, "description");
+      return '<button class="sector" data-sector="' + esc(v.id) + '"><i class="ph ' + (v.id === TRAVEL ? "ph-gas-pump" : "ph-identification-card") + '" aria-hidden="true"></i><b>' + esc(nm) + "</b>" +
+        '<small title="' + esc(desc) + '">' + esc(desc) + '</small><i class="ph ph-caret-right go flip-rtl" aria-hidden="true"></i></button>';
+    }).join("") + '</div></div><p class="footnote">' + t("prototype_note") + "</p>";
+    $("viewSeg").hidden = true; $("legend").hidden = true; $("filterSlot").innerHTML = "";
+    $("heroes").hidden = true; syncHeroesHeight();
+    $("drawer").hidden = true;
+    $("tabs").hidden = true; $("actions").hidden = true;
+    $("impactPanel").innerHTML = '<div class="sec"><div class="home-note"><i class="ph ph-hand-pointing" aria-hidden="true"></i><span>' + t("choose_sector_note") + "</span></div></div>";
+    if (map) {
+      ringLayer.clearLayers(); pinLayer.clearLayers();
+      dots.forEach(function (m) { if (m._path) m._path.setAttribute("class", "dot idle leaflet-interactive"); });
+      declutterLabels();
+    }
+  }
+  // The sector panel head: a back button to the list, and the sector name as the title.
+  function renderPolicyHead() {
+    const v = svcInfo(), nm = DICT.en["svc_name_" + S.service] ? t("svc_name_" + S.service) : loc(v, "name");
+    $("policyHead").className = "panel-head sector-head";
+    $("policyHead").innerHTML = '<button class="back-btn" data-home><i class="ph ph-arrow-left flip-rtl" aria-hidden="true"></i>' + t("sectors") + '</button><h2 class="panel-title" id="policyTitle">' + esc(nm) + "</h2>";
+  }
+
   async function boot() {
     renderStatic();
     bootScreen("loading");
     try {
-      const opt = function (p, fb) { return p.catch(function (e) { if (e.status === 404 || e.status === 405) return fb; throw e; }); };
-      const r = await Promise.all([API.population(), API.sites(), API.scenarios(), opt(API.assumptions(), []), opt(API.areas(), null), opt(API.heroes(), null)]);
+      const r = await Promise.all([API.population(), API.sites(), API.scenarios(), opt(API.assumptions(), []), opt(API.areas(), null), opt(API.services(), null)]);
       S.pop = r[0]; S.byId = new Map(S.pop.map(function (c) { return [c.id, c]; }));
-      S.sites = r[1]; S.scenarios = r[2]; S.assumptions = r[3];
+      S.sites = r[1]; S.allScenarios = r[2]; S.assumptions = r[3];
       S.areas = r[4] && Object.keys(r[4]).length ? r[4] : CFG.AREAS;
-      S.heroes = (r[5] && r[5].length ? r[5] : CFG.HERO_IDS.map(function (id) { return { id: id }; })).filter(function (h) { return S.byId.has(h.id); });
-      if (!S.scenarios.length) throw new API.ApiError("no scenarios", 0, "/scenarios");
-      const base = S.scenarios.find(function (s) { return s.id === "baseline"; }) || S.scenarios[0];
-      S.baseline = clone(base.policy); S.policy = clone(base.policy);
+      S.services = (r[5] && r[5].length ? r[5] : CFG.SERVICES).filter(function (v) { return S.allScenarios.some(function (s) { return s.service === v.id; }); });
+      if (!S.services.length) throw new API.ApiError("no scenarios", 0, "/scenarios");
       initMap();
-      await recompute();
-      if (!S.cmp) throw new API.ApiError("compare failed", 0, "/compare");
+      // ?sector=id_renewal|everyday_travel skips the list (used on stage); otherwise the start state, every time.
+      const want = new URLSearchParams(location.search).get("sector");
+      if (want && S.services.some(function (v) { return v.id === want; })) {
+        await chooseSector(want);
+        if (!S.cmp) throw new API.ApiError("compare failed", 0, "/compare");
+      } else goHome();
       bootScreen("done");
       refreshLlm();
     } catch (e) {
@@ -283,6 +387,8 @@
   function renderBusy() { $("busy").hidden = !S.busy; }
 
   function renderSteps() {
+    if (!S.service) { $("steps").hidden = true; return; }
+    $("steps").hidden = false;
     const cur = S.appliedFix ? "fix" : changed() ? "scenario" : "baseline";
     const items = [["baseline", "ph-house-line", "step_baseline"], ["scenario", "ph-scales", "step_scenario"], ["fix", "ph-check-circle", "step_fix"]];
     $("steps").innerHTML = items.map(function (it, i) {
@@ -306,6 +412,8 @@
   }
 
   function renderPolicy() {
+    if (!S.service || !S.policy) return;
+    renderPolicyHead();
     const p = S.policy;
     let h = "";
     h += '<div class="sec"><h3 class="sec-title">' + t("presets") + '</h3><div class="presets">' +
@@ -314,14 +422,14 @@
         return '<button class="preset" data-preset="' + esc(sc.id) + '" aria-pressed="' + (S.preset === sc.id) + '"><b>' + esc(scenarioName(sc)) + "</b>" + (note ? "<small>" + esc(note) + "</small>" : "<small></small>") + '<i class="ph ph-check tick" aria-hidden="true"></i></button>';
       }).join("") + "</div></div>";
 
-    const ex = [1, 2, 3, 4].map(function (i) { return t("example_" + i); });
+    const ex = [1, 2, 3, 4].map(function (i) { return ts("example_" + i); });
     h += '<div class="sec"><label class="sec-title" for="nl">' + t("describe") + '</label>' +
-      '<textarea class="input" id="nl" rows="3" placeholder="' + esc(t("describe_ph")) + '">' + esc(S.text) + "</textarea>" +
+      '<textarea class="input" id="nl" rows="3" placeholder="' + esc(ts("describe_ph")) + '">' + esc(S.text) + "</textarea>" +
       '<div class="examples">' + ex.map(function (e, i) { return '<button class="ex" data-ex="' + i + '" title="' + esc(e) + '">' + esc(e) + "</button>"; }).join("") + "</div>" +
       '<div class="parse-row"><p class="help" style="margin:0">' + t("describe_help") + '</p><button class="btn sm accent" id="parseBtn"' + (S.parse && S.parse.status === "loading" ? " disabled" : "") + '><i class="ph ph-sparkle"></i>' + t("parse") + "</button></div>" +
       renderParse() + "</div>";
 
-    if (!p.online_only) {
+    if (lever("offices") && !p.online_only) {
       p.offices.forEach(function (o, i) {
         const days = DAYS.filter(function (d) { return o.schedule[d]; });
         const first = days.filter(function (d) { return d !== "thu"; })[0] || days[0];
@@ -342,21 +450,23 @@
         '<button class="btn sm ghost" id="addOffice"><i class="ph ph-plus"></i>' + t("add_office") + "</button></div></div>";
     }
 
-    h += '<div class="sec"><h3 class="sec-title">' + t("rules") + "</h3>" +
+    if (lever("online") || lever("appointments")) h += '<div class="sec"><h3 class="sec-title">' + t("rules") + "</h3>" +
       sw("online", p.online_enabled, t("online_enabled"), p.online_only) + sw("onlineOnly", p.online_only, t("online_only")) + sw("appt", p.appointment_required, t("appointment"), p.online_only) + "</div>";
 
-    h += protectHTML(p);
+    if (lever("protections")) h += protectHTML(p);
 
     const units = p.mobile_units || [];
-    h += '<div class="sec"><h3 class="sec-title"><span>' + t("mobile_units") + '</span><button class="btn sm ghost" id="addUnit"' + (p.online_only ? " disabled" : "") + '><i class="ph ph-plus"></i>' + t("add_unit") + "</button></h3>" +
+    if (lever("mobile_units")) h += '<div class="sec"><h3 class="sec-title"><span>' + t("mobile_units") + '</span><button class="btn sm ghost" id="addUnit"' + (p.online_only ? " disabled" : "") + '><i class="ph ph-plus"></i>' + t("add_unit") + "</button></h3>" +
       (units.length ? units.map(function (u, i) {
         return '<div class="unit"><select class="input" data-u="' + i + ':area" aria-label="' + t("area") + '">' + areaOptions(u.area) + '</select><select class="input" data-u="' + i + ':day" aria-label="' + t("day") + '">' + dayOptions(u.day) + "</select>" +
           '<button class="x" data-urm="' + i + '" aria-label="' + t("remove") + '"><i class="ph ph-trash"></i></button>' +
           '<div class="hours"><input class="input num" type="time" step="1800" data-u="' + i + ':open" value="' + u.open + '" aria-label="' + t("opens") + '"><input class="input num" type="time" step="1800" data-u="' + i + ':close" value="' + u.close + '" aria-label="' + t("closes") + '"></div></div>';
       }).join("") : '<div class="empty">' + t("no_units") + "</div>") + "</div>";
 
-    h += '<div class="sec"><div class="row2"><div class="field" style="margin:0"><span class="label">' + t("fee") + "</span>" + stepper("data-fee", p.fee_jd, "", t("fee"), 0.5) + "</div>" +
+    if (lever("fee") || lever("visits")) h += '<div class="sec"><div class="row2"><div class="field" style="margin:0"><span class="label">' + t("fee") + "</span>" + stepper("data-fee", p.fee_jd, "", t("fee"), 0.5) + "</div>" +
       '<div class="field" style="margin:0"><span class="label">' + t("visits") + "</span>" + stepper("data-visits", p.visits_required, "", t("visits")) + "</div></div></div>";
+    if (lever("fuel") || lever("fares") || lever("cash_support")) h += travelPolicyHTML(p);
+    else if (lever("transport_vouchers")) h += '<div class="sec">' + voucherHTML(p, true) + "</div>";
     h += '<p class="footnote">' + t("prototype_note") + "</p>";
 
     const el = $("policyPanel"), sc = el.scrollTop;
@@ -373,7 +483,6 @@
   }
   function protectHTML(p) {
     const fd = p.fee_discounts || {}, fdGroups = Object.keys(fd), pct = fdGroups.length ? fd[fdGroups[0]] : S.feePct;
-    const v = (p.transport_vouchers || [])[0], vGroups = v ? v.groups : [], amt = v ? v.amount_jd : S.voucherJd;
     const hv = p.home_visits, inPerson = !p.online_only;
     const pick = '<p class="help" style="margin:0">' + t("pick_group_first") + "</p>";
     let h = '<div class="sec"><h3 class="sec-title"><span><i class="ph ph-hand-heart" aria-hidden="true"></i> ' + t("protect") + "</span></h3>" +
@@ -382,14 +491,57 @@
       (p.appointment_required ? "" : '<p class="help" style="margin:0">' + t("walkin_help") + "</p>") + "</div>";
     h += '<div class="field"><span class="label">' + t("fee_off") + "</span>" + groupChips("fee", fdGroups) +
       '<div class="row2"><span class="label" style="align-self:center">' + t("fee_pct") + "</span>" + stepper("data-feepct", pct, "%", t("fee_pct")) + "</div>" + (fdGroups.length ? "" : pick) + "</div>";
-    h += '<div class="field"><span class="label">' + t("voucher") + "</span>" + groupChips("voucher", vGroups, !inPerson) +
-      '<div class="row2"><span class="label" style="align-self:center">' + t("voucher_amt") + "</span>" + stepper("data-vjd", amt, "", t("voucher_amt")) + "</div>" + (vGroups.length || !inPerson ? "" : pick) + "</div>";
+    h += voucherHTML(p, inPerson);
     h += sw("home", !!hv, t("home_visits"), !inPerson);
     if (hv) h += '<div class="field">' + groupChips("home", hv.groups || []) +
       '<div class="row2"><span class="label" style="align-self:center">' + t("home_slots") + "</span>" + stepper("data-hslots", hv.slots, "", t("home_slots")) + "</div>" +
       '<p class="help" style="margin:0">' + t("home_help") + "</p></div>";
     h += sw("hybrid", !!p.hybrid_pickup, t("hybrid"), !inPerson) + '<p class="help" style="margin:0">' + t("hybrid_help") + "</p>";
     return h + "</div>";
+  }
+
+  // Transport voucher (both services): group chips + a JD-per-round-trip stepper; the panel shows the first voucher.
+  function voucherHTML(p, enabled) {
+    const v = (p.transport_vouchers || [])[0], vGroups = v ? v.groups : [], amt = v ? v.amount_jd : S.voucherJd;
+    const pick = '<p class="help" style="margin:0">' + t("pick_group_first") + "</p>";
+    return '<div class="field"><span class="label">' + t("voucher") + "</span>" + groupChips("voucher", vGroups, !enabled) +
+      '<div class="row2"><span class="label" style="align-self:center">' + t("voucher_amt") + "</span>" + stepper("data-vjd", amt, "", t("voucher_amt")) + "</div>" + (vGroups.length || !enabled ? "" : pick) + "</div>";
+  }
+
+  // Everyday travel: fuel price, bus and taxi fares (follow fuel = null, freeze = 0, custom %), cash support, voucher.
+  // The pump price line is display only (config.js FUEL_PRICE_90_JD x the change); the engine uses the percentage.
+  const signed = function (x) { return (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x); };
+  function travelPolicyHTML(p) {
+    let h = "";
+    if (lever("fuel")) {
+      const pct = +p.fuel_price_change_pct || 0, base = CFG.FUEL_PRICE_90_JD || 1.05;
+      h += '<div class="sec"><h3 class="sec-title"><span><i class="ph ph-gas-pump" aria-hidden="true"></i> ' + t("fuel") + "</span></h3>" +
+        '<div class="row2 field"><span class="label" style="align-self:center">' + t("fuel_change") + "</span>" + stepper("data-fuel", signed(pct), "%", t("fuel_change"), 5) + "</div>" +
+        '<p class="fuel-line"><span>' + t("fuel_price_line", { a: '<b class="num">' + base.toFixed(3) + "</b>", arrow: t("arrow"), b: '<b class="num">' + (base * (1 + pct / 100)).toFixed(3) + "</b>" }) + "</span><small>" + t("fuel_price_note") + "</small></p>" +
+        '<p class="help" style="margin:0">' + t("fuel_help") + "</p></div>";
+    }
+    if (lever("fares")) {
+      h += '<div class="sec"><h3 class="sec-title"><span><i class="ph ph-bus" aria-hidden="true"></i> ' + t("fares") + "</span></h3>";
+      ["bus", "taxi"].forEach(function (m) {
+        const v = p[m + "_fare_change_pct"], mode = v == null ? "follow" : +v === 0 ? "freeze" : "custom";
+        h += '<div class="field"><span class="label" id="fl_' + m + '">' + t("fare_" + m) + '</span><div class="seg3" role="group" aria-labelledby="fl_' + m + '">' +
+          ["follow", "freeze", "custom"].map(function (k) { return '<button data-fare="' + m + ":" + k + '" aria-pressed="' + (mode === k) + '">' + t("fare_" + k) + "</button>"; }).join("") + "</div>" +
+          (mode === "custom" ? '<div class="row2"><span class="label" style="align-self:center">' + t("fare_pct") + "</span>" + stepper("data-farepct=\"" + m + "\" data-fstep", signed(+v), "%", t("fare_" + m) + ": " + t("fare_pct"), 5) + "</div>" : "") + "</div>";
+      });
+      h += '<p class="help" style="margin:0">' + t("fares_help") + "</p></div>";
+    }
+    if (lever("cash_support") || lever("transport_vouchers")) {
+      h += '<div class="sec"><h3 class="sec-title"><span><i class="ph ph-hand-heart" aria-hidden="true"></i> ' + t("protect") + "</span></h3>";
+      if (lever("cash_support")) {
+        const c = (p.cash_support || [])[0], cGroups = c ? c.groups : [], amt = c ? c.amount_jd_month : S.cashJd;
+        h += '<div class="field"><span class="label">' + t("cash") + "</span>" + groupChips("cash", cGroups) +
+          '<div class="row2"><span class="label" style="align-self:center">' + t("cash_amt") + "</span>" + stepper("data-cash", amt, "", t("cash_amt"), 2) + "</div>" +
+          (cGroups.length ? "" : '<p class="help" style="margin:0">' + t("pick_group_first") + "</p>") + '<p class="help" style="margin:0">' + t("cash_help") + "</p></div>";
+      }
+      if (lever("transport_vouchers")) h += voucherHTML(p, true);
+      h += "</div>";
+    }
+    return h;
   }
 
   function renderParse() {
@@ -464,15 +616,23 @@
     S.pop.forEach(function (c) {
       const hero = heroIds.has(c.id);
       const m = L.circleMarker([c.lat, c.lng], { radius: hero ? 7 : 4, weight: hero ? 2.5 : 0.8, opacity: 1, fillOpacity: 0.92, className: "dot served", renderer: r, bubblingMouseEvents: false });
-      m.on("click", function () { select(c.id); });
+      m.on("click", function () { if (S.service) select(c.id); });
       m.addTo(dotLayer); dots.set(c.id, m);
     });
     Object.keys(S.sites).forEach(function (k) {
       const s = S.sites[k];
       L.marker([s.lat, s.lng], { icon: L.divIcon({ className: "", html: '<div class="site-mark"></div>', iconSize: [12, 12], iconAnchor: [6, 6] }), interactive: false, keyboard: false }).addTo(siteLayer);
     });
+    if (S.service !== "id_renewal") map.removeLayer(siteLayer);   // office sites: ID renewal only
     map.on("zoomend", declutterLabels);
     renderLabels(); placeZoom();
+  }
+  // After a service switch: the hero dots of the new service are drawn larger, and office sites show only for ID renewal.
+  function styleDots() {
+    if (!map) return;
+    const heroIds = new Set(S.heroes.map(function (h) { return h.id; }));
+    dots.forEach(function (m, id) { const hero = heroIds.has(id); m.setRadius(hero ? 7 : 4); m.setStyle({ weight: hero ? 2.5 : 0.8 }); });
+    if (S.service !== "id_renewal") map.removeLayer(siteLayer); else if (!map.hasLayer(siteLayer)) siteLayer.addTo(map);
   }
   function placeZoom() {
     if (!map) return;
@@ -519,7 +679,7 @@
       const o = sim.byId.get(c.id), m = dots.get(c.id);
       if (!o || !m) return;
       let cls = "dot " + o.status;
-      if (S.reason && !(o.status === "left_out" && (o.reasons || []).indexOf(S.reason) >= 0)) cls += " dim";
+      if (S.reason && !(o.status === S.reasonSt && (o.reasons || []).indexOf(S.reason) >= 0)) cls += " dim";
       if (S.sel === c.id) cls += " sel";
       if (m._path) m._path.setAttribute("class", cls + " leaflet-interactive");
     });
@@ -534,6 +694,8 @@
     }
     pinLayer.clearLayers();
     const p = viewPolicy(), editable = S.view === "after";
+    // Everyday travel has no pins: the dots are the story (offices and vans are ID-renewal levers).
+    if (isTravel()) return declutterLabels();
     if (p.online_only) return declutterLabels();
     p.offices.forEach(function (o, i) {
       const s = S.sites[o.site_id]; if (!s) return;
@@ -574,14 +736,15 @@
 
   function renderMapTools() {
     if (!S.cmp) return;
+    $("viewSeg").hidden = false; $("legend").hidden = false;
     $("viewSeg").setAttribute("aria-label", t("map_before") + " / " + t("map_after"));
     $("viewSeg").innerHTML = ["before", "after"].map(function (v) { return '<button data-view="' + v + '" aria-pressed="' + (S.view === v) + '"' + (v === "before" && !changed() ? " disabled" : "") + ">" + t("map_" + v) + "</button>"; }).join("");
     const k = viewSim().counts;
     let rings = "";
     if (S.view === "after" && S.cmpFix && S.cmpFix.flipped_better.length) rings = '<span class="lg-div"></span><span class="lg rings"><span class="sw-ring" style="border-color:var(--served)"></span><b class="num">' + S.cmpFix.flipped_better.length + "</b> " + t("got_better") + "</span>";
     else if (S.view === "after" && S.cmp.flipped_worse.length) rings = '<span class="lg-div"></span><span class="lg rings"><span class="sw-ring"></span><b class="num">' + S.cmp.flipped_worse.length + "</b> " + t("got_worse") + "</span>";
-    $("legend").innerHTML = ["served", "hardship", "left_out"].map(function (s) { return '<span class="lg"><span class="sw-dot ' + s + '"></span>' + t(s) + ' <b class="num">' + int(k[s] || 0) + "</b></span>"; }).join("") + rings;
-    $("filterSlot").innerHTML = S.reason ? '<div class="float filter-chip"><i class="ph ph-funnel"></i>' + t("r_" + S.reason) + '<button data-clear-reason>' + t("clear_filter") + "</button></div>" : "";
+    $("legend").innerHTML = ["served", "hardship", "left_out"].map(function (s) { return '<span class="lg"><span class="sw-dot ' + s + '"></span>' + ts(s) + ' <b class="num">' + int(k[s] || 0) + "</b></span>"; }).join("") + rings;
+    $("filterSlot").innerHTML = S.reason ? '<div class="float filter-chip"><i class="ph ph-funnel"></i>' + (isTravel() ? ts(S.reasonSt) + ": " : "") + t("r_" + S.reason) + '<button data-clear-reason>' + t("clear_filter") + "</button></div>" : "";
     const sim = viewSim();
     $("heroes").hidden = !S.heroes.length;
     $("heroes").innerHTML = '<p class="heroes-title">' + t("heroes") + '</p><div class="hero-list">' + S.heroes.map(function (h) {
@@ -617,7 +780,30 @@
   }
 
   function statusPill(o, label, current) {
-    return '<span class="flow-step' + (current ? " cur" : "") + '"><small>' + label + '</small><span class="pill ' + o.status + '">' + t(o.status) + "</span></span>";
+    return '<span class="flow-step' + (current ? " cur" : "") + '"><small>' + label + '</small><span class="pill ' + o.status + '">' + ts(o.status) + "</span></span>";
+  }
+
+  // Everyday travel: the citizen's regular trip, every number as the engine sent it (null fields are hidden).
+  function tripHTML(o) {
+    if (o.channel === "no_regular_trip" || (!o.purpose && !o.channel)) return '<div class="note"><i class="ph ph-info"></i><span>' + t("no_trip") + "</span></div>";
+    const fact = function (k, val) { return '<div class="fact"><small>' + t(k) + "</small><b>" + val + "</b></div>"; };
+    const has = function (x) { return x != null && isFinite(x); };
+    const jd = function (x) { return '<span class="num">' + (+x).toFixed(2) + "</span> " + t("jd"); };
+    const facts = [];
+    if (o.purpose) facts.push(fact("purpose", '<i class="ph ' + (PURPOSE_ICON[o.purpose] || "ph-dot") + '"></i> ' + t("pur_" + o.purpose)));
+    if (loc(o, "channel_name")) facts.push(fact("hub", esc(loc(o, "channel_name"))));
+    if (o.mode) facts.push(fact("mode", '<i class="ph ' + (MODE_ICON[o.mode] || "ph-dot") + '"></i> ' + ts("m_" + o.mode) + (o.mode === "bus" ? " <small class=\"num-ish\">(" + tp("transfers", o.bus_transfers || 0) + ")</small>" : "")));
+    if (has(o.days_per_week)) facts.push(fact("days_week", '<span class="num">' + o.days_per_week + "</span>"));
+    facts.push(fact("travel", '<span class="num">' + Math.round(o.travel_minutes || 0) + "</span> " + t("min")));
+    if (has(o.income_share_pct)) facts.push(fact("income_share", '<span class="num">' + f1(o.income_share_pct) + "%</span>"));
+    let h = '<div><h4 class="sec-title" style="margin-bottom:8px">' + t("trip") + '</h4><div class="facts">' + facts.join("") + "</div></div>";
+    // Monthly cost: before -> after (the extra, signed), as computed by the engine.
+    const before = has(o.monthly_cost_before_jd) ? o.monthly_cost_before_jd : null, extra = has(o.extra_jd_month) ? o.extra_jd_month : null;
+    let cost = before != null ? '<span class="flow">' + (+before).toFixed(2) + " " + t("arrow") + " " + (+o.cost_jd).toFixed(2) + "</span> " + t("jd") : jd(o.cost_jd);
+    if (extra != null && Math.abs(extra) >= 0.005) cost += ' <span class="delta ' + (extra > 0 ? "bad" : "good") + '"><span class="num">' + (extra > 0 ? "+" : "−") + Math.abs(extra).toFixed(2) + "</span></span>";
+    const rows = [fact("month_cost", cost)];
+    if (has(o.cash_support_jd_month) && o.cash_support_jd_month > 0) rows.push(fact("cash_got", jd(o.cash_support_jd_month)));
+    return h + '<div class="facts one">' + rows.join("") + "</div>";
   }
 
   function renderDrawer() {
@@ -654,7 +840,8 @@
     else if (v && v.status === "error") body = '<div class="voice-err"><span>' + t(gk("voice_failed", c)) + '</span><button class="btn sm ghost" data-voice-retry><i class="ph ph-arrow-clockwise"></i>' + t("retry") + "</button></div>";
     else body = '<div class="skel"></div><div class="skel w60"></div><span class="sr">' + t(gk("voice_loading", c)) + "</span>";
     h += '<div class="voice" aria-live="polite"><div class="voice-meta"><span>' + t(gk("voice_label", c)) + "</span>" + (v && v.status === "done" ? '<span class="src' + (isTpl ? "" : " ai") + '">' + t(isTpl ? "tpl" : "ai") + "</span>" : "") + "</div>" + body + "</div>";
-    if (o.status !== "left_out") {
+    if (isTravel()) h += tripHTML(o);
+    else if (o.status !== "left_out") {
       const fact = function (k, val) { return '<div class="fact"><small>' + t(k) + "</small><b>" + val + "</b></div>"; };
       const facts = [fact("channel", esc(loc(o, "channel_name") || o.channel || "")),
         fact("mode", '<i class="ph ' + (MODE_ICON[o.mode] || "ph-dot") + '"></i> ' + t("m_" + o.mode) + (o.mode === "bus" ? ' <span class="num">(' + ((o.bus_transfers || 0) + 1) + ")</span>" : ""))];
@@ -686,6 +873,7 @@
     const tab = function (id, icon, label, dis, extra) {
       return '<button class="tab" role="tab" id="tab-' + id + '" data-tab="' + id + '" aria-controls="impactPanel" aria-selected="' + (S.tab === id) + '" tabindex="' + (S.tab === id ? 0 : -1) + '"' + (dis ? " disabled" : "") + '><i class="ph ' + icon + '"></i>' + label + (extra || "") + "</button>";
     };
+    $("tabs").hidden = false;
     $("tabs").innerHTML = tab("impact", "ph-chart-bar-horizontal", t("impact")) + tab("fixes", "ph-wrench", t("fixes"), !S.fixes, nf ? ' <span class="count num">' + nf + "</span>" : "");
     $("impactPanel").setAttribute("aria-labelledby", "tab-" + S.tab);
   }
@@ -729,18 +917,19 @@
     const n = K.n || (cur.counts ? cur.counts.served + cur.counts.hardship + cur.counts.left_out : 0);
     let h = '<div class="sec"><div class="kpis" aria-live="polite">' + [["pct_served", "served", false], ["pct_hardship", "hardship", true], ["pct_left_out", "left_out", true]].map(function (x) {
       const cnt = cur.counts ? '<div class="kpi-n">' + t("kpi_of", { n: int(cur.counts[x[1]]), t: int(n) }) + "</div>" : "";
-      return '<div class="kpi"><div class="kpi-label"><span class="sw-dot ' + x[1] + '"></span>' + t(x[1]) + "</div>" + kpiVal(x[0], f1(K[x[0]])) + cnt +
+      return '<div class="kpi"><div class="kpi-label"><span class="sw-dot ' + x[1] + '"></span>' + ts(x[1]) + "</div>" + kpiVal(x[0], f1(K[x[0]])) + cnt +
         (showD ? delta(D[x[0]], x[2]) : '<span class="delta flat">' + (S.view === "before" ? t("step_baseline") : t("vs_baseline")) + "</span>") + "</div>";
     }).join("") + "</div>";
     if (showD && S.cmpFix) h += '<div class="delta-ref"><span>' + t(vsFix ? "vs_prefix" : "vs_baseline") + '</span><button class="linkbtn" data-delta-ref="' + (vsFix ? "baseline" : "prefix") + '">' + t(vsFix ? "show_vs_today" : "show_vs_prefix") + "</button></div>";
     const hvNow = viewPolicy().home_visits;
     if (hvNow) h += '<div class="kpi-sub kpi-note"><span><i class="ph ph-house-line"></i> ' + t("home_used") + ' <b class="num">' + (K.n_home_visits || 0) + "</b> / " + hvNow.slots + "</span></div>";
-    h += '<div class="kpi-sub"><span>' + t("avg_hours") + ' <b class="num">' + f1(K.avg_hours_lost) + "</b> " + t("hrs") + " " + (showD ? delta(D.avg_hours_lost, true, t("hrs")) : "") + "</span><span>" + t("avg_cost") + ' <b class="num">' + f1(K.avg_cost_jd) + "</b> " + t("jd") + " " + (showD ? delta(D.avg_cost_jd, true, t("jd")) : "") + "</span></div>";
+    if (isTravel()) h += travelKpisHTML(K, D, showD);
+    else h += '<div class="kpi-sub"><span>' + t("avg_hours") + ' <b class="num">' + f1(K.avg_hours_lost) + "</b> " + t("hrs") + " " + (showD ? delta(D.avg_hours_lost, true, t("hrs")) : "") + "</span><span>" + t("avg_cost") + ' <b class="num">' + f1(K.avg_cost_jd) + "</b> " + t("jd") + " " + (showD ? delta(D.avg_cost_jd, true, t("jd")) : "") + "</span></div>";
     // A policy that moves nobody: say so plainly (Nas has no queues or capacity).
     const B = S.cmp.baseline.kpis;
     if (showD && !S.appliedFix && !S.cmp.flipped_worse.length && !S.cmp.flipped_better.length &&
         ["pct_served", "pct_hardship", "pct_left_out"].every(function (x) { return Math.abs(K[x] - B[x]) < 1e-9; }))
-      h += '<div class="note"><i class="ph ph-info"></i><span>' + t("no_change") + "</span></div>";
+      h += '<div class="note"><i class="ph ph-info"></i><span>' + ts("no_change") + "</span></div>";
     if (changed()) h += robustHTML();
     h += "</div>";
 
@@ -759,15 +948,30 @@
         '<span class="v num">' + f1(bad) + "%" + (showD && Math.abs(d) >= 0.05 ? '<small class="' + (d > 0 ? "delta bad" : "delta good") + '">' + (d > 0 ? "+" : "−") + f1(Math.abs(d)) + "</small>" : "") + "</span></div>";
     };
     h += '<div class="sec"><h3 class="sec-title"><span>' + t("equity") + '</span><button class="info-btn" data-glossary aria-label="' + esc(t("glossary_btn")) + '" title="' + esc(t("glossary_btn")) + '"><i class="ph ph-info"></i></button></h3>' + row("all", "all") + groups.map(function (g) { return row(g); }).join("") +
-      '<div class="eq-legend"><span><span class="sw-dot hardship"></span>' + t("hardship") + '</span><span><span class="sw-dot left_out"></span>' + t("left_out") + "</span><span>% = " + t("hardship") + " + " + t("left_out") + "</span></div></div>";
+      '<div class="eq-legend"><span><span class="sw-dot hardship"></span>' + ts("hardship") + '</span><span><span class="sw-dot left_out"></span>' + ts("left_out") + "</span><span>% = " + ts("hardship") + " + " + ts("left_out") + "</span></div></div>";
 
-    // Who is left out, by reason: the backend's kpis.left_out_by_reason (people per reason). The small line
-    // under each reason names the two groups most present among those people (a display count, not a score).
-    const byReason = K.left_out_by_reason;
+    // Who is left out, by reason. Everyday travel lists the priced out and the squeezed, each by reason.
+    if (!isTravel()) return h + '<div class="sec"><h3 class="sec-title"><span>' + t("who_left") + '</span><span class="num-ish" style="color:var(--left-ink)">' + tp("people", cur.counts ? cur.counts.left_out : 0) + "</span></h3>" + reasonsHTML(cur, "left_out") + "</div>";
+    const nL = cur.counts ? cur.counts.left_out : 0, nH = cur.counts ? cur.counts.hardship : 0;
+    h += '<div class="sec"><h3 class="sec-title"><span>' + ts("who_left") + "</span></h3>";
+    if (!nL && !nH && !Object.keys(K.left_out_by_reason || {}).length && !Object.keys(K.hardship_by_reason || {}).length) h += '<div class="ok-note"><i class="ph ph-check-circle"></i>' + ts("nobody_left") + "</div>";
+    else [["left_out", nL, "--left-ink"], ["hardship", nH, "--hardship-ink"]].forEach(function (x) {
+      h += '<h4 class="sub-title"><span><span class="sw-dot ' + x[0] + '"></span>' + ts(x[0]) + '</span><span class="num-ish" style="color:var(' + x[2] + ')">' + tp("people", x[1]) + "</span></h4>" + reasonsHTML(cur, x[0], true);
+    });
+    if (Object.keys(K.left_out_by_reason || {}).length || Object.keys(K.hardship_by_reason || {}).length) h += '<p class="help">' + t("several_reasons") + "</p>";
+    h += breakdownHTML(K);
+    return h + "</div>";
+  }
+
+  // Reasons for one status, from the backend's kpis.<status>_by_reason (people per reason; an older backend:
+  // counted from the outcomes). The small line under each reason names the two groups most present among
+  // those people (a display count, not a score). Clicking a reason filters the map.
+  function reasonsHTML(cur, status, quiet) {
+    const K = cur.kpis, byReason = K[status + "_by_reason"];
     const counts = {}, tagsBy = {};
     S.pop.forEach(function (c) {
       const o = cur.byId.get(c.id);
-      if (!o || o.status !== "left_out") return;
+      if (!o || o.status !== status) return;
       (o.reasons || []).forEach(function (r) {
         if (!byReason) counts[r] = (counts[r] || 0) + 1;   // older backend: count here
         tagsBy[r] = tagsBy[r] || {};
@@ -776,19 +980,53 @@
     });
     if (byReason) Object.keys(byReason).forEach(function (r) { if (+byReason[r] > 0) counts[r] = +byReason[r]; });
     const keys = Object.keys(counts).sort(function (a, b2) { return counts[b2] - counts[a] || (a < b2 ? -1 : 1); });
-    const nLeft = cur.counts ? cur.counts.left_out : 0;
-    h += '<div class="sec"><h3 class="sec-title"><span>' + t("who_left") + '</span><span class="num-ish" style="color:var(--left-ink)">' + tp("people", nLeft) + "</span></h3>";
-    if (!keys.length) h += '<div class="ok-note"><i class="ph ph-check-circle"></i>' + t("nobody_left") + "</div>";
-    else {
-      h += '<div class="reasons">' + keys.map(function (r) {
-        const tb = tagsBy[r] || {};
-        const top = Object.keys(tb).sort(function (a, b2) { return tb[b2] - tb[a]; }).slice(0, 2).map(groupLabel).join(t("list_sep"));
-        return '<button class="reason" data-reason="' + esc(r) + '" aria-pressed="' + (S.reason === r) + '"><i class="ph ' + (REASON_ICON[r] || "ph-warning") + '"></i><span><b>' + t("r_" + r) + "</b><small>" + esc(top) + '</small></span><span class="n num">' + int(counts[r]) + "</span></button>";
-      }).join("") + "</div>";
-      const sum = keys.reduce(function (a, r) { return a + counts[r]; }, 0);
-      if (sum > nLeft) h += '<p class="help">' + t("several_reasons") + "</p>";
-    }
-    return h + "</div>";
+    const n = cur.counts ? cur.counts[status] : 0;
+    if (!keys.length) return quiet ? "" : '<div class="ok-note"><i class="ph ph-check-circle"></i>' + t("nobody_left") + "</div>";
+    let h = '<div class="reasons">' + keys.map(function (r) {
+      const tb = tagsBy[r] || {};
+      const top = Object.keys(tb).sort(function (a, b2) { return tb[b2] - tb[a]; }).slice(0, 2).map(groupLabel).join(t("list_sep"));
+      return '<button class="reason" data-reason="' + esc(r) + '" data-rst="' + status + '" aria-pressed="' + (S.reason === r && S.reasonSt === status) + '"><i class="ph ' + (REASON_ICON[r] || "ph-warning") + '"></i><span><b>' + t("r_" + r) + "</b><small>" + esc(top) + '</small></span><span class="n num">' + int(counts[r]) + "</span></button>";
+    }).join("") + "</div>";
+    const sum = keys.reduce(function (a, r) { return a + counts[r]; }, 0);
+    if (sum > n && !quiet) h += '<p class="help">' + t("several_reasons") + "</p>";
+    return h;
+  }
+
+  // Everyday-travel money readouts, each shown only when the kpis carry it.
+  function travelKpisHTML(K, D, showD) {
+    const has = function (x) { return typeof K[x] === "number" && isFinite(K[x]); };
+    const dd = function (x, unit) { return showD && typeof D[x] === "number" ? " " + delta(D[x], true, unit) : ""; };
+    const items = [];
+    if (has("avg_monthly_cost_jd")) items.push("<span>" + t("avg_month_cost") + ' <b class="num">' + f1(K.avg_monthly_cost_jd) + "</b> " + t("jd_month") + dd("avg_monthly_cost_jd", t("jd")) + "</span>");
+    else items.push("<span>" + t("avg_month_cost") + ' <b class="num">' + f1(K.avg_cost_jd) + "</b> " + t("jd_month") + (showD ? " " + delta(D.avg_cost_jd, true, t("jd")) : "") + "</span>");
+    if (has("avg_extra_jd_month") && showD) items.push("<span>" + t("extra_month") + ' <b class="num">' + (K.avg_extra_jd_month > 0.005 ? "+" : K.avg_extra_jd_month < -0.005 ? "−" : "") + Math.abs(K.avg_extra_jd_month).toFixed(2) + "</b> " + t("jd") +
+      (has("total_extra_jd_month") && Math.abs(K.total_extra_jd_month) >= 0.5 ? ' <small class="num-ish">(' + t("total_extra", { x: (K.total_extra_jd_month > 0 ? "+" : "−") + int(Math.abs(K.total_extra_jd_month)) }) + ")</small>" : "") + "</span>");
+    if (has("avg_income_share_pct")) items.push("<span>" + t("avg_share") + ' <b class="num">' + f1(K.avg_income_share_pct) + "%</b>" + dd("avg_income_share_pct") + "</span>");
+    const cs = viewPolicy().cash_support || [];
+    if (has("n_cash_support") && (K.n_cash_support > 0 || cs.length)) items.push('<span><i class="ph ph-hand-coins"></i> ' + t("n_support") + ' <b class="num">' + int(K.n_cash_support) + "</b></span>");
+    return '<div class="kpi-sub wrap">' + items.join("") + "</div>";
+  }
+
+  // kpis.by_purpose / by_mode: {key: {served, hardship, left_out}} (percent, drawn as bars) or {key: number}
+  // (shown as is). Unknown shapes are skipped.
+  function breakdownHTML(K) {
+    let h = "";
+    [["by_purpose", "pur_"], ["by_mode", "m_"]].forEach(function (b) {
+      const src = K[b[0]];
+      if (!src || typeof src !== "object") return;
+      const rows = Object.keys(src).map(function (k) {
+        const v = src[k], label = DICT.en[b[1] + k] ? ts(b[1] + k) : k;
+        if (typeof v === "number") return '<div class="eq"><span class="name">' + esc(label) + '</span><span></span><span class="v num">' + int(v) + "</span></div>";
+        if (!v || typeof v !== "object" || !("served" in v || "hardship" in v || "left_out" in v)) return "";
+        const s = +v.served || 0, hd = +v.hardship || 0, l = +v.left_out || 0, pct = Math.abs(s + hd + l - 100) < 1.5;
+        const tot = s + hd + l || 1, w = function (x) { return pct ? x : x / tot * 100; };
+        const n = v.n != null ? +v.n : pct ? null : s + hd + l;
+        return '<div class="eq"><span class="name">' + esc(label) + (n != null ? ' <small class="num-ish">' + int(n) + "</small>" : "") + '</span><span class="bar"><i class="s" style="width:' + w(s) + '%"></i><i class="h" style="width:' + w(hd) + '%"></i><i class="l" style="width:' + w(l) + '%"></i></span>' +
+          '<span class="v num">' + f1(w(hd) + w(l)) + "%</span></div>";
+      }).join("");
+      if (rows) h += '<h4 class="sub-title"><span>' + t(b[0]) + "</span></h4>" + rows;
+    });
+    return h;
   }
 
   // "left out 9 → 1" (the arrow follows the reading direction; the span is bidi-isolated).
@@ -811,12 +1049,12 @@
     if (ex) exHTML = '<p class="explain">' + esc(ex) + '<span class="src' + (exSrc === "fallback" ? "" : " ai") + '">' + t(exSrc === "fallback" ? "tpl" : "ai") + "</span></p>";
     else if (aiPending) exHTML = '<div class="skel"></div><div class="skel w60" style="margin-bottom:12px"></div>';
     const a = F.scenKpis && F.scenKpis.counts, b = fx.kpis && fx.kpis.counts;
-    const counts = a && b ? '<div class="fix-counts"><span>' + t("left_out") + " " + flow(a.left_out, b.left_out) + '</span><span class="dotsep" aria-hidden="true">·</span><span>' + t("hardship") + " " + flow(a.hardship, b.hardship) + "</span></div>" : "";
+    const counts = a && b ? '<div class="fix-counts"><span>' + ts("left_out") + " " + flow(a.left_out, b.left_out) + '</span><span class="dotsep" aria-hidden="true">·</span><span>' + ts("hardship") + " " + flow(a.hardship, b.hardship) + "</span></div>" : "";
     const nch = fx.n_changes ? '<span class="nchg">' + tp("changes", fx.n_changes) + "</span>" : "";
     return '<article class="fix' + (isAI ? " ai" : "") + (applied ? " applied" : "") + '" style="animation-delay:' + (i * 70) + 'ms">' +
       '<div class="fix-top"><span class="prov"><i class="ph-fill ' + (isAI ? "ph-sparkle" : "ph-check-circle") + '"></i>' + t(isAI ? "badge_ai" : "badge_engine") + "</span>" + nch + "</div>" +
       '<h4 class="fix-title">' + esc(loc(fx, "title")) + "</h4>" +
-      '<div class="drops">' + dropHTML(fx.left_out_drop, t("left_drop")) + dropHTML(fx.hardship_drop, t("hard_drop")) + "</div>" + counts +
+      '<div class="drops">' + dropHTML(fx.left_out_drop, ts("left_drop")) + dropHTML(fx.hardship_drop, ts("hard_drop")) + "</div>" + counts +
       exHTML +
       '<div class="fix-acts">' + (applied ? '<span class="applied-note"><i class="ph-fill ph-check-circle"></i>' + t("applied") + '</span><button class="btn sm ghost" data-unfix><i class="ph ph-arrow-counter-clockwise"></i>' + t("cancel") + "</button>"
         : '<span></span><button class="btn sm ' + (isAI ? "accent" : "") + '" data-fix="' + esc(fx.id) + '"><i class="ph ph-check"></i>' + t("apply_fix") + "</button>") + "</div></article>";
@@ -853,6 +1091,7 @@
 
   function renderActions() {
     const can = changed() || S.appliedFix;
+    $("actions").hidden = false;
     $("actions").innerHTML = '<button class="btn accent" id="fixBtn"' + (can ? "" : " disabled") + '><i class="ph ph-wrench"></i>' + t("suggest_fixes") + "</button>" +
       '<button class="btn ghost" id="reportBtn"' + (can ? "" : " disabled") + '><i class="ph ph-file-text"></i>' + t("report") + "</button>";
   }
@@ -987,9 +1226,11 @@
       }
       h += "</section>";
     }
-    if (S.assumptions.length) {
+    // Only this service's constants and the shared ones (an older backend sends no service tag: all are shown).
+    const rows = S.assumptions.filter(function (a) { return !a.service || a.service === "shared" || a.service === S.service; });
+    if (rows.length) {
       h += '<section><h3 class="sec-title">' + t("assumptions") + "</h3><table><thead><tr><th>" + t("col_constant") + "</th><th>" + t("col_value") + "</th><th>" + t("col_tag") + "</th><th>" + t("col_why") + "</th></tr></thead><tbody>" +
-        S.assumptions.map(function (a) {
+        rows.map(function (a) {
           const label = loc(a, "label");
           return "<tr><td>" + (label ? esc(label) + "<br>" : "") + '<code class="num" style="font-size:11px;color:var(--faint)">' + esc(a.key) + '</code></td><td class="num-ish">' + fmtVal(a.value, a.unit) + '</td><td><span class="tagcell' + (a.tag === "ANCHORED" ? " anch" : "") + '">' + esc(a.tag) + "</span></td><td>" + esc(loc(a, "rationale")) + (a.source ? '<br><small style="color:var(--muted)">' + esc(typeof a.source === "object" ? (a.source.name || "") + " " + (a.source.year || "") : (loc(a, "source") || a.source)) + "</small>" : "") + "</td></tr>";
         }).join("") + "</tbody></table></section>";
@@ -1006,7 +1247,17 @@
       const n = bg && isFinite(bg.n) ? bg.n : S.pop.filter(function (c) { return (c.tags || []).indexOf(g) >= 0; }).length;
       h += "<dt>" + esc(groupLabel(g)) + ' <small class="num-ish">' + tp("people", n) + "</small></dt><dd>" + t("gl_" + g) + "</dd>";
     });
-    openModal(h + "</dl></div>", "glossary");
+    h += "</dl>";
+    // Everyday travel: the two frozen thresholds behind fine / squeezed / priced out (values from /assumptions).
+    if (isTravel()) {
+      const pct = function (key, fb) { const a = S.assumptions.find(function (x) { return x.key === key; }); return a && isFinite(+a.value) ? String(Math.round(+a.value * 1000) / 10) : fb; };
+      const sq = pct("TRANSPORT_SHARE_SQUEEZED", "10"), po = pct("TRANSPORT_SHARE_PRICED_OUT", "20");
+      h += '<section><h3 class="sec-title">' + t("gl_thresholds") + '</h3><dl class="gloss">' +
+        [["served", t("gl_fine", { p: sq })], ["hardship", t("gl_squeezed", { a: sq, b: po })], ["left_out", t("gl_priced", { p: po })]].map(function (x) {
+          return '<dt><span class="sw-dot ' + x[0] + '" style="display:inline-block;margin-inline-end:6px"></span>' + ts(x[0]) + "</dt><dd>" + esc(x[1]) + "</dd>";
+        }).join("") + "</dl></section>";
+    }
+    openModal(h + "</div>", "glossary");
   }
 
   // POST /report with {baseline, scenario: the policy before the fix, fix: the applied fix's policy or null}.
@@ -1020,7 +1271,7 @@
   }
   async function reportModal() {
     const scen = scenarioPolicy(), fixP = S.appliedFix ? S.policy : null, key = canon([S.baseline, scen, fixP]);
-    const show = function (inner) { openModal(modalHead(t("report_title"), t("report_sub")) + '<div class="modal-body">' + inner + "</div>", "report", S.modal === "report"); };
+    const show = function (inner) { openModal(modalHead(ts("report_title"), t("report_sub")) + '<div class="modal-body">' + inner + "</div>", "report", S.modal === "report"); };
     if (S.report && S.report.key === key && S.report.r) return show(reportBody(S.report.r, !!fixP));
     show('<div class="report-cols"><div class="report-col"><div class="skel"></div><div class="skel"></div><div class="skel w60"></div></div><div class="report-col"><div class="skel"></div><div class="skel"></div><div class="skel w60"></div></div></div><span class="sr">' + t("report_loading") + "</span>");
     if (S.report && S.report.key === key && S.report.pending) return;   // already on its way; it renders when it lands
@@ -1050,7 +1301,8 @@
     if (q("#toastRetry")) { $("toast").hidden = true; if (toastMsg.retry) toastMsg.retry(); return; }
     if (q("#langBtn") || q("#langBtn2")) {
       S.lang = S.lang === "ar" ? "en" : "ar"; store.set("nas.lang", S.lang);
-      if (!S.cmp) { renderStatic(); return $("boot").hidden ? null : bootScreen($("bootRetry") ? "error" : "loading"); }
+      if (!S.service && $("boot").hidden) { renderHome(); renderLabels(); placeZoom(); return; }
+      if (!S.cmp) { renderStatic(); renderPolicy(); return $("boot").hidden ? null : bootScreen($("bootRetry") ? "error" : "loading"); }
       renderAll(); renderLabels(); placeZoom();
       if (S.modal === "assumptions") assumptionsModal(true); else if (S.modal === "glossary") glossaryModal(); else if (S.modal === "llm") llmModal(); else if (S.modal === "report") reportModal();
       return;
@@ -1061,6 +1313,8 @@
     }
     if (q("[data-close-modal]") || e.target === $("modal")) return closeModal();
     if (q("#aiChip")) return llmModal();
+    if ((el = q("[data-sector]"))) return chooseSector(el.dataset.sector);
+    if (q("[data-home]")) return goHome();
     if (!S.cmp) return;
     if ((el = q("[data-preset]"))) return loadPreset(el.dataset.preset);
     if ((el = q("[data-step]"))) {
@@ -1069,7 +1323,7 @@
       if (s === "scenario" && S.appliedFix) return unapplyFix();
       return;
     }
-    if ((el = q("[data-ex]"))) { S.text = t("example_" + (+el.dataset.ex + 1)); renderPolicy(); return runParse(); }
+    if ((el = q("[data-ex]"))) { S.text = ts("example_" + (+el.dataset.ex + 1)); renderPolicy(); return runParse(); }
     if (q("#parseBtn")) return runParse();
     if ((el = q("[data-parse]"))) {
       if (el.dataset.parse === "apply" && S.parse && S.parse.policy) { const p = clone(S.parse.policy); S.parse = null; return edit(function (pp) { Object.keys(pp).forEach(function (k) { delete pp[k]; }); Object.assign(pp, p); }, { now: true }); }
@@ -1111,6 +1365,9 @@
         } else if (kind === "voucher") {
           const v = (p.transport_vouchers || [])[0], gs = toggle(v ? v.groups.slice() : []);
           p.transport_vouchers = gs.length ? [{ groups: gs, amount_jd: v ? v.amount_jd : S.voucherJd }] : [];
+        } else if (kind === "cash") {
+          const c = (p.cash_support || [])[0], gs = toggle(c ? c.groups.slice() : []);
+          p.cash_support = gs.length ? [{ groups: gs, amount_jd_month: c ? c.amount_jd_month : S.cashJd }] : [];
         } else if (kind === "home" && p.home_visits) {
           p.home_visits.groups = toggle((p.home_visits.groups || []).slice());
         }
@@ -1130,6 +1387,34 @@
       S.voucherJd = next;
       if (!v || next === cur) return renderPolicy();
       return edit(function (p) { p.transport_vouchers = [{ groups: p.transport_vouchers[0].groups, amount_jd: next }].concat(p.transport_vouchers.slice(1)); });
+    }
+    // Everyday travel: fuel -50..+100 % (step 5), fares follow / freeze / custom % (custom skips 0, which is a freeze),
+    // cash support 0..50 JD a month (step 2; with no group chosen it only sets the next value).
+    if ((el = q("[data-fuel]"))) {
+      const cur = +S.policy.fuel_price_change_pct || 0, next = Math.min(100, Math.max(-50, cur + 5 * Math.sign(+el.dataset.fuel)));
+      if (next === cur) return;
+      return edit(function (p) { p.fuel_price_change_pct = next; });
+    }
+    if ((el = q("[data-fare]"))) {
+      const parts = el.dataset.fare.split(":"), m = parts[0], key = m + "_fare_change_pct", cur = S.policy[key] == null ? null : +S.policy[key];
+      const next = parts[1] === "follow" ? null : parts[1] === "freeze" ? 0 : (cur != null && cur !== 0 ? cur : S.fareCustom[m] || 10);
+      if (next === cur) return;
+      return edit(function (p) { p[key] = next; }, { now: true });
+    }
+    if ((el = q("[data-farepct]"))) {
+      const m = el.dataset.farepct, key = m + "_fare_change_pct", cur = +S.policy[key] || 0, step = 5 * Math.sign(+el.dataset.fstep);
+      let next = Math.min(100, Math.max(-50, cur + step));
+      if (next === 0) next = cur + 2 * step >= -50 && cur + 2 * step <= 100 ? cur + 2 * step : cur;
+      if (next === cur) return;
+      S.fareCustom[m] = next;
+      return edit(function (p) { p[key] = next; });
+    }
+    if ((el = q("[data-cash]"))) {
+      const c = (S.policy.cash_support || [])[0], cur = c ? c.amount_jd_month : S.cashJd;
+      const next = Math.min(50, Math.max(0, cur + 2 * Math.sign(+el.dataset.cash)));
+      S.cashJd = next;
+      if (!c || next === cur) return renderPolicy();
+      return edit(function (p) { p.cash_support = [{ groups: p.cash_support[0].groups, amount_jd_month: next }].concat(p.cash_support.slice(1)); });
     }
     if ((el = q("[data-hslots]"))) {
       const hv = S.policy.home_visits; if (!hv) return;
@@ -1173,7 +1458,11 @@
     if ((el = q("[data-hero]"))) { const c = S.byId.get(el.dataset.hero); map.flyTo([c.lat, c.lng], Math.max(map.getZoom(), 14), { duration: reduceMotion ? 0 : 0.8 }); return select(c.id); }
     if (q("[data-close-drawer]")) { S.sel = null; renderDrawer(); updateMap(); renderMapTools(); return; }
     if (q("[data-voice-retry]")) return loadVoice();
-    if ((el = q("[data-reason]"))) { S.reason = S.reason === el.dataset.reason ? null : el.dataset.reason; renderMapTools(); updateMap(); renderImpact(); return; }
+    if ((el = q("[data-reason]"))) {
+      const st = el.dataset.rst || "left_out";
+      S.reason = S.reason === el.dataset.reason && S.reasonSt === st ? null : el.dataset.reason; S.reasonSt = st;
+      renderMapTools(); updateMap(); renderImpact(); return;
+    }
     if (q("[data-clear-reason]")) { S.reason = null; renderMapTools(); updateMap(); renderImpact(); return; }
     if ((el = q("[data-delta-ref]"))) { S.deltaRef = el.dataset.deltaRef; return renderImpact(); }
     if ((el = q("[data-tab]"))) { S.tab = el.dataset.tab; return renderImpact(); }
