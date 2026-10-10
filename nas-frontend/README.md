@@ -26,10 +26,10 @@ If the backend is down, the page shows a "can't reach the engine" screen with th
 ## Sectors (services)
 
 The page always opens on a **start state**: the left panel lists one card per sector from `GET /services`
-("اختر القطاع / Choose a sector"; names from i18n `svc_name_<id>`: ID renewal, **Fuel prices** for `everyday_travel`;
-the backend's `description_*` as one line). The map shows every resident as a neutral dot (no pins, rings, heroes or
+("اختر القطاع / Choose a sector"; names from i18n `svc_name_<id>`: ID renewal, **Fuel prices** for `everyday_travel`,
+**Medical exemptions** for `medical_exemption`, always in that order; the backend's `description_*` as one line). The map shows every resident as a neutral dot (no pins, rings, heroes or
 steps), the right panel shows a short note instead of KPIs, and no `/compare` is sent. The sector is **not** remembered.
-`?sector=id_renewal` or `?sector=everyday_travel` skips the list (for the stage).
+`?sector=id_renewal`, `?sector=everyday_travel` or `?sector=medical_exemption` skips the list (for the stage).
 
 Choosing a card loads that sector: its presets (`/scenarios` filtered by `service`, its `baseline_scenario` first and
 used as the compare baseline), its heroes (`/heroes?service=<id>`), and a policy panel built from `ServiceInfo.levers`.
@@ -93,6 +93,29 @@ All bodies are JSON. Field names follow `backend/app/models.py` (CLAUDE.md §5).
   two thresholds from `/assumptions` (`TRANSPORT_SHARE_SQUEEZED`, `TRANSPORT_SHARE_PRICED_OUT`).
 - **Map**: no pins (the backend has no hub coordinates; offices and vans are ID-renewal levers), no candidate-site marks.
 - Fixes, robustness and the report work exactly as for ID renewal (titles and numbers from the backend; the report heading names the sector).
+
+### Medical exemptions (Royal Court)
+
+- **Who**: only residents without health insurance (tag `uninsured`, `Citizen.has_health_insurance: false`) apply. An insured
+  resident's outcome has `channel: "not_applicable"`: the map draws them in the neutral blue idle style (lighter), the legend adds
+  "مؤمَّن صحياً: لا ينطبق / Insured: not applicable" with `kpis.n_not_applicable`, and their card shows a one-line note with no
+  numbers, no reasons and no voice call. `api.js` leaves them out of the counts when it has to count outcomes itself.
+- **KPIs** are over the uninsured: the cards read "N of `n_eligible` uninsured" ("{n} من {t} غير مؤمَّن"), with a line
+  "`n_not_applicable` insured residents don't need the exemption". Status words are ID renewal's. Fix cards say "left out 40 → 12 ·
+  hardship ... of the uninsured". The `uninsured` bar is hidden here (it is everyone counted); in the other sectors it shows only
+  if the backend sends it, labelled "غير المؤمَّنين صحياً / Uninsured", and it is never named under a reason. The glossary adds it.
+- **Policy panel** (`ServiceInfo.levers` = `offices`, `online`, `mobile_units`, `visits`, `proxy`, `protections`): the ID-renewal
+  controls, relabelled through `<key>_medical_exemption` strings: intake offices (open, close, move to any site, incl.
+  `royal_court_csu`; "Open an intake office" lists the areas and then the Royal Court site as its own option `site:<id>`), online
+  via Sanad on / off / only, mobile intake days, visits, protections (no walk-in without the `appointments` lever, no fee discount
+  without the `fee` lever), and **"التقديم بالإنابة / Applying on someone's behalf"**: one switch bound to `proxy_allowed`
+  (`null` = the service default, shown on; the switch always writes `true` / `false`). No fee or appointment control.
+- **Sites**: `config.js` `SERVICE_ONLY_SITES` (`royal_court_csu: "medical_exemption"`) keeps the Royal Court site out of the other
+  sectors' site lists, pin snapping and map marks, so ID renewal still offers its 15 sites.
+- **Citizen card**: channel, mode (`helper_visit` = "قريب من الدرجة الأولى قدّم بدلاً عنه/عنها / A relative applied on his/her
+  behalf", with the helper relation), day, travel, visits (`outcome.visits` if sent, else the policy's `visits_required`, hidden
+  with the Sanad-and-collect option), time lost and cost. Online reads "عبر سند / via Sanad". A "health insurance" chip joins the
+  profile chips.
 
 ### What the UI sends as a Policy
 

@@ -7,12 +7,18 @@
   const GROUP_ORDER = ["elderly", "disabled", "no_car", "offline", "low_income", "worker", "student"];
   const REASON_ICON = { TOO_FAR: "ph-map-pin-line", NO_TRANSPORT: "ph-bus", HOURS_CONFLICT_WORK: "ph-clock-countdown", NO_SMARTPHONE: "ph-device-mobile-slash", LOW_DIGITAL_LITERACY: "ph-cursor-click", NOT_WHEELCHAIR_ACCESSIBLE: "ph-wheelchair", TOO_EXPENSIVE: "ph-coins", OFFICE_CLOSED_ON_AVAILABLE_DAYS: "ph-calendar-x",
     TRANSPORT_OVER_BUDGET: "ph-wallet", FUEL_COST: "ph-gas-pump", FARE_COST: "ph-ticket" };
-  const MODE_ICON = { car: "ph-car-profile", helper_car: "ph-car-profile", bus: "ph-bus", taxi: "ph-taxi", online: "ph-globe-simple", home: "ph-house-line" };
+  const MODE_ICON = { car: "ph-car-profile", helper_car: "ph-car-profile", bus: "ph-bus", taxi: "ph-taxi", online: "ph-globe-simple", home: "ph-house-line", helper_visit: "ph-users" };
   const PURPOSE_ICON = { work: "ph-briefcase", university: "ph-graduation-cap", hospital: "ph-first-aid-kit" };
   const PROTECT_GROUPS = GROUP_ORDER;
-  const TRAVEL = "everyday_travel";
+  const TRAVEL = "everyday_travel", MED = "medical_exemption";
+  // Sector cards: fixed order and icon per service id (an unknown service goes last with the ID-card icon).
+  const SECTOR_ORDER = ["id_renewal", TRAVEL, MED];
+  const SECTOR_ICON = { id_renewal: "ph-identification-card", everyday_travel: "ph-gas-pump", medical_exemption: "ph-first-aid-kit" };
+  // Medical exemptions: an insured resident's outcome has this channel; they are outside every count.
+  const NA = "not_applicable";
   // The ID-renewal panel sections, used when GET /services doesn't say (an older backend).
   const ID_LEVERS = ["offices", "online", "appointments", "mobile_units", "fee", "visits", "protections"];
+  const MED_LEVERS = ["offices", "online", "mobile_units", "visits", "proxy", "protections"];
 
   const $ = function (id) { return document.getElementById(id); };
   const esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]; }); };
@@ -66,15 +72,19 @@
   function ts(k, vars) { return DICT.en[k + "_" + S.service] != null ? t(k + "_" + S.service, vars) : t(k, vars); }
   const svcInfo = function () { return S.services.find(function (v) { return v.id === S.service; }) || null; };
   const isTravel = function () { return S.service === TRAVEL; };
+  const isMed = function () { return S.service === MED; };
+  const isNA = function (o) { return !!o && o.channel === NA; };
   function levers() {
     const v = svcInfo();
     if (v && v.levers.length) return v.levers;
-    return isTravel() ? ["fuel", "fares", "cash_support", "transport_vouchers"] : ID_LEVERS;
+    return isTravel() ? ["fuel", "fares", "cash_support", "transport_vouchers"] : isMed() ? MED_LEVERS : ID_LEVERS;
   }
   const lever = function (x) { return levers().indexOf(x) >= 0; };
   const loc = function (o, base) { return o ? (o[base + "_" + S.lang] || o[base + "_" + (S.lang === "ar" ? "en" : "ar")] || "") : ""; };
   const areaName = function (k) { return S.areas[k] ? loc(S.areas[k], "name") : k; };
   const siteName = function (id) { return S.sites[id] ? loc(S.sites[id], "name") : id; };
+  // The sites the current service can use: every site except those config.js reserves for another service.
+  const siteIds = function () { const only = CFG.SERVICE_ONLY_SITES || {}; return Object.keys(S.sites).filter(function (k) { return !only[k] || only[k] === S.service; }); };
   const dayName = function (d) { return t("day_" + d); };
   const shortDay = function (d) { return S.lang === "ar" ? dayName(d).replace("ال", "").slice(0, 3) : dayName(d).slice(0, 2); };
   const name = function (c) { return (S.lang === "ar" ? c.name_ar : c.name_en) || c.name_ar || c.name_en || c.id; };
@@ -186,7 +196,7 @@
     $("policyHead").innerHTML = '<h2 class="panel-title" id="policyTitle">' + t("choose_sector") + "</h2>";
     $("policyPanel").innerHTML = '<div class="sec"><div class="sectors">' + S.services.map(function (v) {
       const nm = DICT.en["svc_name_" + v.id] ? t("svc_name_" + v.id) : loc(v, "name"), desc = loc(v, "description");
-      return '<button class="sector" data-sector="' + esc(v.id) + '"><i class="ph ' + (v.id === TRAVEL ? "ph-gas-pump" : "ph-identification-card") + '" aria-hidden="true"></i><b>' + esc(nm) + "</b>" +
+      return '<button class="sector" data-sector="' + esc(v.id) + '"><i class="ph ' + (SECTOR_ICON[v.id] || "ph-identification-card") + '" aria-hidden="true"></i><b>' + esc(nm) + "</b>" +
         '<small title="' + esc(desc) + '">' + esc(desc) + '</small><i class="ph ph-caret-right go flip-rtl" aria-hidden="true"></i></button>';
     }).join("") + '</div></div><p class="footnote">' + t("prototype_note") + "</p>";
     $("viewSeg").hidden = true; $("legend").hidden = true; $("filterSlot").innerHTML = "";
@@ -215,10 +225,12 @@
       S.pop = r[0]; S.byId = new Map(S.pop.map(function (c) { return [c.id, c]; }));
       S.sites = r[1]; S.allScenarios = r[2]; S.assumptions = r[3];
       S.areas = r[4] && Object.keys(r[4]).length ? r[4] : CFG.AREAS;
-      S.services = (r[5] && r[5].length ? r[5] : CFG.SERVICES).filter(function (v) { return S.allScenarios.some(function (s) { return s.service === v.id; }); });
+      const ord = function (v) { const i = SECTOR_ORDER.indexOf(v.id); return i < 0 ? 99 : i; };
+      S.services = (r[5] && r[5].length ? r[5] : CFG.SERVICES).filter(function (v) { return S.allScenarios.some(function (s) { return s.service === v.id; }); })
+        .map(function (v, i) { return [v, i]; }).sort(function (a, b) { return ord(a[0]) - ord(b[0]) || a[1] - b[1]; }).map(function (x) { return x[0]; });
       if (!S.services.length) throw new API.ApiError("no scenarios", 0, "/scenarios");
       initMap();
-      // ?sector=id_renewal|everyday_travel skips the list (used on stage); otherwise the start state, every time.
+      // ?sector=id_renewal|everyday_travel|medical_exemption skips the list (used on stage); otherwise the start state, every time.
       const want = new URLSearchParams(location.search).get("sector");
       if (want && S.services.some(function (v) { return v.id === want; })) {
         await chooseSector(want);
@@ -403,6 +415,14 @@
     return '<div class="switch-row"><span id="l_' + id + '">' + label + '</span><button class="switch" role="switch" aria-labelledby="l_' + id + '" data-sw="' + id + '" aria-checked="' + !!on + '"' + (dis ? " disabled" : "") + "></button></div>";
   }
   function areaOptions(sel) { return Object.keys(S.areas).map(function (k) { return '<option value="' + esc(k) + '"' + (k === sel ? " selected" : "") + ">" + esc(areaName(k)) + "</option>"; }).join(""); }
+  // "Open an office": the sites that belong to this service only (the Royal Court site), each as its own
+  // option "site:<id>" after the areas, named "<site> (<area>)".
+  function specialSiteOptions(sel) {
+    return siteIds().filter(function (k) { return (CFG.SERVICE_ONLY_SITES || {})[k] === S.service; }).map(function (k) {
+      const v = "site:" + k, s = S.sites[k];
+      return '<option value="' + esc(v) + '"' + (v === sel ? " selected" : "") + ">" + esc(t("site_in_area", { site: siteName(k), area: s.area ? areaName(s.area) : "" })) + "</option>";
+    }).join("");
+  }
   function dayOptions(sel) { return DAYS.map(function (d) { return '<option value="' + d + '"' + (d === sel ? " selected" : "") + ">" + dayName(d) + "</option>"; }).join(""); }
   // A stepper with meaningful labels for its two buttons ("Decrease: Fee (JD)").
   function stepper(attr, val, unit, label, step) {
@@ -435,9 +455,9 @@
         const first = days.filter(function (d) { return d !== "thu"; })[0] || days[0];
         const hrs = first ? o.schedule[first] : ["08:00", "15:00"];
         const lateThu = o.schedule.thu && o.schedule.thu[1] === "19:00";
-        h += '<div class="sec"><h3 class="sec-title"><span><i class="ph ph-bank" aria-hidden="true"></i> ' + t("office") + (p.offices.length > 1 ? " " + (i + 1) : "") + '</span><button class="x" data-orm="' + i + '" aria-label="' + t("remove_office") + '" title="' + t("remove_office") + '"><i class="ph ph-trash"></i></button></h3>' +
+        h += '<div class="sec"><h3 class="sec-title"><span><i class="ph ph-bank" aria-hidden="true"></i> ' + ts("office") + (p.offices.length > 1 ? " " + (i + 1) : "") + '</span><button class="x" data-orm="' + i + '" aria-label="' + ts("remove_office") + '" title="' + ts("remove_office") + '"><i class="ph ph-trash"></i></button></h3>' +
           '<div class="field"><label class="label" for="site' + i + '">' + t("site") + '</label><select class="input" id="site' + i + '" data-site="' + i + '">' +
-          Object.keys(S.sites).map(function (s) { return '<option value="' + esc(s) + '"' + (s === o.site_id ? " selected" : "") + ">" + esc(siteName(s)) + "</option>"; }).join("") +
+          siteIds().concat(S.sites[o.site_id] && siteIds().indexOf(o.site_id) < 0 ? [o.site_id] : []).map(function (s) { return '<option value="' + esc(s) + '"' + (s === o.site_id ? " selected" : "") + ">" + esc(siteName(s)) + "</option>"; }).join("") +
           '</select><p class="help" style="margin:0">' + t("drag_hint") + "</p></div>" +
           '<div class="field"><span class="label">' + t("days") + '</span><div class="daychips">' +
           DAYS.map(function (d) { return '<button class="daychip" data-day="' + i + ":" + d + '" aria-pressed="' + !!o.schedule[d] + '" title="' + dayName(d) + '" aria-label="' + dayName(d) + '">' + shortDay(d) + "</button>"; }).join("") + "</div></div>" +
@@ -445,26 +465,33 @@
           '<div class="field" style="margin:0"><label class="label" for="cl' + i + '">' + t("closes") + '</label><input class="input num" type="time" step="1800" id="cl' + i + '" data-close="' + i + '" value="' + hrs[1] + '"></div></div>' +
           sw("late:" + i, lateThu, t("late_thu"), !o.schedule.thu) + sw("acc:" + i, o.wheelchair_accessible !== false, t("accessible")) + "</div>";
       });
-      h += '<div class="sec"><div class="addoffice">' + (p.offices.length ? "" : '<div class="empty" style="grid-column:1/-1">' + t("no_offices") + "</div>") +
-        '<select class="input" id="newOfficeArea" aria-label="' + t("add_office_in") + '">' + areaOptions(S.newOfficeArea) + '</select>' +
-        '<button class="btn sm ghost" id="addOffice"><i class="ph ph-plus"></i>' + t("add_office") + "</button></div></div>";
+      h += '<div class="sec"><div class="addoffice">' + (p.offices.length ? "" : '<div class="empty" style="grid-column:1/-1">' + ts("no_offices") + "</div>") +
+        '<select class="input" id="newOfficeArea" aria-label="' + t("add_office_in") + '">' + areaOptions(S.newOfficeArea) + specialSiteOptions(S.newOfficeArea) + '</select>' +
+        '<button class="btn sm ghost" id="addOffice"><i class="ph ph-plus"></i>' + ts("add_office") + "</button></div></div>";
     }
 
     if (lever("online") || lever("appointments")) h += '<div class="sec"><h3 class="sec-title">' + t("rules") + "</h3>" +
-      sw("online", p.online_enabled, t("online_enabled"), p.online_only) + sw("onlineOnly", p.online_only, t("online_only")) + sw("appt", p.appointment_required, t("appointment"), p.online_only) + "</div>";
+      (lever("online") ? sw("online", p.online_enabled, ts("online_enabled"), p.online_only) + sw("onlineOnly", p.online_only, ts("online_only")) : "") +
+      (lever("appointments") ? sw("appt", p.appointment_required, t("appointment"), p.online_only) : "") + "</div>";
+
+    // Medical exemptions: a first-degree relative (the resident's helper) may apply instead. null = the service
+    // default (true for this service), so it shows as on; the switch always writes true or false.
+    if (lever("proxy")) h += '<div class="sec"><h3 class="sec-title"><span><i class="ph ph-users" aria-hidden="true"></i> ' + t("proxy") + "</span></h3>" +
+      sw("proxy", p.proxy_allowed !== false, t("proxy_label")) + '<p class="help" style="margin:0">' + t("proxy_help") + "</p></div>";
 
     if (lever("protections")) h += protectHTML(p);
 
     const units = p.mobile_units || [];
-    if (lever("mobile_units")) h += '<div class="sec"><h3 class="sec-title"><span>' + t("mobile_units") + '</span><button class="btn sm ghost" id="addUnit"' + (p.online_only ? " disabled" : "") + '><i class="ph ph-plus"></i>' + t("add_unit") + "</button></h3>" +
+    if (lever("mobile_units")) h += '<div class="sec"><h3 class="sec-title"><span>' + ts("mobile_units") + '</span><button class="btn sm ghost" id="addUnit"' + (p.online_only ? " disabled" : "") + '><i class="ph ph-plus"></i>' + ts("add_unit") + "</button></h3>" +
       (units.length ? units.map(function (u, i) {
         return '<div class="unit"><select class="input" data-u="' + i + ':area" aria-label="' + t("area") + '">' + areaOptions(u.area) + '</select><select class="input" data-u="' + i + ':day" aria-label="' + t("day") + '">' + dayOptions(u.day) + "</select>" +
           '<button class="x" data-urm="' + i + '" aria-label="' + t("remove") + '"><i class="ph ph-trash"></i></button>' +
           '<div class="hours"><input class="input num" type="time" step="1800" data-u="' + i + ':open" value="' + u.open + '" aria-label="' + t("opens") + '"><input class="input num" type="time" step="1800" data-u="' + i + ':close" value="' + u.close + '" aria-label="' + t("closes") + '"></div></div>';
-      }).join("") : '<div class="empty">' + t("no_units") + "</div>") + "</div>";
+      }).join("") : '<div class="empty">' + ts("no_units") + "</div>") + "</div>";
 
-    if (lever("fee") || lever("visits")) h += '<div class="sec"><div class="row2"><div class="field" style="margin:0"><span class="label">' + t("fee") + "</span>" + stepper("data-fee", p.fee_jd, "", t("fee"), 0.5) + "</div>" +
-      '<div class="field" style="margin:0"><span class="label">' + t("visits") + "</span>" + stepper("data-visits", p.visits_required, "", t("visits")) + "</div></div></div>";
+    const feeF = lever("fee") ? '<div class="field" style="margin:0"><span class="label">' + t("fee") + "</span>" + stepper("data-fee", p.fee_jd, "", t("fee"), 0.5) + "</div>" : "";
+    const visF = lever("visits") ? '<div class="field" style="margin:0"><span class="label">' + t("visits") + "</span>" + stepper("data-visits", p.visits_required, "", t("visits")) + "</div>" : "";
+    if (feeF || visF) h += '<div class="sec"><div class="row2">' + feeF + visF + "</div></div>";
     if (lever("fuel") || lever("fares") || lever("cash_support")) h += travelPolicyHTML(p);
     else if (lever("transport_vouchers")) h += '<div class="sec">' + voucherHTML(p, true) + "</div>";
     h += '<p class="footnote">' + t("prototype_note") + "</p>";
@@ -487,16 +514,17 @@
     const pick = '<p class="help" style="margin:0">' + t("pick_group_first") + "</p>";
     let h = '<div class="sec"><h3 class="sec-title"><span><i class="ph ph-hand-heart" aria-hidden="true"></i> ' + t("protect") + "</span></h3>" +
       '<p class="help" style="margin:-4px 0 10px">' + t("protect_help") + "</p>";
-    h += '<div class="field"><span class="label">' + t("walkin") + "</span>" + groupChips("exempt", p.appointment_exempt_groups || [], !p.appointment_required || !inPerson) +
+    // Walk-in needs the appointments lever, the fee discount the fee lever (medical exemptions have neither: no fee).
+    if (lever("appointments")) h += '<div class="field"><span class="label">' + t("walkin") + "</span>" + groupChips("exempt", p.appointment_exempt_groups || [], !p.appointment_required || !inPerson) +
       (p.appointment_required ? "" : '<p class="help" style="margin:0">' + t("walkin_help") + "</p>") + "</div>";
-    h += '<div class="field"><span class="label">' + t("fee_off") + "</span>" + groupChips("fee", fdGroups) +
+    if (lever("fee")) h += '<div class="field"><span class="label">' + t("fee_off") + "</span>" + groupChips("fee", fdGroups) +
       '<div class="row2"><span class="label" style="align-self:center">' + t("fee_pct") + "</span>" + stepper("data-feepct", pct, "%", t("fee_pct")) + "</div>" + (fdGroups.length ? "" : pick) + "</div>";
     h += voucherHTML(p, inPerson);
     h += sw("home", !!hv, t("home_visits"), !inPerson);
     if (hv) h += '<div class="field">' + groupChips("home", hv.groups || []) +
       '<div class="row2"><span class="label" style="align-self:center">' + t("home_slots") + "</span>" + stepper("data-hslots", hv.slots, "", t("home_slots")) + "</div>" +
       '<p class="help" style="margin:0">' + t("home_help") + "</p></div>";
-    h += sw("hybrid", !!p.hybrid_pickup, t("hybrid"), !inPerson) + '<p class="help" style="margin:0">' + t("hybrid_help") + "</p>";
+    h += sw("hybrid", !!p.hybrid_pickup, ts("hybrid"), !inPerson) + '<p class="help" style="margin:0">' + ts("hybrid_help") + "</p>";
     return h + "</div>";
   }
 
@@ -619,20 +647,28 @@
       m.on("click", function () { if (S.service) select(c.id); });
       m.addTo(dotLayer); dots.set(c.id, m);
     });
-    Object.keys(S.sites).forEach(function (k) {
-      const s = S.sites[k];
-      L.marker([s.lat, s.lng], { icon: L.divIcon({ className: "", html: '<div class="site-mark"></div>', iconSize: [12, 12], iconAnchor: [6, 6] }), interactive: false, keyboard: false }).addTo(siteLayer);
-    });
-    if (S.service !== "id_renewal") map.removeLayer(siteLayer);   // office sites: ID renewal only
+    renderSiteMarks();
     map.on("zoomend", declutterLabels);
     renderLabels(); placeZoom();
   }
-  // After a service switch: the hero dots of the new service are drawn larger, and office sites show only for ID renewal.
+  // Candidate office sites: only for a sector whose panel edits offices (ID renewal, medical exemptions), and only
+  // the sites that sector can use (config.js SERVICE_ONLY_SITES).
+  const showSites = function () { return !!S.service && lever("offices"); };
+  function renderSiteMarks() {
+    if (!siteLayer) return;
+    siteLayer.clearLayers();
+    siteIds().forEach(function (k) {
+      const s = S.sites[k];
+      L.marker([s.lat, s.lng], { icon: L.divIcon({ className: "", html: '<div class="site-mark"></div>', iconSize: [12, 12], iconAnchor: [6, 6] }), interactive: false, keyboard: false }).addTo(siteLayer);
+    });
+    if (!showSites()) map.removeLayer(siteLayer); else if (!map.hasLayer(siteLayer)) siteLayer.addTo(map);
+  }
+  // After a service switch: the hero dots of the new service are drawn larger, and the office sites follow the sector.
   function styleDots() {
     if (!map) return;
     const heroIds = new Set(S.heroes.map(function (h) { return h.id; }));
     dots.forEach(function (m, id) { const hero = heroIds.has(id); m.setRadius(hero ? 7 : 4); m.setStyle({ weight: hero ? 2.5 : 0.8 }); });
-    if (S.service !== "id_renewal") map.removeLayer(siteLayer); else if (!map.hasLayer(siteLayer)) siteLayer.addTo(map);
+    renderSiteMarks(); renderLabels();
   }
   function placeZoom() {
     if (!map) return;
@@ -646,7 +682,7 @@
     labelLayer.clearLayers();
     Object.keys(S.areas).forEach(function (k) {
       const a = S.areas[k];
-      const lat = Object.keys(S.sites).reduce(function (m, s) { return S.sites[s].area === k ? Math.min(m, S.sites[s].lat) : m; }, a.lat);
+      const lat = siteIds().reduce(function (m, s) { return S.sites[s].area === k ? Math.min(m, S.sites[s].lat) : m; }, a.lat);
       L.marker([lat, a.lng], { icon: L.divIcon({ className: "", html: '<div class="area-label">' + esc(areaName(k)) + "</div>", iconSize: [0, 0] }), interactive: false, keyboard: false, zIndexOffset: -500 }).addTo(labelLayer);
     });
     declutterLabels();
@@ -678,7 +714,8 @@
     S.pop.forEach(function (c) {
       const o = sim.byId.get(c.id), m = dots.get(c.id);
       if (!o || !m) return;
-      let cls = "dot " + o.status;
+      // Medical exemptions: an insured resident is not applicable, drawn in the neutral idle style.
+      let cls = isNA(o) ? "dot idle na" : "dot " + o.status;
       if (S.reason && !(o.status === S.reasonSt && (o.reasons || []).indexOf(S.reason) >= 0)) cls += " dim";
       if (S.sel === c.id) cls += " sel";
       if (m._path) m._path.setAttribute("class", cls + " leaflet-interactive");
@@ -703,7 +740,7 @@
         icon: L.divIcon({ className: "", html: '<div class="pin' + (pinLayer._snap === i ? " snap" : "") + '"><div class="head"><i class="ph-fill ph-bank"></i></div></div>', iconSize: [40, 48], iconAnchor: [20, 48] }) });
       m.on("dragend", function () {
         const ll = m.getLatLng(); let best = null, bd = Infinity;
-        Object.keys(S.sites).forEach(function (k) { const ss = S.sites[k], d = (ss.lat - ll.lat) ** 2 + ((ss.lng - ll.lng) * Math.cos(ll.lat * Math.PI / 180)) ** 2; if (d < bd) { bd = d; best = k; } });
+        siteIds().forEach(function (k) { const ss = S.sites[k], d =(ss.lat - ll.lat) ** 2 + ((ss.lng - ll.lng) * Math.cos(ll.lat * Math.PI / 180)) ** 2; if (d < bd) { bd = d; best = k; } });
         pinLayer._snap = i;
         m.setLatLng([S.sites[best].lat, S.sites[best].lng]);
         edit(function (pp) { snapOffice(pp.offices[i], best); });
@@ -716,7 +753,7 @@
       const n = p.mobile_units.slice(0, i).filter(function (x) { return x.area === u.area; }).length;
       L.marker([a.lat - 0.0045, a.lng + 0.004 + n * 0.004], { zIndexOffset: 900, keyboard: false,
         icon: L.divIcon({ className: "", html: '<div class="van"><i class="ph-fill ph-van"></i></div>', iconSize: [34, 34], iconAnchor: [17, 17] }) })
-        .bindTooltip(esc(t("van_tip", { area: areaName(u.area), day: dayName(u.day), open: u.open, close: u.close })), { direction: "top", offset: [0, -16] }).addTo(pinLayer);
+        .bindTooltip(esc(ts("van_tip", { area: areaName(u.area), day: dayName(u.day), open: u.open, close: u.close })), { direction: "top", offset: [0, -16] }).addTo(pinLayer);
     });
     declutterLabels();
   }
@@ -743,13 +780,21 @@
     let rings = "";
     if (S.view === "after" && S.cmpFix && S.cmpFix.flipped_better.length) rings = '<span class="lg-div"></span><span class="lg rings"><span class="sw-ring" style="border-color:var(--served)"></span><b class="num">' + S.cmpFix.flipped_better.length + "</b> " + t("got_better") + "</span>";
     else if (S.view === "after" && S.cmp.flipped_worse.length) rings = '<span class="lg-div"></span><span class="lg rings"><span class="sw-ring"></span><b class="num">' + S.cmp.flipped_worse.length + "</b> " + t("got_worse") + "</span>";
-    $("legend").innerHTML = ["served", "hardship", "left_out"].map(function (s) { return '<span class="lg"><span class="sw-dot ' + s + '"></span>' + ts(s) + ' <b class="num">' + int(k[s] || 0) + "</b></span>"; }).join("") + rings;
+    // Medical exemptions: one more entry for the insured (not applicable), counted by the backend or from the outcomes.
+    let na = "";
+    if (isMed()) {
+      const K = viewSim().kpis;
+      let nNA = K.n_not_applicable;
+      if (nNA == null) { nNA = 0; viewSim().byId.forEach(function (o) { if (isNA(o)) nNA++; }); }
+      if (nNA) na = '<span class="lg"><span class="sw-dot na"></span>' + t("na_legend") + ' <b class="num">' + int(nNA) + "</b></span>";
+    }
+    $("legend").innerHTML = ["served", "hardship", "left_out"].map(function (s) { return '<span class="lg"><span class="sw-dot ' + s + '"></span>' + ts(s) + ' <b class="num">' + int(k[s] || 0) + "</b></span>"; }).join("") + na + rings;
     $("filterSlot").innerHTML = S.reason ? '<div class="float filter-chip"><i class="ph ph-funnel"></i>' + (isTravel() ? ts(S.reasonSt) + ": " : "") + t("r_" + S.reason) + '<button data-clear-reason>' + t("clear_filter") + "</button></div>" : "";
     const sim = viewSim();
     $("heroes").hidden = !S.heroes.length;
     $("heroes").innerHTML = '<p class="heroes-title">' + t("heroes") + '</p><div class="hero-list">' + S.heroes.map(function (h) {
       const c = S.byId.get(h.id), o = sim.byId.get(h.id) || { status: "served" };
-      return '<button class="hero-btn" data-hero="' + esc(c.id) + '" aria-pressed="' + (S.sel === c.id) + '" title="' + esc(loc(h, "note")) + '"><span class="avatar ' + o.status + '">' + esc(initial(c)) + "</span>" + esc(name(c)) + "</button>";
+      return '<button class="hero-btn" data-hero="' + esc(c.id) + '" aria-pressed="' + (S.sel === c.id) + '" title="' + esc(loc(h, "note")) + '"><span class="avatar ' + (isNA(o) ? "na" : o.status) + '">' + esc(initial(c)) + "</span>" + esc(name(c)) + "</button>";
     }).join("") + "</div>";
     syncHeroesHeight();
   }
@@ -763,7 +808,7 @@
   async function loadVoice() {
     if (!S.sel || !S.cmp) return;
     const id = S.sel, o = viewSim().byId.get(id);
-    if (!o) return;
+    if (!o || isNA(o)) return;   // an insured resident (medical exemptions) has nothing to say about it: no call
     const key = voiceKey(id, o), cur = S.voices.get(key);
     if (cur && cur.status !== "error") return;
     S.voices.set(key, { status: "loading" });
@@ -780,7 +825,33 @@
   }
 
   function statusPill(o, label, current) {
-    return '<span class="flow-step' + (current ? " cur" : "") + '"><small>' + label + '</small><span class="pill ' + o.status + '">' + ts(o.status) + "</span></span>";
+    const na = isNA(o);
+    return '<span class="flow-step' + (current ? " cur" : "") + '"><small>' + label + '</small><span class="pill ' + (na ? "na" : o.status) + '">' + (na ? t("not_applicable") : ts(o.status)) + "</span></span>";
+  }
+
+  // Medical exemptions: the in-person facts of an exemption visit (office, mode incl. a relative applying instead,
+  // day, travel, number of visits, time, cost). Online and the Sanad route show no travel facts.
+  function exemptionFactsHTML(o, c) {
+    const fact = function (k, val) { return '<div class="fact"><small>' + t(k) + "</small><b>" + val + "</b></div>"; };
+    const online = o.mode === "online" || o.channel === "online";
+    const chName = online ? ts("m_online") : (loc(o, "channel_name") || o.channel || "");
+    let modeTxt;
+    if (o.mode === "helper_visit") {
+      const rel = (S.lang === "ar" ? c.helper_relation_ar : c.helper_relation_en) || "";
+      modeTxt = t(gk("m_helper_visit", c)) + (rel ? " (" + esc(rel) + ")" : "");
+    } else modeTxt = ts("m_" + o.mode) + (o.mode === "bus" ? ' <span class="num">(' + ((o.bus_transfers || 0) + 1) + ")</span>" : "");
+    const facts = [fact("channel", esc(chName)), fact("mode", '<i class="ph ' + (MODE_ICON[o.mode] || "ph-dot") + '"></i> ' + modeTxt)];
+    if (!online && o.mode !== "home") {
+      facts.push(fact("visit_day", o.visit_day ? dayName(o.visit_day) : "-"), fact("travel", '<span class="num">' + Math.round(o.travel_minutes || 0) + "</span> " + t("min")));
+      // The number of visits: the outcome's own count when the backend sends it, else the policy's (not with the
+      // apply-on-Sanad-and-collect option, where it can be a single pickup).
+      const pol = viewPolicy(), nv = o.visits != null ? +o.visits : !pol.hybrid_pickup ? +pol.visits_required : null;
+      if (nv) facts.push(fact("visits_made", tp("visits_n", nv)));
+    }
+    facts.push(fact("hours_lost", '<span class="num">' + f1(o.hours_lost) + "</span> " + t("hrs")), fact("cost", '<span class="num">' + f1(o.cost_jd) + "</span> " + t("jd")));
+    let h = '<div class="facts">' + facts.join("") + "</div>";
+    if (o.work_hours_missed > 0) h += '<div class="facts" style="grid-template-columns:1fr"><div class="fact" style="border:0"><small>' + t("work_missed") + '</small><b><span class="num">' + f1(o.work_hours_missed) + "</span> " + t("hrs") + "</b></div></div>";
+    return h;
   }
 
   // Everyday travel: the citizen's regular trip, every number as the engine sent it (null fields are hidden).
@@ -820,9 +891,11 @@
     const steps = [statusPill(oToday, t("flow_today"), S.view === "before")];
     if (changed() && oPolicy) steps.push(statusPill(oPolicy, t("flow_policy"), S.view === "after" && !oFix));
     if (oFix) steps.push(statusPill(oFix, t("flow_fix"), S.view === "after"));
+    const na = isNA(o);
+    if (na) steps.splice(1);   // insured (medical exemptions): one "not applicable" pill, not the same one three times
     const hero = heroOf(c.id), note = loc(hero, "note");
-    const attr = function (icon, txt, neg) { return '<span class="' + (neg ? "neg" : "") + '"><i class="ph ' + icon + '"></i>' + esc(txt) + "</span>"; };
-    let h = '<div class="drawer-head"><span class="avatar lg ' + o.status + '">' + esc(initial(c)) + '</span><div><h3>' + esc(name(c)) + '</h3><div class="sub">' + esc(t("age_area", { age: c.age, area: areaName(c.area) })) + "</div>" +
+    const attr =function (icon, txt, neg) { return '<span class="' + (neg ? "neg" : "") + '"><i class="ph ' + icon + '"></i>' + esc(txt) + "</span>"; };
+    let h = '<div class="drawer-head"><span class="avatar lg ' + (na ? "na" : o.status) + '">' + esc(initial(c)) + '</span><div><h3>' + esc(name(c)) + '</h3><div class="sub">' + esc(t("age_area", { age: c.age, area: areaName(c.area) })) + "</div>" +
       (note ? '<div class="hero-note">' + esc(note) + "</div>" : "") + '</div><button class="icon-btn" data-close-drawer aria-label="' + t("close") + '"><i class="ph ph-x"></i></button></div><div class="drawer-body">';
     h += '<div class="status-flow">' + steps.join(arrow) + "</div>";
     h += '<div class="attrs">' +
@@ -832,7 +905,16 @@
       attr("ph-cursor-click", c.digital_literacy === "low" ? t("lit_low") : t("lit_ok"), c.digital_literacy === "low") +
       attr("ph-briefcase", c.works ? t("works_hours", { s: c.work_start, e: c.work_end }) : t("not_working")) +
       attr("ph-hand-heart", c.has_helper ? t("helper", { h: (S.lang === "ar" ? c.helper_relation_ar : c.helper_relation_en) || "" }) : t("no_helper"), !c.has_helper) +
+      (isMed() && c.has_health_insurance != null ? attr("ph-first-aid-kit", t(gk(c.has_health_insurance ? "insured" : "uninsured", c)), !c.has_health_insurance) : "") +
       "</div>";
+    // Medical exemptions, an insured resident: a one-line note, no voice, no numbers.
+    if (na) {
+      h += '<div class="note"><i class="ph ph-info"></i><span>' + t(gk("na_note", c)) + "</span></div></div>";
+      const bEl = d.querySelector(".drawer-body"), scr = bEl ? bEl.scrollTop : 0, sameC = d.dataset.cid === c.id;
+      d.innerHTML = h; d.hidden = false; d.dataset.cid = c.id;
+      if (sameC) d.querySelector(".drawer-body").scrollTop = scr;
+      return;
+    }
     const v = S.voices.get(voiceKey(c.id, o));
     const isTpl = v && v.source !== "ai";
     let body;
@@ -841,6 +923,7 @@
     else body = '<div class="skel"></div><div class="skel w60"></div><span class="sr">' + t(gk("voice_loading", c)) + "</span>";
     h += '<div class="voice" aria-live="polite"><div class="voice-meta"><span>' + t(gk("voice_label", c)) + "</span>" + (v && v.status === "done" ? '<span class="src' + (isTpl ? "" : " ai") + '">' + t(isTpl ? "tpl" : "ai") + "</span>" : "") + "</div>" + body + "</div>";
     if (isTravel()) h += tripHTML(o);
+    else if (isMed()) { if (o.status !== "left_out") h += exemptionFactsHTML(o, c); }
     else if (o.status !== "left_out") {
       const fact = function (k, val) { return '<div class="fact"><small>' + t(k) + "</small><b>" + val + "</b></div>"; };
       const facts = [fact("channel", esc(loc(o, "channel_name") || o.channel || "")),
@@ -914,13 +997,20 @@
     // After a fix: deltas against the policy before the fix (default), or against today.
     const vsFix = after && !!S.cmpFix && S.deltaRef === "prefix";
     const D = vsFix ? S.cmpFix.kpi_delta : S.cmp.kpi_delta, ref = vsFix ? S.cmpFix.baseline : S.cmp.baseline;
-    const n = K.n || (cur.counts ? cur.counts.served + cur.counts.hardship + cur.counts.left_out : 0);
+    // Medical exemptions: counts are over the uninsured (n_eligible), not over everyone.
+    const sumN = cur.counts ? cur.counts.served + cur.counts.hardship + cur.counts.left_out : 0;
+    const n = isMed() ? (K.n_eligible != null ? +K.n_eligible : sumN) : K.n || sumN;
     let h = '<div class="sec"><div class="kpis" aria-live="polite">' + [["pct_served", "served", false], ["pct_hardship", "hardship", true], ["pct_left_out", "left_out", true]].map(function (x) {
-      const cnt = cur.counts ? '<div class="kpi-n">' + t("kpi_of", { n: int(cur.counts[x[1]]), t: int(n) }) + "</div>" : "";
+      const cnt = cur.counts ? '<div class="kpi-n">' + ts("kpi_of", { n: int(cur.counts[x[1]]), t: int(n) }) + "</div>" : "";
       return '<div class="kpi"><div class="kpi-label"><span class="sw-dot ' + x[1] + '"></span>' + ts(x[1]) + "</div>" + kpiVal(x[0], f1(K[x[0]])) + cnt +
         (showD ? delta(D[x[0]], x[2]) : '<span class="delta flat">' + (S.view === "before" ? t("step_baseline") : t("vs_baseline")) + "</span>") + "</div>";
     }).join("") + "</div>";
     if (showD && S.cmpFix) h += '<div class="delta-ref"><span>' + t(vsFix ? "vs_prefix" : "vs_baseline") + '</span><button class="linkbtn" data-delta-ref="' + (vsFix ? "baseline" : "prefix") + '">' + t(vsFix ? "show_vs_today" : "show_vs_prefix") + "</button></div>";
+    if (isMed()) {
+      let nNA = K.n_not_applicable;
+      if (nNA == null) { nNA = 0; cur.byId.forEach(function (o) { if (isNA(o)) nNA++; }); }
+      if (nNA) h += '<div class="kpi-sub kpi-note"><span><i class="ph ph-shield-check"></i> ' + t("insured_line", { n: '<b class="num">' + int(nNA) + "</b>" }) + "</span></div>";
+    }
     const hvNow = viewPolicy().home_visits;
     if (hvNow) h += '<div class="kpi-sub kpi-note"><span><i class="ph ph-house-line"></i> ' + t("home_used") + ' <b class="num">' + (K.n_home_visits || 0) + "</b> / " + hvNow.slots + "</span></div>";
     if (isTravel()) h += travelKpisHTML(K, D, showD);
@@ -935,7 +1025,8 @@
 
     // equity bars: groups the backend returned, known groups first, two hardest-hit on top (the backend's order)
     const worst = changed() ? S.cmp.worst_groups.slice(0, 2) : [];
-    const groups = Object.keys(cur.by_group).filter(function (g) { return g !== "all"; }).sort(function (x, y) {
+    // Medical exemptions: "uninsured" is everyone counted here, so its bar would only repeat "Everyone".
+    const groups = Object.keys(cur.by_group).filter(function (g) { return g !== "all" && !(isMed() && g === "uninsured"); }).sort(function (x, y) {
       const wx = worst.indexOf(x), wy = worst.indexOf(y);
       if (wx >= 0 || wy >= 0) return (wx < 0 ? 9 : wx) - (wy < 0 ? 9 : wy);
       const ox = GROUP_ORDER.indexOf(x), oy = GROUP_ORDER.indexOf(y);
@@ -943,7 +1034,7 @@
     });
     const row = function (g, cls) {
       const s = cur.by_group[g], bb = ref.by_group[g] || s, bad = s.left_out + s.hardship, d = bad - (bb.left_out + bb.hardship);
-      return '<div class="eq ' + (cls || "") + '"><span class="name">' + (g === "all" ? t("everyone") : esc(groupLabel(g))) + (worst.indexOf(g) >= 0 && after ? ' <span class="worst-tag">' + t("worst") + "</span>" : "") + "</span>" +
+      return '<div class="eq ' + (cls || "") + '"><span class="name">' + (g === "all" ? ts("everyone") :esc(groupLabel(g))) + (worst.indexOf(g) >= 0 && after ? ' <span class="worst-tag">' + t("worst") + "</span>" : "") + "</span>" +
         '<span class="bar" role="img" aria-label="' + f1(s.served) + "% / " + f1(s.hardship) + "% / " + f1(s.left_out) + '%"><i class="s" style="width:' + s.served + '%"></i><i class="h" style="width:' + s.hardship + '%"></i><i class="l" style="width:' + s.left_out + '%"></i></span>' +
         '<span class="v num">' + f1(bad) + "%" + (showD && Math.abs(d) >= 0.05 ? '<small class="' + (d > 0 ? "delta bad" : "delta good") + '">' + (d > 0 ? "+" : "−") + f1(Math.abs(d)) + "</small>" : "") + "</span></div>";
     };
@@ -951,7 +1042,7 @@
       '<div class="eq-legend"><span><span class="sw-dot hardship"></span>' + ts("hardship") + '</span><span><span class="sw-dot left_out"></span>' + ts("left_out") + "</span><span>% = " + ts("hardship") + " + " + ts("left_out") + "</span></div></div>";
 
     // Who is left out, by reason. Everyday travel lists the priced out and the squeezed, each by reason.
-    if (!isTravel()) return h + '<div class="sec"><h3 class="sec-title"><span>' + t("who_left") + '</span><span class="num-ish" style="color:var(--left-ink)">' + tp("people", cur.counts ? cur.counts.left_out : 0) + "</span></h3>" + reasonsHTML(cur, "left_out") + "</div>";
+    if (!isTravel()) return h + '<div class="sec"><h3 class="sec-title"><span>' + ts("who_left") +'</span><span class="num-ish" style="color:var(--left-ink)">' + tp("people", cur.counts ? cur.counts.left_out : 0) + "</span></h3>" + reasonsHTML(cur, "left_out") + "</div>";
     const nL = cur.counts ? cur.counts.left_out : 0, nH = cur.counts ? cur.counts.hardship : 0;
     h += '<div class="sec"><h3 class="sec-title"><span>' + ts("who_left") + "</span></h3>";
     if (!nL && !nH && !Object.keys(K.left_out_by_reason || {}).length && !Object.keys(K.hardship_by_reason || {}).length) h += '<div class="ok-note"><i class="ph ph-check-circle"></i>' + ts("nobody_left") + "</div>";
@@ -975,7 +1066,7 @@
       (o.reasons || []).forEach(function (r) {
         if (!byReason) counts[r] = (counts[r] || 0) + 1;   // older backend: count here
         tagsBy[r] = tagsBy[r] || {};
-        (c.tags || []).forEach(function (g) { if (g !== "student") tagsBy[r][g] = (tagsBy[r][g] || 0) + 1; });
+        (c.tags || []).forEach(function (g) { if (g !== "student" && g !== "uninsured") tagsBy[r][g] = (tagsBy[r][g] || 0) + 1; });
       });
     });
     if (byReason) Object.keys(byReason).forEach(function (r) { if (+byReason[r] > 0) counts[r] = +byReason[r]; });
@@ -1049,7 +1140,9 @@
     if (ex) exHTML = '<p class="explain">' + esc(ex) + '<span class="src' + (exSrc === "fallback" ? "" : " ai") + '">' + t(exSrc === "fallback" ? "tpl" : "ai") + "</span></p>";
     else if (aiPending) exHTML = '<div class="skel"></div><div class="skel w60" style="margin-bottom:12px"></div>';
     const a = F.scenKpis && F.scenKpis.counts, b = fx.kpis && fx.kpis.counts;
-    const counts = a && b ? '<div class="fix-counts"><span>' + ts("left_out") + " " + flow(a.left_out, b.left_out) + '</span><span class="dotsep" aria-hidden="true">·</span><span>' + ts("hardship") + " " + flow(a.hardship, b.hardship) + "</span></div>" : "";
+    // Medical exemptions: the counts are over the uninsured ("left out 40 → 12 · hardship ... of the uninsured").
+    const scope = DICT.en["fix_scope_" + S.service] ? '<span class="scope">' + ts("fix_scope") + "</span>" : "";
+    const counts = a && b ? '<div class="fix-counts"><span>' + ts("left_out") + " " + flow(a.left_out, b.left_out) + '</span><span class="dotsep" aria-hidden="true">·</span><span>' + ts("hardship") + " " + flow(a.hardship, b.hardship) + "</span>" + scope + "</div>" : "";
     const nch = fx.n_changes ? '<span class="nchg">' + tp("changes", fx.n_changes) + "</span>" : "";
     return '<article class="fix' + (isAI ? " ai" : "") + (applied ? " applied" : "") + '" style="animation-delay:' + (i * 70) + 'ms">' +
       '<div class="fix-top"><span class="prov"><i class="ph-fill ' + (isAI ? "ph-sparkle" : "ph-check-circle") + '"></i>' + t(isAI ? "badge_ai" : "badge_engine") + "</span>" + nch + "</div>" +
@@ -1241,7 +1334,10 @@
   // Group definitions, with how many synthetic residents carry each tag.
   function glossaryModal() {
     let h = modalHead(t("glossary_title"), t("glossary_sub")) + '<div class="modal-body"><dl class="gloss">';
-    GROUP_ORDER.forEach(function (g) {
+    // "uninsured": in the medical-exemption sector, and elsewhere only when the backend sends its bar.
+    const bgAll = S.cmp && S.cmp.baseline && S.cmp.baseline.by_group;
+    const gl = GROUP_ORDER.concat(isMed() || (bgAll && bgAll.uninsured) ? ["uninsured"] : []);
+    gl.forEach(function (g) {
       // Group sizes come from the backend (by_group[g].n); the population is only a fallback for an old backend.
       const bg = S.cmp && S.cmp.baseline && S.cmp.baseline.by_group && S.cmp.baseline.by_group[g];
       const n = bg && isFinite(bg.n) ? bg.n : S.pop.filter(function (c) { return (c.tags || []).indexOf(g) >= 0; }).length;
@@ -1342,6 +1438,7 @@
         else if (id.indexOf("acc:") === 0) p.offices[+id.slice(4)].wheelchair_accessible = on;
         else if (id === "home") p.home_visits = on ? { groups: ["disabled", "elderly"], slots: 20 } : null;
         else if (id === "hybrid") p.hybrid_pickup = on;
+        else if (id === "proxy") p.proxy_allowed = on;   // always explicit true / false (null = service default)
       }, { now: true });
     }
     if ((el = q("[data-day]"))) {
@@ -1433,10 +1530,13 @@
       return edit(function (p) { p.visits_required = next; });
     }
     if (q("#addOffice")) return edit(function (p) {
-      const area = ($("newOfficeArea") && $("newOfficeArea").value) || Object.keys(S.areas)[0];
-      S.newOfficeArea = area;
-      const ids = Object.keys(S.sites).filter(function (k) { return S.sites[k].area === area; });
-      const site = ids.find(function (k) { return k.indexOf("cspd_") === 0; }) || ids[0];
+      const val = ($("newOfficeArea") && $("newOfficeArea").value) || Object.keys(S.areas)[0];
+      S.newOfficeArea = val;
+      // "site:<id>" = a service-only site (the Royal Court); otherwise an area: its real CSPD office if any, else its generic site.
+      const area = val.indexOf("site:") === 0 ? null : val;
+      const ids = siteIds().filter(function (k) { return S.sites[k].area === area && !(CFG.SERVICE_ONLY_SITES || {})[k]; });
+      const site = area ? ids.find(function (k) { return k.indexOf("cspd_") === 0; }) || ids[0] : val.slice(5);
+      if (!S.sites[site]) return;
       const ref = p.offices[0];
       const o = { id: "", name_ar: "", name_en: "", site_id: site, wheelchair_accessible: true,
         schedule: ref ? clone(ref.schedule) : { sun: ["08:30", "15:30"], mon: ["08:30", "15:30"], tue: ["08:30", "15:30"], wed: ["08:30", "15:30"], thu: ["08:30", "15:30"] } };

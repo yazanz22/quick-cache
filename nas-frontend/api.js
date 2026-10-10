@@ -52,13 +52,13 @@
   // Citizen[] (§5). The backend always sends tags (seed.derive_tags), so nothing is derived here.
   function normPopulation(raw) { return arr(raw, "citizens") || arr(raw, "population") || []; }
 
-  // -> { [site_id]: { id, name_ar, name_en, lat, lng, area } }
+  // -> { [site_id]: { id, name_ar, name_en, lat, lng, area, real } }
   function normSites(raw) {
     const out = {};
     const list = arr(raw, "sites") || (raw && typeof raw === "object" ? Object.keys(raw).map(function (k) { return Object.assign({ id: k }, raw[k]); }) : []);
     list.forEach(function (s) {
       const id = s.id || s.site_id;
-      out[id] = { id: id, name_ar: s.name_ar || id, name_en: s.name_en || id, lat: +s.lat, lng: +s.lng, area: s.area || s.area_id || null };
+      out[id] = { id: id, name_ar: s.name_ar || id, name_en: s.name_en || id, lat: +s.lat, lng: +s.lng, area: s.area || s.area_id || null, real: !!s.real };
     });
     return out;
   }
@@ -114,7 +114,9 @@
   }
 
   // kpis: percentages are 0-100 (the backend always sends 0-100, so nothing is rescaled). Adds
-  // .counts {served, hardship, left_out} (people) from the n_* keys, or by counting outcomes on an older backend.
+  // .counts {served, hardship, left_out} (people) from the n_* keys, or by counting outcomes on an older backend
+  // (medical exemptions: an outcome with channel "not_applicable" is an insured resident, outside every count).
+  // n_eligible / n_not_applicable (medical exemptions) pass through untouched.
   // left_out_by_reason / hardship_by_reason ({reason: n people}) pass through untouched when present, and so do the
   // everyday-travel keys (avg_monthly_cost_jd, avg_extra_jd_month, total_extra_jd_month, n_cash_support,
   // avg_income_share_pct, by_purpose, by_mode): a missing one stays missing and the UI hides it.
@@ -123,7 +125,7 @@
     ["pct_served", "pct_hardship", "pct_left_out", "avg_hours_lost", "avg_cost_jd"].forEach(function (x) { k[x] = +k[x] || 0; });
     let counts = null;
     if (k.n_served != null && k.n_hardship != null && k.n_left_out != null) counts = { served: +k.n_served, hardship: +k.n_hardship, left_out: +k.n_left_out };
-    else if (outcomes) { counts = { served: 0, hardship: 0, left_out: 0 }; outcomes.forEach(function (o) { counts[o.status] = (counts[o.status] || 0) + 1; }); }
+    else if (outcomes) { counts = { served: 0, hardship: 0, left_out: 0 }; outcomes.forEach(function (o) { if (o.channel !== "not_applicable") counts[o.status] = (counts[o.status] || 0) + 1; }); }
     k.counts = counts;
     if (k.n == null && counts) k.n = counts.served + counts.hardship + counts.left_out;
     return k;

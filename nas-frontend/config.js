@@ -24,6 +24,10 @@ window.NAS_CONFIG = {
   // "1.050 JD/L -> X". Display only: the engine works from fuel_price_change_pct, never from this number.
   FUEL_PRICE_90_JD: 1.050,
 
+  // Office sites that belong to one service only: hidden from the other services' site lists, pins and map marks
+  // (the Royal Court's Citizen Services Unit takes medical-exemption applications, not ID renewals).
+  SERVICE_ONLY_SITES: { royal_court_csu: "medical_exemption" },
+
   // Used only if GET /services doesn't exist: one service, so the switcher stays hidden.
   SERVICES: [{ id: "id_renewal", name_ar: "تجديد الهوية", name_en: "ID renewal", levers: ["offices", "online", "appointments", "mobile_units", "fee", "visits", "protections"], baseline_scenario: "baseline", demo_scenario: null }],
 
