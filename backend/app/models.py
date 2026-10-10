@@ -14,7 +14,11 @@ Day = Literal["sat", "sun", "mon", "tue", "wed", "thu", "fri"]
 # The services Nas can simulate. "id_renewal": a citizen goes through ID renewal (offices, online, vans...).
 # "everyday_travel": a citizen's regular trip (work, university, hospital) under fuel and fare prices; the
 # statuses keep the same keys but mean fine / squeezed / priced out (share of income spent on the trip).
-Service = Literal["id_renewal", "everyday_travel"]
+# "medical_exemption": an UNINSURED citizen (tag "uninsured", ~46% of adults) applies for a Royal Court medical
+# exemption: today one office (the Citizen Services Unit), two visits, no online channel; a first-degree relative
+# may apply on their behalf (proxy). Insured citizens are "not applicable" (channel "not_applicable") and are left
+# out of every percentage.
+Service = Literal["id_renewal", "everyday_travel", "medical_exemption"]
 
 Status = Literal["served", "hardship", "left_out"]
 
@@ -56,6 +60,8 @@ class Citizen(BaseModel):
     helper_relation_ar: str | None = None
     helper_relation_en: str | None = None
     tags: list[str] = []
+    # From data/seed_insurance.py (seed 42, UNINSURED_RATE_BY_BAND): False adds the "uninsured" tag. None = not assigned.
+    has_health_insurance: bool | None = None
     # Optional, from seed_census.py: GAM district and neighbourhood of the home (display only, ignored by the engine).
     district: str | None = None
     neighbourhood: str | None = None
@@ -109,7 +115,7 @@ class MobileUnit(BaseModel):
     close: str
 
 
-Group = Literal["elderly", "disabled", "no_car", "offline", "low_income", "worker", "student"]
+Group = Literal["elderly", "disabled", "no_car", "offline", "low_income", "worker", "student", "uninsured"]
 
 
 class HomeVisits(BaseModel):
@@ -153,6 +159,8 @@ class Policy(BaseModel):
     bus_fare_change_pct: float | None = None      # None = fares follow fuel via BUS_FARE_FUEL_PASS_THROUGH; 0 = a fare freeze; N = set change
     taxi_fare_change_pct: float | None = None     # same for the taxi per-km tariff
     cash_support: list[CashSupport] = []          # monthly cash to groups, offsets the trip cost
+    # --- medical_exemption lever (None = the service's default: True for medical_exemption, False otherwise) ---
+    proxy_allowed: bool | None = None             # a first-degree relative (the citizen's helper) may make the visits instead
 
 
 class Scenario(BaseModel):

@@ -100,6 +100,15 @@ class Assumptions:
     # ASSUMPTION: share of a fuel price change that the taxi per-km tariff passes on when fares follow fuel.
     TAXI_FARE_FUEL_PASS_THROUGH: float = 0.5
 
+    # --- Royal Court medical exemption (the third sector). Added 2026-10-10, set BEFORE any exemption scenario ran. ---
+    # ASSUMPTION: queue + review time for one visit to the Royal Court's Citizen Services Unit (a medical report is
+    # reviewed by a Ministry of Health doctor on the spot); queues there are long.
+    EXEMPTION_VISIT_MINUTES: float = 120.0
+    # ASSUMPTION: share of Jordanian adults WITHOUT health insurance by income band. Calibrated so the population
+    # average is ~46%: DoS 2015 census analytical paper gives 44.8% uninsured among Amman's Jordanians of all ages,
+    # and every child under 6 is insured by decree, so adults are higher; coverage rises with income and formal work.
+    UNINSURED_RATE_BY_BAND: dict = field(default_factory=lambda: {"low": 0.65, "middle": 0.45, "high": 0.20})
+
     def key(self) -> tuple:
         """Hashable identity, used by the engine's memo cache."""
         d = asdict(self)
@@ -119,6 +128,7 @@ UNITS = {
     "WEEKS_PER_MONTH": "weeks", "INCOME_JD_MONTH": "JD/month", "TRANSPORT_SHARE_SQUEEZED": "share of income",
     "TRANSPORT_SHARE_PRICED_OUT": "share of income", "FUEL_SHARE_OF_CAR_COST": "share",
     "BUS_FARE_FUEL_PASS_THROUGH": "share", "TAXI_FARE_FUEL_PASS_THROUGH": "share",
+    "EXEMPTION_VISIT_MINUTES": "min", "UNINSURED_RATE_BY_BAND": "share",
 }
 
 # Shown in the AssumptionsTable: name -> (rationale, tag, source). Every tag is ASSUMPTION. `source` is a short
@@ -160,6 +170,10 @@ META = {
     "BUS_FARE_FUEL_PASS_THROUGH": ("Share of a fuel change passed on to regulated bus fares", "ASSUMPTION",
                                    "Bus fares are set by the LTRC and move less than fuel; no published pass-through rate found"),
     "TAXI_FARE_FUEL_PASS_THROUGH": ("Share of a fuel change passed on to the taxi per-km tariff", "ASSUMPTION", None),
+    "EXEMPTION_VISIT_MINUTES": ("Queue + doctor's review for one visit to the Royal Court's Citizen Services Unit", "ASSUMPTION",
+                                "Press reports describe the application as in person with a MoH doctor's review and a return visit for the letter; no published queue time"),
+    "UNINSURED_RATE_BY_BAND": ("Share of adults without health insurance, by income band", "ASSUMPTION",
+                               "Calibrated to ~46% overall: DoS 2015 census paper, Amman Jordanians 44.8% uninsured (all ages; under-6s are all insured, so adults are higher)"),
 }
 
 # The uncertain constants perturbed by the robustness check (§6.5), per service.
@@ -167,6 +181,7 @@ SENSITIVITY_PARAMS = ["SERVICE_MINUTES", "BUS_WAIT_PLUS_TRANSFER_MIN", "HARDSHIP
 SENSITIVITY_PARAMS_BY_SERVICE = {
     "id_renewal": SENSITIVITY_PARAMS,
     "everyday_travel": ["FUEL_SHARE_OF_CAR_COST", "BUS_FARE_FUEL_PASS_THROUGH", "TRANSPORT_SHARE_SQUEEZED"],
+    "medical_exemption": ["EXEMPTION_VISIT_MINUTES", "BUS_WAIT_PLUS_TRANSFER_MIN", "HARDSHIP_THRESHOLD"],
 }
 
 
@@ -185,6 +200,7 @@ def as_table(a: Assumptions = DEFAULT) -> list[dict]:
             "service": "everyday_travel" if name in ("WEEKS_PER_MONTH", "INCOME_JD_MONTH", "TRANSPORT_SHARE_SQUEEZED",
                                                       "TRANSPORT_SHARE_PRICED_OUT", "FUEL_SHARE_OF_CAR_COST",
                                                       "BUS_FARE_FUEL_PASS_THROUGH", "TAXI_FARE_FUEL_PASS_THROUGH")
+                       else "medical_exemption" if name in ("EXEMPTION_VISIT_MINUTES", "UNINSURED_RATE_BY_BAND")
                        else "shared" if name in ("TRAFFIC_FACTOR", "ROAD_FACTOR", "CAR_SPEED_KMH", "CAR_COST_PER_KM_JD",
                                                  "BUS_SPEED_KMH", "BUS_WALK_MIN", "LIMITED_MOBILITY_WALK_FACTOR",
                                                  "BUS_FIRST_WAIT_MIN", "BUS_WAIT_PLUS_TRANSFER_MIN", "BUS_FARE_JD",

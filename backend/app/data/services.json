@@ -20,6 +20,16 @@
    "levers": ["fuel", "fares", "cash_support", "transport_vouchers"],
    "baseline_scenario": "travel_today",
    "demo_scenario": "fuel_plus_25_fares"
+  },
+  {
+   "id": "medical_exemption",
+   "name_ar": "الإعفاءات الطبية",
+   "name_en": "Medical exemptions",
+   "description_ar": "من لا يملك تأميناً صحياً (نحو 46% من البالغين) يطلب إعفاءً طبياً من الديوان الملكي: اليوم مكتب واحد وزيارتان ولا طريق إلكتروني. من يصل، ومن يصل بمشقة، ومن يُترك خارجاً.",
+   "description_en": "Citizens without health insurance (about 46% of adults) apply for a Royal Court medical exemption: today one office, two visits, no online channel. Who gets there, who struggles, who is left out.",
+   "levers": ["offices", "online", "mobile_units", "visits", "proxy", "protections"],
+   "baseline_scenario": "exemption_today",
+   "demo_scenario": "exemption_online_only"
   }
  ]
 }

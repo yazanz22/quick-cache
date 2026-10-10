@@ -135,7 +135,9 @@ _LATER_FIELDS = {"appointment_exempt_groups": [], "fee_discounts": {}, "home_vis
                  "transport_vouchers": [], "hybrid_pickup": False,
                  # everyday_travel levers (2026-10-10): no-ops for id_renewal, so they stay out of its keys
                  "fuel_price_change_pct": 0.0, "bus_fare_change_pct": None, "taxi_fare_change_pct": None,
-                 "cash_support": []}
+                 "cash_support": [],
+                 # medical_exemption lever (2026-10-10)
+                 "proxy_allowed": None}
 
 
 def policy_json(p: Policy) -> dict:
