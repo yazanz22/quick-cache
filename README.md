@@ -1,10 +1,45 @@
+<img src="nas-frontend/assets/logo.png" alt="Nas logo" width="220">
+
 # Nas (ناس): Policy Simulator for Jordan's Public Services
 
 *Every policy leaves someone out. Nas shows you who, why, and how to fix it before you launch.*
 
-AI Quest @ Al Hussein Technical University. A synthetic population of 1,000 Amman residents, AI-voiced,
-run through a policy in one of three sectors. The deterministic engine decides and searches; the AI translates,
-explains and proposes; the engine verifies everything the AI proposes. See [CLAUDE.md](CLAUDE.md) for the full spec.
+Nas is a policy simulator for Jordan's public services: it tests a policy on 1,000 synthetic citizens of Amman,
+AI-voiced, and shows who it leaves out, why, and how to fix it before launch.
+
+- **Live:** https://nas-rbo5.onrender.com (free plan: the first visit can take 30-60 s to wake). On stage, add
+  `?sector=id_renewal`, `?sector=everyday_travel` or `?sector=medical_exemption` to skip the sector list.
+- **Built for:** AI Quest @ Al Hussein Technical University · theme *Future in Jordan* · sector *Smart Society & Public Services*.
+- **Team:** Sultan Abbas (Software Engineer) · Yazan Zarka (Software Engineer) · Omar Hawasheen (Data Scientist).
+
+The deterministic engine decides and searches; the AI translates, explains and proposes; the engine verifies everything
+the AI proposes. See [CLAUDE.md](CLAUDE.md) for the full spec.
+
+## How it works
+
+1. **Population.** 1,000 synthetic Jordanian adults spread across Amman's 22 districts, generated with a fixed seed so
+   that published shares become the same shares of people (e.g. 95.6% internet use → 956 with a smartphone, MoDEE 2024).
+   Homes sit on real OpenStreetMap streets; road distances to every office come from OSRM.
+2. **Policy.** An official changes the policy with the controls, or types it in Arabic or English; the AI turns the
+   sentence into a structured policy and shows an "understood as" list before anything is applied.
+3. **Engine** (pure Python, deterministic, ~50 ms for 1,000 people). For every citizen it tries every channel (each office,
+   mobile van, online), every open day and every way to get there (own car, a relative's car, bus with transfers, taxi),
+   checks work hours, mobility, smartphone, digital skills and income, and picks the lowest burden (hours lost + cost +
+   work missed). Result: served / hardship / left out, with reason codes.
+4. **Fixes.** The engine scores ~30 candidate fixes (mobile vans, longer hours, rule changes, pairs) in about a second and
+   shows the top 3. The AI explains them and proposes one more; the engine re-runs it and shows it only if it beats the
+   best engine fix without hurting any group.
+5. **Trust.** A ±20% robustness check on the most uncertain assumptions; a grounding check that rejects any AI text with a
+   number the engine didn't compute; a template fallback for every AI task and a committed cache, so the demo runs offline.
+
+**Stack:** Python 3.11+ · FastAPI · Pydantic v2 · static HTML/JS (no build step) · Leaflet + OpenStreetMap · OSRM ·
+Gemini and Groq through one provider-agnostic client · fully bilingual Arabic/English UI with RTL.
+**Tests:** `pytest -q` → 285 passed, 57 xfailed (the xfails are AI answers not pre-cached yet), all offline.
+
+**Docs:** [CLAUDE.md](CLAUDE.md) (spec) · [HANDOFF.md](HANDOFF.md) (project state, demo numbers) ·
+[DEMO_RUNBOOK.md](DEMO_RUNBOOK.md) (stage clicks and fallbacks) · [PITCH_OUTLINE.md](PITCH_OUTLINE.md) ·
+[GAMMA_PROMPT.md](GAMMA_PROMPT.md) (8-slide pitch deck prompt with sources) · logos in [nas-frontend/assets/](nas-frontend/assets/)
+(`logo-dark-transparent.png` for dark slides).
 
 ## Sectors
 
