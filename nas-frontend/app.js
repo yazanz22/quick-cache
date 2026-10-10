@@ -117,7 +117,7 @@
     const b = $("boot");
     if (state === "done") { b.hidden = true; return; }
     b.hidden = false;
-    if (state === "loading") b.innerHTML = '<div class="boot-card"><h2><span class="mark" aria-hidden="true" style="width:30px;height:30px;font-size:13px">ناس</span>' + t("loading") + '</h2><div class="bar-load"><i></i></div></div>';
+    if (state === "loading") b.innerHTML = '<div class="boot-card"><h2><img class="logo" src="assets/logo.png" alt="" aria-hidden="true" style="height:30px;width:auto;vertical-align:middle"><img class="logo logo-dark" src="assets/logo-dark.png" alt="" aria-hidden="true" style="height:30px;width:auto;vertical-align:middle"> ' + t("loading") + '</h2><div class="bar-load"><i></i></div></div>';
     else b.innerHTML = '<div class="boot-card"><h2><i class="ph-fill ph-plugs" style="color:var(--left)"></i>' + esc(t("backend_down", { url: API.base })) + "</h2><p>" + t("backend_hint") + "</p>" +
       (err ? "<p><code>" + esc(err.path || "") + " " + esc(err.message) + "</code></p>" : "") +
       '<div><button class="btn accent" id="bootRetry"><i class="ph ph-arrow-clockwise"></i>' + t("retry") + '</button> <button class="btn ghost" id="langBtn2">' + t("lang_other") + "</button></div></div>";

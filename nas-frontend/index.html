@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nas Policy Simulator</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
 <!-- Fonts, map library and icons are vendored in vendor/ (see vendor/README.md), so the demo runs without internet. -->
 <link rel="stylesheet" href="vendor/fonts/fonts.css">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
@@ -29,6 +30,7 @@
   --shadow-lg: 0 2px 6px rgb(18 22 28 / .08), 0 24px 60px rgb(18 22 28 / .18);
   --r-card: 10px; --r-ctl: 8px;
   --ease: cubic-bezier(.16, 1, .3, 1);
+  --logo-light: block; --logo-dark: none;   /* which logo variant shows (assets/logo.png vs logo-dark.png) */
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -45,10 +47,12 @@
     --tile-filter: invert(1) hue-rotate(180deg) grayscale(1) brightness(.78) contrast(.92) opacity(.6);
     --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 8px 24px rgb(0 0 0 / .35);
     --shadow-lg: 0 2px 6px rgb(0 0 0 / .4), 0 24px 60px rgb(0 0 0 / .55);
+    --logo-light: none; --logo-dark: block;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
+  --logo-light: none; --logo-dark: block;
   --bg: #0b0e12; --surface: #12161c; --surface-2: #181d24; --surface-3: #212731;
   --line: #262d37; --line-strong: #353e4b;
   --ink: #e8ebef; --ink-2: #c5cbd3; --muted: #98a1ad; --faint: #8a939f;
@@ -86,10 +90,9 @@ button { cursor: pointer; }
   background: var(--surface); border-bottom: 1px solid var(--line); min-width: 0;
 }
 .brand { display: flex; align-items: center; gap: 12px; flex: none; }
-.mark {
-  width: 34px; height: 34px; border-radius: 9px; background: var(--ink); color: var(--surface);
-  display: grid; place-items: center; font-weight: 700; font-size: 15px; font-family: "IBM Plex Sans Arabic", sans-serif;
-}
+/* The team's logo (assets/): the Arabic wordmark with the green figure; a light-ink copy for dark mode. */
+.logo { height: 36px; width: auto; display: var(--logo-light); }
+.logo.logo-dark { display: var(--logo-dark); }
 .brand-name { font-weight: 700; font-size: 17px; letter-spacing: -.01em; line-height: 1.1; }
 .brand-sub { color: var(--muted); font-size: 12px; line-height: 1.2; }
 
@@ -539,7 +542,8 @@ html[dir="rtl"] .boot-card .bar-load i { animation-name: load-rtl; }
 <div class="app">
   <header class="top">
     <div class="brand">
-      <div class="mark" aria-hidden="true">ناس</div>
+      <img class="logo" src="assets/logo.png" alt="ناس" width="75" height="36">
+      <img class="logo logo-dark" src="assets/logo-dark.png" alt="" aria-hidden="true" width="75" height="36">
       <div>
         <div class="brand-name">Nas <span aria-hidden="true">·</span> ناس</div>
         <div class="brand-sub" data-t="app_sub"></div>
