@@ -102,6 +102,23 @@ WRONG_CURRENCY = re.compile(r"ليرة|ليره|ليرات")
 KNOWN_MISSPELLINGS = {"استقلبت": "استقللت", "وكلفشنا": "وكلّفنا"}
 
 
+# everyday_travel voices are about a regular trip and its cost, never about renewing an ID. Matched after hamza
+# variants are unified and shadda/tashkeel removed ("أجدّد" -> "اجدد").
+_ID_WORDING = re.compile(
+    r"(?<![ء-ي])[وف]?[بلك]?(?:ال|ل)?(?:هوي[ةته]|هويتي)(?![ء-ي])"                 # ID
+    r"|(?<![ء-ي])[وف]?(?:اجدد|نجدد|يجدد|تجدد|جددت|جدد|تجديد|التجديد)"            # renew
+    r"|(?<![ء-ي])[وف]?(?:ال)?معامل[ةته]|الاحوال المدني")                          # the transaction, Civil Status
+_TASHKEEL = re.compile("[ؐ-ًؚ-ٰٟـ]")  # harakat, shadda, tatweel
+
+
+def travel_voice_problems(text: str) -> list[str]:
+    """An everyday_travel voice must not slip into the ID-renewal story ("أجدّد هويتي", "المعاملة", "الأحوال المدنية"):
+    priced out means the trip has become unaffordable, not that a service failed."""
+    t = _unify_hamza(_TASHKEEL.sub("", text or ""))
+    found = sorted({m.group(0).strip() for m in _ID_WORDING.finditer(t)})
+    return [f"this is about everyday travel, not ID renewal: remove {found}"] if found else []
+
+
 def voice_style_problems(text: str, helper_relation_ar: str | None) -> list[str]:
     """Dialect slips a native speaker flagged: the wrong currency, or the helper word without its
     possessive (e.g. "ابن" instead of "ابني")."""

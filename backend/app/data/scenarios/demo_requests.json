@@ -1,5 +1,5 @@
 {
- "_note": "Rehearsed free-text requests (CLAUDE.md §10). scripts/warm_cache.py runs each once so its parse is cached (--parse-only for just these). 'demo' is the sentence typed on stage; applied to the consolidate preset it must equal consolidate_digital_first. Each request: text, apply_to (the preset it is typed on), expect (ok | unsupported) and, for some, expected: a note on what the result shows. Most requests appear twice: on baseline (cached first) and on consolidate_digital_first, the policy on screen during the demo.",
+ "_note": "Rehearsed free-text requests (CLAUDE.md §10). scripts/warm_cache.py runs each once so its parse is cached (--parse-only for just these). 'demo' is the sentence typed on stage; applied to the consolidate preset it must equal consolidate_digital_first. Each request: text, apply_to (the preset it is typed on), expect (ok | unsupported) and, for some, expected: a note on what the result shows. Most requests appear twice: on baseline (cached first) and on consolidate_digital_first, the policy on screen during the demo. Travel requests (service everyday_travel) are typed on travel_today or on fuel_plus_25_fares, the travel demo path.",
  "demo": {
   "text": "خلّوا الكاونترات تسكر الساعة 1 الظهر، وما حدا يراجع المكتب إلا بموعد مسبق أونلاين",
   "apply_to": "consolidate",
@@ -345,6 +345,90 @@
    "apply_to": "consolidate_digital_first",
    "expect": "unsupported",
    "expected": "likely judge request on the demo path"
+  },
+  {
+   "text": "ارفعوا سعر البنزين 10%",
+   "apply_to": "travel_today",
+   "expect": "ok",
+   "service": "everyday_travel",
+   "expected": "fuel_price_change_pct 10"
+  },
+  {
+   "text": "Raise petrol prices by 10%",
+   "apply_to": "travel_today",
+   "expect": "ok",
+   "service": "everyday_travel",
+   "expected": "fuel_price_change_pct 10"
+  },
+  {
+   "text": "ارفعوا الوقود 25% وأعطوا الأسر ذات الدخل المحدود 14 ديناراً شهرياً",
+   "apply_to": "travel_today",
+   "expect": "ok",
+   "service": "everyday_travel",
+   "expected": "fuel_price_change_pct 25 + cash_support low_income 14 JD/month (fares follow fuel; the fuel_plus_25_support preset also sets fares +25%)"
+  },
+  {
+   "text": "Raise fuel by 25% but give low-income families 14 dinars a month",
+   "apply_to": "travel_today",
+   "expect": "ok",
+   "service": "everyday_travel",
+   "expected": "fuel_price_change_pct 25 + cash_support low_income 14 JD/month (fares follow fuel; the fuel_plus_25_support preset also sets fares +25%)"
+  },
+  {
+   "text": "جمّدوا أجور الباصات",
+   "apply_to": "fuel_plus_25_fares",
+   "expect": "ok",
+   "service": "everyday_travel",
+   "expected": "bus_fare_change_pct 0 (on the travel demo path)"
+  },
+  {
+   "text": "Freeze bus fares",
+   "apply_to": "fuel_plus_25_fares",
+   "expect": "ok",
+   "service": "everyday_travel",
+   "expected": "bus_fare_change_pct 0 (on the travel demo path)"
+  },
+  {
+   "text": "ادفعوا أجرة الباص للطلاب",
+   "apply_to": "fuel_plus_25_fares",
+   "expect": "ok",
+   "service": "everyday_travel",
+   "expected": "transport voucher for student, 3 JD per round trip (on the travel demo path)"
+  },
+  {
+   "text": "Pay the bus fare for students",
+   "apply_to": "fuel_plus_25_fares",
+   "expect": "ok",
+   "service": "everyday_travel",
+   "expected": "transport voucher for student, 3 JD per round trip (on the travel demo path)"
+  },
+  {
+   "text": "Give every worker 20 dinars a month",
+   "apply_to": "fuel_plus_25_fares",
+   "expect": "ok",
+   "service": "everyday_travel",
+   "expected": "cash_support worker 20 JD/month (on the travel demo path)"
+  },
+  {
+   "text": "خفّضوا سعر الكهرباء",
+   "apply_to": "travel_today",
+   "expect": "unsupported",
+   "service": "everyday_travel",
+   "expected": "electricity prices are not modelled"
+  },
+  {
+   "text": "Lower electricity prices",
+   "apply_to": "travel_today",
+   "expect": "unsupported",
+   "service": "everyday_travel",
+   "expected": "electricity prices are not modelled"
+  },
+  {
+   "text": "Raise diesel only",
+   "apply_to": "travel_today",
+   "expect": "unsupported",
+   "service": "everyday_travel",
+   "expected": "one fuel price change only: no separate diesel price"
   }
  ]
 }

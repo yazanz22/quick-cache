@@ -86,7 +86,7 @@ import pytest  # noqa: E402
 
 from app import config  # noqa: E402
 from app.llm.client import Completion, LLMUnavailable  # noqa: E402
-from app.models import MobileUnit, Policy  # noqa: E402
+from app.models import CashSupport, MobileUnit, Policy  # noqa: E402
 from app.sim.compare import compare  # noqa: E402
 
 DEMO = "consolidate_digital_first"
@@ -404,3 +404,202 @@ def test_fix_and_report_templates_handle_signs():
     ar, en = fallbacks.report(s)
     assert "لا تسوء أوضاع أي فئة" in ar and "No group is worse off" in en
     assert "130 شخصاً" in ar and "130 people better off" in en
+
+
+
+# ------------------------------------------------------------------ id_renewal cache keys (snapshot)
+
+def test_id_renewal_voice_facts_and_report_summary_unchanged():
+    """The everyday_travel work must not touch an id_renewal cache key: the demo hero's voice facts and the demo
+    report summary are snapshotted (as warmed in backend/cache/)."""
+    pop = world.population()
+    i = next(k for k, c in enumerate(pop) if c["id"] == "c_0028")
+    demo = world.scenario_policy(DEMO)
+    facts = tasks.voice_facts(pop[i], engine.run(demo, pop)[i])
+    assert facts == {
+        "register": "msa",
+        "profile": {"age": 71, "gender": "f", "area_ar": "وسط البلد", "mobility": "none", "has_car": False,
+                    "has_smartphone": False, "digital_literacy": "low", "works": False, "work_start": None,
+                    "work_end": None, "income_band": "middle", "helper_relation_ar": "ابني"},
+        "outcome": {"status": "hardship", "reasons": ["NO_SMARTPHONE", "LOW_DIGITAL_LITERACY"],
+                    "channel_name_ar": "أونلاين", "mode": "online", "bus_transfers": 0, "visit_day_ar": None,
+                    "travel_minutes_one_way": 0, "total_cost_jd": 2.0, "total_hours_lost_incl_waiting": 0.3,
+                    "work_hours_missed": 0.0}}
+    assert cache.key("voice", facts) == "9248f3a3f256af0bf91ef98cfd2bb7468a592229202be1899660ea98f117eacc"
+    base_out = engine.run(world.scenario_policy("baseline"), pop)[i]
+    assert cache.key("voice", tasks.voice_facts(pop[i], base_out)) == \
+        "a92d23aa839f209625870dcaaa1ea94063fcea4960bd004e9ffb6d98e1f33d8f"
+    summary = tasks.report_summary(compare(world.scenario_policy("baseline"), demo), None)
+    assert "service" not in summary and "travel" not in summary
+    assert cache.key("report", summary) == "f71692de2d7accb5bf3c9875bbd2fee5debd57662408a9bd8841a62bf125a09b"
+    assert cache.key("fixes", tasks._fixes_context(demo)["inputs"]) == \
+        "833ed362ce93ef1ad8133d48be45d476182167ffb09f6af1ed605798006138bf"
+
+
+# ------------------------------------------------------------------ everyday_travel
+
+TRAVEL_DEMO = "fuel_plus_25_fares"
+
+
+def _trip(**kw):
+    o = {"citizen_id": "c_0028", "status": "hardship", "channel": "trip:work_sahab", "channel_name_ar": "سحاب",
+         "channel_name_en": "Sahab", "mode": "car", "bus_transfers": 0, "visit_day": None, "travel_minutes": 41.6,
+         "cost_jd": 37.2, "hours_lost": 30.0, "work_hours_missed": 0.0, "reasons": ["TRANSPORT_OVER_BUDGET", "FUEL_COST"],
+         "purpose": "work", "days_per_week": 5, "monthly_cost_before_jd": 32.3, "extra_jd_month": 4.9,
+         "income_share_pct": 28.4, "cash_support_jd_month": 0.0}
+    o.update(kw)
+    return o
+
+
+def _citizen(**kw):
+    c = dict(next(c for c in world.population() if c["id"] == "c_0028"))
+    c.update(kw)
+    return c
+
+
+def test_travel_voice_facts_are_rounded_and_grounded():
+    c = _citizen()
+    o = _trip()
+    f = tasks.voice_facts(c, o)
+    assert f["service"] == "everyday_travel" and f["status_meaning"] == "squeezed" and f["regular_trip"] is True
+    assert f["trip"]["destination_ar"].startswith("مدينة الملك عبدالله الثاني الصناعية")   # from hubs.json
+    assert f["trip"]["travel_minutes_one_way"] == 42 and f["trip"]["days_per_week"] == 5
+    assert f["money"] == {"monthly_cost_before_jd": 32.3, "monthly_cost_now_jd": 37.2, "extra_jd_month": 4.9,
+                          "income_share_pct": 28, "cash_support_jd_month": 0.0}
+    assert "has_smartphone" not in f["profile"]
+    ar, en = fallbacks.voice(c, o)
+    assert ar.startswith("أذهب إلى عملي في مدينة الملك عبدالله الثاني الصناعية (سحاب) بسيارتي 5 أيام في الأسبوع.")
+    assert "كانت رحلتي تكلّفني 32 ديناراً في الشهر، وبعد القرار الجديد أصبحت تكلّفني 37 ديناراً، أي 28% من دخلي." in ar
+    assert ar.endswith("هذا يضغط على ميزانيتي بسبب غلاء وقود سيارتي.")
+    assert "32 JD a month" in en and "37 JD" in en and "28% of my income" in en
+    assert checks.ungrounded(ar, f) == [] and checks.travel_voice_problems(ar) == []
+    # The id_renewal wording is caught in a travel voice.
+    assert checks.travel_voice_problems("لم أتمكن من تجديد هويتي")
+    assert checks.travel_voice_problems("لم أتمكن من إنجاز المعاملة")
+
+
+def test_travel_voice_template_modes_support_and_no_trip():
+    son = _citizen(helper_relation_ar="ابني", helper_relation_en="my son")
+    mom = _citizen(helper_relation_ar="أمي", helper_relation_en="my mother")
+    bus = _trip(mode="bus", bus_transfers=1, reasons=["TRANSPORT_OVER_BUDGET", "FARE_COST"], status="left_out")
+    ar, en = fallbacks.voice(son, bus)
+    assert "بحافلتين" in ar and "لم أعد أستطيع تحمّل كلفتها بسبب ارتفاع أجور الحافلات." in ar
+    assert "on two buses" in en and "can no longer afford it" in en
+    ar, _ = fallbacks.voice(mom, _trip(mode="helper_car", purpose="hospital", days_per_week=1,
+                                       channel="trip:hosp_bashir", status="served", reasons=[]))
+    assert ar.startswith("أراجع مستشفى البشير مرة واحدة في الأسبوع، وتوصلني أمي بالسيارة.")
+    assert "ما زالت كلفتها في حدود قدرتي" in ar
+    cash = _trip(cash_support_jd_month=14.0, cost_jd=23.2, extra_jd_month=-9.1, status="served", reasons=[])
+    ar, en = fallbacks.voice(son, cash)
+    assert "ومع دعم نقدي شهري قدره 14 ديناراً أصبحت تكلّفني 23 ديناراً" in ar and "14 JD a month in cash support" in en
+    assert checks.ungrounded(ar, tasks.voice_facts(son, cash)) == []
+    small = _trip(monthly_cost_before_jd=19.6, cost_jd=20.1)        # whole dinars would read "20 -> 20"
+    assert "19.6 دينار" in fallbacks.voice(son, small)[0] and "20.1 دينار" in fallbacks.voice(son, small)[0]
+    none = {"citizen_id": "c_0028", "status": "served", "channel": "no_regular_trip", "mode": None, "purpose": None,
+            "cost_jd": 0.0, "reasons": [], "cash_support_jd_month": 0.0}
+    ar, en = fallbacks.voice(son, none)
+    assert ar == "ليست لي رحلة منتظمة، فلا يغيّر سعر الوقود شيئاً في يومي."
+    assert tasks.voice_facts(son, none)["regular_trip"] is False
+
+
+def test_travel_templates_from_the_engine_are_grounded():
+    pop = world.population()
+    for sid in ("travel_today", TRAVEL_DEMO, "fuel_plus_25_support"):
+        for c, o in zip(pop, engine.run(world.scenario_policy(sid), pop)):
+            ar, _ = fallbacks.voice(c, o)
+            assert checks.ungrounded(ar, tasks.voice_facts(c, o)) == [], (sid, c["id"], ar)
+            assert not checks.travel_voice_problems(ar), ar
+            assert not checks.foreign_people(ar, fallbacks.msa_helper(c["helper_relation_ar"])), ar
+
+
+def test_travel_report_template_and_summary():
+    cr = compare(world.scenario_policy("travel_today"), world.scenario_policy(TRAVEL_DEMO))
+    s = tasks.report_summary(cr, None)
+    assert s["service"] == "everyday_travel" and "avg_extra_jd_month" in s["travel"]["scenario"]
+    assert "by_mode" in s["travel"]["scenario"] and "by_purpose" in s["travel"]["scenario"]
+    ar, en = fallbacks.report(s)
+    assert "من تُضغط ميزانيتهم" in ar and "يعجزون عن تحمّل كلفة التنقل" in ar and "تمت خدمتهم" not in ar
+    assert "squeezed" in en and "priced out" in en and "served" not in en
+    assert checks.ungrounded(ar + " " + en, s) == []
+    r = tasks.write_report(cr, None)   # offline: a template, never blank
+    assert r.source == "fallback" and r.summary_ar
+
+
+def test_parse_raise_petrol_on_travel(live_ai):
+    cur = world.scenario_policy("travel_today")
+    want = cur.model_copy(update={"fuel_price_change_pct": 10.0})
+    calls = live_ai(_parse_ok(want, ["رفع سعر الوقود 10%"], ["Fuel price +10%"]))
+    r = tasks.parse_policy("raise petrol by 10% (stub)", cur, lang="en")
+    assert r.source == "ai" and r.status == "ok" and r.policy.fuel_price_change_pct == 10
+    assert r.policy.service == "everyday_travel"
+    assert '"reference"' in calls[0]["user"] and '"sites"' not in calls[0]["user"]
+
+
+def test_parse_on_travel_must_keep_service_and_id_fields(live_ai):
+    cur = world.scenario_policy("travel_today")
+    switched = cur.model_copy(update={"service": "id_renewal", "fuel_price_change_pct": 10.0})
+    fee = cur.model_copy(update={"fee_jd": 5.0, "fuel_price_change_pct": 10.0})
+    calls = live_ai(_parse_ok(switched, ["x"], ["x"]), _parse_ok(fee, ["x"], ["x"]))
+    r = tasks.parse_policy("raise petrol by 10% (stub 2)", cur)
+    assert r.source == "fallback" and len(calls) == 2
+    assert "service" in calls[1]["user"]
+
+
+def test_parse_id_renewal_must_not_set_travel_levers(live_ai):
+    base = world.scenario_policy("baseline")
+    live_ai(_parse_ok(base.model_copy(update={"fuel_price_change_pct": 10.0}), ["x"], ["x"]),
+            _parse_ok(base.model_copy(update={"fuel_price_change_pct": 10.0}), ["x"], ["x"]))
+    assert tasks.parse_policy("raise petrol by 10% (stub 3)", base).source == "fallback"
+
+
+def _travel_answer(ctx, pol, title_ar="دعم نقدي للعاملين", title_en="Cash support for workers"):
+    prop = {"title_ar": title_ar, "title_en": title_en, "rationale_ar": "دعم يصل إلى من يتنقلون كل يوم.",
+            "rationale_en": "Support for the people who travel every day.", "policy": pol.model_dump(mode="json")}
+    return {"explanations": _explanations(ctx), "proposal": prop}
+
+
+def _travel_fix_ctx():
+    scen = world.scenario_policy(TRAVEL_DEMO)
+    return scen, tasks._fixes_context(scen)
+
+
+def _travel_fixes(scen):
+    return tasks.explain_and_propose_fixes(world.scenario_policy("travel_today"), scen)
+
+
+def test_travel_fixes_inputs_are_service_aware():
+    scen, ctx = _travel_fix_ctx()
+    inp = ctx["inputs"]
+    assert inp["service"] == "everyday_travel" and inp["scenario_by_mode"] and inp["scenario_by_purpose"]
+    assert inp["proposal_limits"] == {"max_cash_jd_month": 20.0, "max_voucher_jd": 0.5}
+    r = _travel_fixes(scen)   # offline: grid fixes with template explanations
+    assert r.source == "fallback" and len(r.fixes) == 3
+    assert all("يعجزون عن تحمّل كلفة التنقل" in f.explanation_ar and "priced out" in f.explanation_en for f in r.fixes)
+
+
+@pytest.mark.parametrize("change,why", [
+    ({"fuel_price_change_pct": 10.0}, "the fuel price"),
+    ({"fee_jd": 0.0}, "an id_renewal field"),
+    ({"bus_fare_change_pct": -20.0}, "a fare cut"),
+    ({"cash_support": [{"groups": ["worker"], "amount_jd_month": 50.0}]}, "above the cash limit"),
+    ({"transport_vouchers": [{"groups": ["student"], "amount_jd": 3.0}]}, "above the voucher limit"),
+])
+def test_travel_proposal_outside_its_levers_is_rejected(live_ai, change, why):
+    scen, ctx = _travel_fix_ctx()
+    pol = Policy.model_validate({**scen.model_dump(mode="json"), **change})
+    calls = live_ai(_travel_answer(ctx, pol), _travel_answer(ctx, pol))
+    r = _travel_fixes(scen)
+    assert len(calls) == 2 and "rejected" in calls[1]["user"], why
+    assert r.source == "ai" and r.ai_proposal["status"] == "invalid", why
+    assert _cached_files(live_ai.dir, "fixes") == []
+
+
+def test_travel_proposal_within_its_levers_is_scored_by_the_engine(live_ai):
+    scen, ctx = _travel_fix_ctx()
+    pol = scen.model_copy(update={"cash_support": [CashSupport(groups=["no_car"], amount_jd_month=20.0),
+                                                   CashSupport(groups=["worker"], amount_jd_month=20.0)],
+                                  "bus_fare_change_pct": 0.0})
+    live_ai(_travel_answer(ctx, pol, title_ar="دعم نقدي 20 ديناراً شهرياً وتجميد أجور الحافلات",
+                           title_en="20 JD a month cash support and a bus fare freeze"))
+    r = _travel_fixes(scen)
+    assert r.ai_proposal["status"] in ("shown", "hidden_not_better", "hidden_worsens_a_group"), r.ai_proposal

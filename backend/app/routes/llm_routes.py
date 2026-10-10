@@ -3,6 +3,8 @@
 The engine numbers the AI sees are computed here, server-side, whenever the client sends policies:
 /citizen/voice recomputes the citizen's outcome from `policy`, /report recomputes the comparison, the
 robustness check and the applied fix's effect from `baseline`, `scenario` and `fix`.
+Every route serves both services: engine.run dispatches on policy.service, and the tasks pick that service's
+prompts, voice facts and templates (id_renewal or everyday_travel).
 """
 from __future__ import annotations
 
@@ -19,6 +21,13 @@ from . import sim_routes
 from .sim_routes import validate_policy
 
 router = APIRouter(tags=["ai"])
+
+
+def _same_service(*policies) -> None:
+    """A comparison, a report or a fix only makes sense within one service (id_renewal vs everyday_travel)."""
+    services = {p.service for p in policies if p is not None}
+    if len(services) > 1:
+        raise HTTPException(422, f"policies are for different services: {sorted(services)}")
 
 
 @router.post("/policy/parse", response_model=ParseResult)
@@ -57,6 +66,7 @@ def post_report(req: ReportRequest):
         for p in (req.baseline, req.scenario, req.fix):
             if p is not None:
                 validate_policy(p)
+        _same_service(req.baseline, req.scenario, req.fix)
         cr = compare(req.baseline, req.scenario)
         # Same robustness result (and cache) as /sensitivity: with the applied fix, or ranking-only without one.
         sens = sim_routes.post_sensitivity(SensitivityRequest(baseline=req.baseline, scenario=req.scenario, fix=req.fix))
@@ -71,6 +81,7 @@ def post_report(req: ReportRequest):
 def post_fixes(req: CompareRequest):
     started = time.monotonic()
     validate_policy(req.scenario)
+    _same_service(req.baseline, req.scenario)
     return tasks.explain_and_propose_fixes(req.baseline, req.scenario, started_at=started)
 
 

@@ -34,6 +34,15 @@ log = logging.getLogger("nas.llm")
 MAX_AI_CHANGES = 3  # keep the AI's idea comparable with grid pairs
 # Group protections are manual levers (CLAUDE.md §6.4): an AI fix proposal must leave them as in the scenario.
 PROTECTION_FIELDS = ("appointment_exempt_groups", "fee_discounts", "home_visits", "transport_vouchers", "hybrid_pickup")
+
+TRAVEL = "everyday_travel"
+# Policy fields by service. Under everyday_travel only the travel levers (+ transport_vouchers, shared) apply; under
+# id_renewal the travel levers are no-ops. A parse or an AI fix must keep the other service's fields as they are.
+ID_RENEWAL_FIELDS = ("offices", "online_enabled", "online_only", "mobile_units", "appointment_required", "fee_jd",
+                     "visits_required", "appointment_exempt_groups", "fee_discounts", "home_visits", "hybrid_pickup")
+TRAVEL_FIELDS = ("fuel_price_change_pct", "bus_fare_change_pct", "taxi_fare_change_pct", "cash_support")
+# The only levers an AI fix proposal may use for everyday_travel (the fuel price is the decision under test).
+TRAVEL_PROPOSAL_FIELDS = ("cash_support", "bus_fare_change_pct", "taxi_fare_change_pct", "transport_vouchers")
 SENSITIVITY_PCT = 20  # the ±20% of the robustness check: allowed in report text, never part of the cache key
 
 
@@ -148,7 +157,23 @@ def _str_or_none(d: dict, k: str):
 
 # ---------------------------------------------------------------------- parse
 
-def _check_parse(raw: str, cur: dict, text: str) -> dict:
+def _fields_changed(a: Policy, b: Policy, fields) -> list[str]:
+    """Which of `fields` differ between two policies (order-independent, via validate.canonical)."""
+    da, db = json.loads(canonical(a)), json.loads(canonical(b))
+    return [f for f in fields if da.get(f) != db.get(f)]
+
+
+def _other_service_fields(service: str) -> tuple[str, ...]:
+    return ID_RENEWAL_FIELDS if service == TRAVEL else TRAVEL_FIELDS
+
+
+def travel_reference() -> dict:
+    """Public reference figures quoted in the travel parse prompt (not part of any cache key)."""
+    return {"fuel_90_octane_jd_per_litre_oct_2026": 1.05, "last_rise_jd_per_litre": 0.05,
+            "national_aid_fund_fuel_support_jd_month": [8, 14], "default_student_bus_voucher_jd_per_round_trip": 3}
+
+
+def _check_parse(raw: str, cur: dict, text: str, current: Policy | None = None) -> dict:
     d = _loads(raw)
     status = d.get("status")
     if status == "ok":
@@ -156,6 +181,13 @@ def _check_parse(raw: str, cur: dict, text: str) -> dict:
         errs = policy_errors(pol)
         if errs:
             raise Rejected("; ".join(errs))
+        if current is not None:
+            if pol.service != current.service:
+                raise Rejected(f'keep "service": "{current.service}" (the parse never switches the service)')
+            other = _fields_changed(current, pol, _other_service_fields(current.service))
+            if other:
+                raise Rejected(f"under {current.service} these fields don't apply and must stay exactly as in the "
+                               f"current policy: {', '.join(other)}")
         out = {"status": "ok", "policy": pol.model_dump(mode="json"), "changes_ar": d.get("changes_ar"),
                "changes_en": d.get("changes_en"), "message_ar": None, "message_en": None}
         if not out["changes_ar"] or not out["changes_en"]:
@@ -163,7 +195,8 @@ def _check_parse(raw: str, cur: dict, text: str) -> dict:
         # The full response model, so a bad shape (e.g. changes_ar as a string) is a rejection here, not a
         # cached answer that fails later with a 500.
         ParseResult.model_validate({**out, "source": "ai"})
-        bad = checks.ungrounded(" ".join(out["changes_ar"] + out["changes_en"]), [cur, out["policy"], text])
+        also = travel_reference() if current is not None and current.service == TRAVEL else None
+        bad = checks.ungrounded(" ".join(out["changes_ar"] + out["changes_en"]), [cur, out["policy"], text], also=also)
         if bad:
             raise Rejected(f"change list mentions numbers not in the policy: {bad}")
         return out
@@ -181,11 +214,15 @@ def parse_policy(text: str, current: Policy, lang: str = "ar") -> ParseResult:
     """lang (the official's UI language) only goes into the prompt, not the cache key: the answer carries
     both languages either way."""
     cur = policy_json(current)
-    inputs = {"text": cache.normalize_text(text), "current_policy": cur}
-    user = json.dumps({"current_policy": cur, **_sites_areas(), "official_text": text, "official_ui_language": lang},
+    inputs = {"text": cache.normalize_text(text), "current_policy": cur}   # the service is inside current_policy
+    if current.service == TRAVEL:
+        context = {"groups": list(world.ALL_GROUPS), "reference": travel_reference()}
+    else:
+        context = _sites_areas()
+    user = json.dumps({"current_policy": cur, **context, "official_text": text, "official_ui_language": lang},
                       ensure_ascii=False)
-    a = _ai("parse", inputs, prompts.PARSE_SYSTEM, user, lambda raw, final: _check_parse(raw, cur, text),
-            smart=True, want_json=True)
+    a = _ai("parse", inputs, prompts.system("parse", current.service), user,
+            lambda raw, final: _check_parse(raw, cur, text, current), smart=True, want_json=True)
     if a.out is None:
         # "rejected": the AI answered but its output failed the checks twice; otherwise there was no AI answer.
         return fallbacks.parse_failed() if a.why == "rejected" else fallbacks.parse_unavailable()
@@ -194,7 +231,49 @@ def parse_policy(text: str, current: Policy, lang: str = "ar") -> ParseResult:
 
 # ---------------------------------------------------------------------- voice
 
+STATUS_MEANING_TRAVEL = {"served": "fine", "hardship": "squeezed", "left_out": "priced_out"}
+
+
+def _r1(x) -> float:
+    return round(float(x or 0), 1)
+
+
+def travel_voice_facts(citizen: dict, o: dict) -> dict:
+    """everyday_travel voice input (and cache key): the profile, the regular trip and its monthly money. Every number a
+    travel voice may say comes from here (grounding check)."""
+    a = world.areas()[citizen["area"]]
+    facts = {
+        "register": "msa", "service": TRAVEL,
+        "profile": {
+            "age": citizen["age"], "gender": citizen["gender"], "area_ar": a["name_ar"], "mobility": citizen["mobility"],
+            "has_car": citizen["has_car"], "works": citizen["works"], "income_band": citizen["income_band"],
+            "helper_relation_ar": fallbacks.msa_helper(citizen["helper_relation_ar"]),
+        },
+        "status": o["status"], "status_meaning": STATUS_MEANING_TRAVEL[o["status"]], "reasons": o.get("reasons", []),
+    }
+    if o.get("purpose") is None:  # channel "no_regular_trip"
+        facts["regular_trip"] = False
+        return facts
+    hub = fallbacks.trip_hub(o)
+    facts["regular_trip"] = True
+    facts["trip"] = {
+        "purpose": o["purpose"], "destination_ar": hub["name_ar"] if hub else o.get("channel_name_ar"),
+        "mode": o.get("mode"), "bus_transfers": o.get("bus_transfers", 0), "days_per_week": o.get("days_per_week"),
+        "travel_minutes_one_way": round(o.get("travel_minutes") or 0),
+        "monthly_hours_in_transit": _r1(o.get("hours_lost")),
+    }
+    facts["money"] = {
+        "monthly_cost_before_jd": _r1(o.get("monthly_cost_before_jd")), "monthly_cost_now_jd": _r1(o.get("cost_jd")),
+        "extra_jd_month": _r1(o.get("extra_jd_month")), "income_share_pct": round(float(o.get("income_share_pct") or 0)),
+        "cash_support_jd_month": _r1(o.get("cash_support_jd_month")),
+    }
+    return facts
+
+
 def voice_facts(citizen: dict, o: dict) -> dict:
+    """The voice input (and cache key). id_renewal facts are exactly what they always were (the warmed demo voices)."""
+    if fallbacks.is_travel_outcome(o):
+        return travel_voice_facts(citizen, o)
     a = world.areas()[citizen["area"]]
     facts = {
         "register": "msa",  # voices are فصحى; part of the cache key so old dialect voices are never reused
@@ -219,6 +298,7 @@ def voice_facts(citizen: dict, o: dict) -> dict:
 
 def voice_citizen(citizen: dict, outcome: dict, started_at: float | None = None) -> VoiceResponse:
     facts = voice_facts(citizen, outcome)
+    travel = facts.get("service") == TRAVEL
     fb_ar, fb_en = fallbacks.voice(citizen, outcome)
     user = json.dumps(facts, ensure_ascii=False)
     helper = fallbacks.msa_helper(citizen["helper_relation_ar"])
@@ -233,12 +313,13 @@ def voice_citizen(citizen: dict, outcome: dict, started_at: float | None = None)
         extra = checks.foreign_people(t, helper)
         if extra:
             raise Rejected(f"mentions people other than the helper: {extra}")
-        style = checks.voice_style_problems(t, helper)
+        style = checks.voice_style_problems(t, helper) + (checks.travel_voice_problems(t) if travel else [])
         if style:
             raise Rejected("; ".join(style))
         return t
 
-    a = _ai("voice", facts, prompts.VOICE_SYSTEM, user, check, smart=False, want_json=False, budget=_left(started_at))
+    a = _ai("voice", facts, prompts.system("voice", TRAVEL if travel else "id_renewal"), user, check, smart=False,
+            want_json=False, budget=_left(started_at))
     if a.out is None:
         return VoiceResponse(text_ar=fb_ar, summary_en=fb_en, source="fallback")
     return VoiceResponse(text_ar=a.out, summary_en=fb_en, source="ai")
@@ -246,9 +327,19 @@ def voice_citizen(citizen: dict, outcome: dict, started_at: float | None = None)
 
 # --------------------------------------------------------------------- report
 
+# The travel KPIs engine.summarize adds for everyday_travel outcomes that go into the travel report.
+TRAVEL_REPORT_KPIS = ("avg_extra_jd_month", "avg_monthly_cost_jd", "n_cash_support", "by_purpose", "by_mode")
+
+
+def is_travel_result(cr: CompareResult) -> bool:
+    """The engine adds the travel KPIs (n_with_trip, ...) to everyday_travel results only."""
+    return "n_with_trip" in cr.scenario.kpis
+
+
 def report_summary(cr: CompareResult, sens: SensitivityResult | None, applied_fix: dict | None = None) -> dict:
     """The report's input (and cache key). Without an applied fix it is exactly what it always was, so the
-    warmed report entries still hit; `applied_fix` (from fix_effect) adds one block."""
+    warmed report entries still hit; `applied_fix` (from fix_effect) adds one block. For everyday_travel (and only
+    then) it also carries "service" and a "travel" block with the engine's travel KPIs."""
     keys = ["pct_served", "pct_hardship", "pct_left_out", "avg_hours_lost", "avg_cost_jd"]
     bg, sg = cr.baseline.by_group, cr.scenario.by_group
     reasons = Counter(r for o in cr.scenario.outcomes if o.status != "served" for r in o.reasons)
@@ -269,6 +360,10 @@ def report_summary(cr: CompareResult, sens: SensitivityResult | None, applied_fi
             **({"fix_still_helps": sens.fix_still_helps, "passed": sens.passed} if sens.fix_checked else {}),
             "stable_top_group": sens.stable_top_group, "stable_top2": sens.stable_top2},
     }
+    if is_travel_result(cr):
+        summary["service"] = TRAVEL
+        summary["travel"] = {side: {k: r.kpis[k] for k in TRAVEL_REPORT_KPIS if k in r.kpis}
+                             for side, r in (("baseline", cr.baseline), ("scenario", cr.scenario))}
     if applied_fix is not None:
         summary["applied_fix"] = applied_fix
     return summary
@@ -282,7 +377,8 @@ def fix_effect(cr: CompareResult, fix: Policy) -> dict:
     k, _ = summarize(outs, pop)
     sk = cr.scenario.kpis
     better = sum(STATUS_RANK[f["status"]] < STATUS_RANK[s.status] for f, s in zip(outs, cr.scenario.outcomes))
-    return {"kpis": {x: k[x] for x in ("pct_served", "pct_hardship", "pct_left_out")},
+    keys = ("pct_served", "pct_hardship", "pct_left_out") + (("avg_extra_jd_month",) if "avg_extra_jd_month" in k else ())
+    return {"kpis": {x: k[x] for x in keys},
             "left_out_drop": round(sk["pct_left_out"] - k["pct_left_out"], 1),
             "hardship_drop": round(sk["pct_hardship"] - k["pct_hardship"], 1),
             "people_better_off": better}
@@ -303,8 +399,8 @@ def write_report(cr: CompareResult, sens: SensitivityResult | None, applied_fix:
             raise Rejected(f"numbers not in the input: {bad}")
         return {"summary_ar": ar, "summary_en": en}
 
-    a = _ai("report", summary, prompts.REPORT_SYSTEM, json.dumps(summary, ensure_ascii=False), check,
-            smart=True, want_json=True, budget=_left(started_at))
+    a = _ai("report", summary, prompts.system("report", summary.get("service", "id_renewal")),
+            json.dumps(summary, ensure_ascii=False), check, smart=True, want_json=True, budget=_left(started_at))
     if a.out is None:
         return ReportResponse(summary_ar=fb_ar, summary_en=fb_en, source="fallback")
     return ReportResponse(**a.out, source="ai")
@@ -341,7 +437,50 @@ def _fixes_context(scenario: Policy) -> dict:
                           "left_out_drop": c["left_out_drop"], "hardship_drop": c["hardship_drop"],
                           "improved_groups": c["improved_groups"]} for c in top],
     }
+    if scenario.service == TRAVEL:
+        # everyday_travel only (new keys; the id_renewal inputs above are untouched): who is squeezed or priced out
+        # by travel mode and trip purpose, the average extra cost, and the proposal's spending limits.
+        inputs["service"] = TRAVEL
+        inputs["scenario_kpis"]["avg_extra_jd_month"] = sk.get("avg_extra_jd_month")
+        inputs["scenario_by_mode"] = sk.get("by_mode")
+        inputs["scenario_by_purpose"] = sk.get("by_purpose")
+        inputs["proposal_limits"] = travel_proposal_limits()
     return {"sk": sk, "sg": sg, "grid": grid, "top": top, "ids": [c["id"] for c in top], "inputs": inputs}
+
+
+def travel_proposal_limits() -> dict:
+    """An AI travel fix may not spend more per person than the grid's largest cash support / voucher: it has to win
+    by targeting, not by paying more."""
+    cash, vouchers = getattr(fixgrid, "CASH_GRID", None) or [("", 20.0)], getattr(fixgrid, "VOUCHER_GRID", None) or [("", 0.5)]
+    return {"max_cash_jd_month": max(a for _g, a in cash), "max_voucher_jd": max(a for _g, a in vouchers)}
+
+
+def _travel_proposal_problems(scenario: Policy, pol: Policy, limits: dict) -> list[str]:
+    """everyday_travel: the proposal may only use cash support, the bus/taxi fare settings and transport vouchers,
+    never the fuel price, and stays within the grid's amounts."""
+    probs = []
+    if pol.service != scenario.service:
+        probs.append(f'keep "service": "{scenario.service}"')
+    if pol.fuel_price_change_pct != scenario.fuel_price_change_pct:
+        probs.append("the fuel price (fuel_price_change_pct) is the decision being tested: keep it as in the scenario")
+    other = [f for f in _fields_changed(scenario, pol, ID_RENEWAL_FIELDS + TRAVEL_FIELDS + ("transport_vouchers",))
+             if f not in TRAVEL_PROPOSAL_FIELDS and f != "fuel_price_change_pct"]
+    if other:
+        probs.append(f"only cash_support, bus_fare_change_pct, taxi_fare_change_pct and transport_vouchers may change, "
+                     f"not {', '.join(other)}")
+    for name in ("bus_fare_change_pct", "taxi_fare_change_pct"):
+        v = getattr(pol, name)
+        if v is not None and v != getattr(scenario, name) and v < 0:
+            probs.append(f"{name}: a freeze (0) or a rise, no fare cuts")
+    old_cash = {(tuple(sorted(set(c.groups))), c.amount_jd_month) for c in scenario.cash_support}
+    if any(c.amount_jd_month > limits["max_cash_jd_month"] for c in pol.cash_support
+           if (tuple(sorted(set(c.groups))), c.amount_jd_month) not in old_cash):
+        probs.append(f"cash support above {limits['max_cash_jd_month']:g} JD a month (proposal_limits)")
+    old_v = {(tuple(sorted(set(v.groups))), v.amount_jd) for v in scenario.transport_vouchers}
+    if any(v.amount_jd > limits["max_voucher_jd"] for v in pol.transport_vouchers
+           if (tuple(sorted(set(v.groups))), v.amount_jd) not in old_v):
+        probs.append(f"a transport voucher above {limits['max_voucher_jd']:g} JD per round trip (proposal_limits)")
+    return probs
 
 
 def _protections_changed(scenario: Policy, pol: Policy) -> list[str]:
@@ -381,10 +520,19 @@ def _check_fixes(raw: str, final: bool, scenario: Policy, inputs: dict, ids: lis
             if n > MAX_AI_CHANGES:
                 raise Rejected(f"proposal makes {n} changes; at most {MAX_AI_CHANGES} are allowed "
                                "(each van, each new opening day group, each toggle counts as one)")
-            used = _protections_changed(scenario, pol)
-            if used:
-                raise Rejected(f"proposal must not change the group protections ({', '.join(used)}): use offices, "
-                               "hours, days, mobile units, wheelchair access, appointments or online settings")
+            if scenario.service == TRAVEL:
+                probs = _travel_proposal_problems(scenario, pol, inputs["proposal_limits"])
+                if probs:
+                    raise Rejected("; ".join(probs))
+            else:
+                used = _protections_changed(scenario, pol)
+                if used:
+                    raise Rejected(f"proposal must not change the group protections ({', '.join(used)}): use offices, "
+                                   "hours, days, mobile units, wheelchair access, appointments or online settings")
+                travel = _fields_changed(scenario, pol, TRAVEL_FIELDS) + (
+                    ["service"] if pol.service != scenario.service else [])
+                if travel:
+                    raise Rejected(f"proposal must not change {', '.join(travel)}: this is the id_renewal service")
             t_ar, t_en = _str_or_none(prop, "title_ar"), _str_or_none(prop, "title_en")
             r_ar, r_en = _str_or_none(prop, "rationale_ar"), _str_or_none(prop, "rationale_en")
             if not t_ar or not t_en:
@@ -420,13 +568,15 @@ def explain_and_propose_fixes(baseline: Policy, scenario: Policy, hint: str | No
     top, ids, inputs = ctx["top"], ctx["ids"], ctx["inputs"]
     if not top:
         return FixesResponse(fixes=[], source="fallback", ai_proposal={"status": "no_grid_fixes"})
-    user = json.dumps({**inputs, **_sites_areas()}, ensure_ascii=False)
+    service = scenario.service
+    extra = {"groups": list(world.ALL_GROUPS)} if service == TRAVEL else _sites_areas()
+    user = json.dumps({**inputs, **extra}, ensure_ascii=False)
     if hint:
         user += f"\n\nIdea to consider for your proposal: {hint}"
 
     # An answer whose proposal was invalid or missing is not cached, so the next request tries again.
     keep = lambda out: out.get("proposal") is not None or config.DEMO_OFFLINE  # noqa: E731
-    a = _ai("fixes", inputs, prompts.FIXES_SYSTEM, user,
+    a = _ai("fixes", inputs, prompts.system("fixes", service), user,
             lambda raw, final: _check_fixes(raw, final, scenario, inputs, ids),
             smart=True, want_json=True, use_cache=use_cache, budget=_left(started_at), keep=keep)
     out = a.out
@@ -438,7 +588,7 @@ def explain_and_propose_fixes(baseline: Policy, scenario: Policy, hint: str | No
         if c["id"] in exp_by_id:
             fc.explanation_ar, fc.explanation_en = exp_by_id[c["id"]]["explanation_ar"], exp_by_id[c["id"]]["explanation_en"]
         else:
-            fc.explanation_ar, fc.explanation_en = fallbacks.fix_explanation(c, c["improved_groups"])
+            fc.explanation_ar, fc.explanation_en = fallbacks.fix_explanation(c, c["improved_groups"], service)
         fixes.append(fc)
 
     prop = (out or {}).get("proposal")
@@ -480,7 +630,7 @@ def _verify_proposal(prop: dict, scenario: Policy, grid: list[dict], sk: dict, s
         return {"status": "hidden_not_better", "title_en": prop["title_en"], **numbers}, None
     groups = _improved_groups(s["groups"], sg)
     fb_ar, fb_en = fallbacks.fix_explanation(
-        {"title_ar": prop["title_ar"], "title_en": prop["title_en"], **numbers}, groups)
+        {"title_ar": prop["title_ar"], "title_en": prop["title_en"], **numbers}, groups, scenario.service)
     fc = FixCandidate(
         id="ai:" + hashlib.sha256(canon.encode()).hexdigest()[:8], title_ar=prop["title_ar"], title_en=prop["title_en"],
         policy=pol, source="ai_proposed", left_out_drop=s["left_out_drop"], hardship_drop=s["hardship_drop"],

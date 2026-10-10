@@ -19,6 +19,8 @@ from app.sim.compare import compare
 from app.sim.validate import canonical
 
 PENDING = "needs scripts.warm_cache after the Gemini quota reset"
+TRAVEL = "everyday_travel"
+TRAVEL_PENDING = "travel cache not warmed yet"
 REQUESTS = json.loads((SCENARIOS_DIR / "demo_requests.json").read_text(encoding="utf-8"))
 HEROES = json.loads((SCENARIOS_DIR / "heroes.json").read_text(encoding="utf-8"))
 DEMO = HEROES["scenario"]
@@ -50,7 +52,9 @@ def test_stage_sentence_hits_and_equals_the_demo_preset():
 
 def _request_params():
     for x in REQUESTS["requests"]:
-        yield pytest.param(x, id=f"{x['apply_to']}:{x['text'][:40]}")
+        # everyday_travel requests were added 2026-10-10 and are warmed later (quota): pending, not a regression.
+        marks = [pytest.mark.xfail(strict=False, reason=TRAVEL_PENDING)] if x.get("service") == TRAVEL else []
+        yield pytest.param(x, marks=marks, id=f"{x['apply_to']}:{x['text'][:40]}")
 
 
 @pytest.mark.parametrize("x", list(_request_params()))
@@ -87,7 +91,7 @@ def test_cached_ai_fix_policy_reads_the_cache_only():
 
 def _voice_params():
     for label in ("baseline", "demo", "top_fix", "ai_fix"):
-        for h in HEROES["heroes"]:
+        for h in [h for h in HEROES["heroes"] if h.get("service", "id_renewal") == "id_renewal"]:
             cid = h["citizen_id"]
             marks = [pytest.mark.xfail(strict=False, reason=PENDING)] if (cid, label) in PENDING_VOICES else []
             yield pytest.param(cid, label, marks=marks, id=f"{label}:{cid}")
@@ -111,5 +115,49 @@ def test_report_with_top_fix_robustness_hits():
 @pytest.mark.parametrize("fix", [None, "top_fix", "ai_fix"])
 def test_report_from_policies_hits(fix):
     p = _policies()
+    r = llm_routes.post_report(ReportRequest(baseline=p["baseline"], scenario=p["demo"], fix=p[fix] if fix else None))
+    assert r.source == "ai"
+
+
+# ------------------------------------------------------------------ everyday_travel (pending: not warmed yet)
+# Same checks for the travel demo path (travel_today -> fuel_plus_25). All xfail(strict=False) until
+# `python -m scripts.warm_cache --service everyday_travel` has run online; then drop the marks.
+
+travel_pending = pytest.mark.xfail(strict=False, reason=TRAVEL_PENDING)
+
+
+@functools.lru_cache(maxsize=1)
+def _travel_policies() -> dict:
+    base = world.scenario_policy(world.baseline_scenario_id(TRAVEL))
+    scen = world.scenario_policy(world.demo_scenario_id(TRAVEL))
+    return {"baseline": base, "demo": scen, "top_fix": fixgrid.top_fixes(scen)[0].policy,
+            "ai_fix": tasks.cached_ai_fix_policy(base, scen)}
+
+
+@travel_pending
+def test_travel_fixes_hit_with_the_ai_proposal_shown():
+    p = _travel_policies()
+    r = tasks.explain_and_propose_fixes(p["baseline"], p["demo"])
+    assert r.source == "ai" and r.ai_proposal["status"] == "shown"
+
+
+def _travel_voice_params():
+    for label in ("baseline", "demo", "top_fix", "ai_fix"):
+        for h in [h for h in HEROES["heroes"] if h.get("service") == TRAVEL]:
+            yield pytest.param(h["citizen_id"], label, marks=[travel_pending], id=f"travel:{label}:{h['citizen_id']}")
+
+
+@pytest.mark.parametrize("cid,label", list(_travel_voice_params()))
+def test_travel_hero_voice_hits(cid, label):
+    pol = _travel_policies()[label]
+    assert pol is not None
+    v = llm_routes.post_voice(VoiceRequest(citizen_id=cid, policy=pol))
+    assert v.source == "ai"
+
+
+@travel_pending
+@pytest.mark.parametrize("fix", [None, "top_fix", "ai_fix"])
+def test_travel_report_from_policies_hits(fix):
+    p = _travel_policies()
     r = llm_routes.post_report(ReportRequest(baseline=p["baseline"], scenario=p["demo"], fix=p[fix] if fix else None))
     assert r.source == "ai"
